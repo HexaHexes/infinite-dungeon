@@ -88,7 +88,8 @@ out through the portal they came in by.
 
 - Gamemode is swapped on entry and restored on exit. Block breaking is
   cancelled inside the dimension, with a configurable whitelist of
-  player-placeable blocks (including placed corpses). Announcements explain
+  player-placeable blocks. Corpse corpses are entities, not blocks, so
+  they need no whitelist entry (spike finding). Announcements explain
   the lock.
 - Death teleports the player to the dungeon lobby on final death only.
   PlayerRevive bleed-out is respected; a successful revive keeps the player
@@ -320,7 +321,50 @@ gated on ModList presence:
 | `gateways` | `gateways-to-eternity-417802:6926284` (plus `bettergatewaystoeternity-1583270:8325455`) |
 | `borninchaos` | soft-dep only, not in pack |
 
-## 14. Overworld suppression datapack
+## 14. Spawn safety
+
+A togglable in-mod feature (not a separate mod) that keeps affected
+dimensions mostly safe and gates spawning on magicule concentration.
+
+Config `safety.*`:
+
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | on | master toggle |
+| `hostile` | off | hostiles may spawn at all |
+| `neutral` | on | neutral mobs may spawn |
+| `passive` | on | passive mobs may spawn |
+| `dimensions.mode` | `whitelist` | or `blacklist` |
+| `dimensions.list` | `[minecraft:overworld]` | affected dimensions; our dungeon dimension is exempt by default |
+| `magiculeGate.enabled` | on | attribute-driven magicule gate |
+| `magiculeGate.stat` | `ep` | `ap`, `mp`, or `ep` (AP + MP) |
+| `magiculeGate.deviationPercent` | 10 | tolerance band on the strict rule |
+| `magiculeGate.attributeScale` | 1 | advanced; units are expected to align with Tensura's own values |
+| `magiculeGate.ambientFallback` | 0 | ambient value when Tensura is absent or disabled |
+
+- Spawns are intercepted at `MobSpawnEvent.FinalizeSpawn` filtered to
+  natural spawns; commands, spawners, and structure placement stay
+  functional.
+- Gate rule: `ambientM(chunk) >= selectedAttribute * attributeScale *
+  (1 - deviationPercent / 100)`. Tensura applies AP and MP to all mobs,
+  vanilla ones included, and exposes a per-chunk magicule concentration,
+  which is the ambient source. Attribute-less mobs (Tensura absent or
+  integration disabled) treat the requirement as zero, so the gate is a
+  harmless no-op there.
+- Mob classification is derived, not curated: datapack override, then
+  the `NeutralMob` interface, then the `Monster` class or MONSTER
+  category, then passive. `classification.json` is override-only and no
+  curated lists ship.
+- Datapack data (`data/<ns>/infinite_dungeon/safety/`):
+  `classification.json` for overrides, and `hostile.json`,
+  `neutral.json`, `passive.json` each carrying whitelist and blacklist
+  entity references. Precedence: a disabled category blocks its mobs;
+  blacklist beats whitelist; a non-empty whitelist restricts.
+- In our dimension, feeding the M curve into Tensura's per-chunk
+  magicule system is attempted if the API allows it (spike item);
+  otherwise the gate reads M directly.
+
+## 15. Overworld suppression datapack
 
 - Ships as a separate companion zip in the repository and release assets. It
   cannot live inside the mod jar because mod datapacks auto-enable.
@@ -329,7 +373,7 @@ gated on ModList presence:
 - A one-file override, version-pinned to the Dungeon Crawl version in the
   pack. Phase 0 verifies that an empty structures list is valid.
 
-## 15. Compatibility: Chunky, Distant Horizons, Living Horizons
+## 16. Compatibility: Chunky, Distant Horizons, Living Horizons
 
 The dimension must be fully compatible with pregeneration and with distant
 LOD rendering.
@@ -373,7 +417,7 @@ All three verification items are Phase 0 spikes; any finding that requires
 code (for example a Distant Horizons dimension exclusion option) becomes a
 client config knob rather than a gameplay integration.
 
-## 16. Delivery phases
+## 17. Delivery phases
 
 Phase 0 spike checklist:
 
@@ -389,8 +433,13 @@ Phase 0 spike checklist:
 - [ ] Corpse empty-removal API and adventure-lock removal path
 - [ ] PlayerRevive event ordering versus final death
 - [ ] Xaero waypoint filter API
-- [ ] Tensura attribute names, attribute tag availability, and environment or
-      magicule hooks
+- [ ] Tensura attribute names (AP, MP), attribute tag availability,
+      per-chunk magicule concentration API (read side), whether the
+      per-chunk value can be provided per dimension (write side, to feed
+      M into it), a unit-alignment sample for the attributeScale default,
+      and environment or magicule hooks
+- [ ] Attribute instances are populated at MobSpawnEvent.FinalizeSpawn
+      for natural spawns (serves both spawn safety and attribute scaling)
 - [ ] Gateways activation inside a custom dimension and wave spawner
       interaction with spawn filtering
 - [ ] FTB Teams and Journeymap APIs (soft-dep wiring)
@@ -400,24 +449,28 @@ Phase 0 spike checklist:
 - [ ] Distant Horizons LOD rendering at full dimension height
 - [ ] Living Horizons entity rendering at LOD distance (third-party bosses)
 
-PR sequence, each bumping the alpha:
+Delivery is one feature per PR and per alpha bump, ordered core first
+with Tensura integration pulled forward:
 
-- [ ] PR1: scaffold from template (mod id, package, README, AGENTS.md,
-      gametest harness)
-- [ ] PR2: dimension, portal, adventure lock, lobby, death policy, Corpse and
-      PlayerRevive handling
-- [ ] PR3: Dungeon Crawl wiring, lanes and layers, transitions, safe rooms,
-      Waystones, waypoint policy
-- [ ] PR4: spawns, difficulty, magicule, and density curves, party scaling,
-      minibosses, guardians with gating and respawn
-- [ ] PR5: rooms and events (monster houses, treasure rooms, traps, mimics,
-      decoration pass, gateway challenge rooms)
-- [ ] PR6: loot curves, Lootr, pity counter
-- [ ] PR7: Tensura and Apotheosis behavior integration
-- [ ] PR8: content-default integrations (roster seeds, loot injections,
-      decoration palettes as datapack defaults)
-- [ ] PR9: suppression companion datapack
-- [ ] Release: isolated clean 1.0.0
+- Wave 1 (core skeleton): scaffold; dimension and dimension type; portal
+  construction and tinted rendering; return anchors and construction
+  toggle; adventure lock; death policy.
+- Wave 2 (core world): Dungeon Crawl wiring; lane and layer geometry
+  with the depth API; fallback halls; layer transitions; waystones and
+  waypoint policy.
+- Wave 3 (Tensura spine): difficulty curve and the attribute-scaling
+  framework; magicule curve, API, and particles; Tensura attribute
+  integration; spawn safety with the attribute-driven magicule gate.
+- Wave 4 (core gameplay): density curve, pool schema, and ambient
+  spawns; party scaling; guardians with gating and respawn; minibosses
+  and keys; safe rooms.
+- Wave 5 (content): monster houses; treasure rooms; trap framework and
+  trap set; mimics; gateway challenge rooms; decoration pass.
+- Wave 6 (loot and integrations): depth loot tables; depth-injection
+  framework with content defaults; Lootr; pity counter; Apotheosis;
+  content roster and palette seeds.
+- Wave 7 (packaging): suppression companion datapack; Chunky and pack
+  integration docs; release 1.0.0.
 
 Gametest coverage plan: portal round-trip anchoring, anchor-unset fallback,
 construction refusal, depth derivation, per-layer floor-count determinism,
@@ -425,7 +478,7 @@ difficulty, magicule, and density curve math, adventure lock, boss gating
 and respawn cooldown, spawn pool filtering, Lootr instancing, and pool JSON
 reload filtering. Pure math additionally gets direct JUnit suites.
 
-## 17. Decision record
+## 18. Decision record
 
 Resolved during planning:
 
@@ -460,3 +513,14 @@ Resolved during planning:
   seed-derived at chunk-generation time (waystones included), with no
   visitor-triggered edits, and must render and behave correctly under
   Distant Horizons and Living Horizons.
+- Features ship one by one (one PR and one alpha per feature), core
+  first, with Tensura integration pulled forward into the third wave.
+- Spawn safety is an in-mod feature behind `safety.enabled`: per-category
+  spawn toggles with datapack whitelist/blacklist data, dimension
+  whitelist/blacklist filtering (overworld affected, our dimension
+  exempt by default), and a magicule gate comparing the spawn chunk's
+  Tensura concentration against the mob's own AP, MP, or EP with a
+  configurable deviation band.
+- Mob classification is derived (datapack override, then the NeutralMob
+  interface, then the Monster class or MONSTER category, then passive)
+  rather than curated.

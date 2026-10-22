@@ -34,8 +34,9 @@ out through the portal they came in by.
 - Dimension type: `min_y: -64`, `height: 2048`. This is locked; changing it
   later is destructive to existing worlds.
 - Layers live on X-lanes at `L * laneStride`. `laneStride` is Dungeon Crawl's
-  natural placement grid (32 chunks = 512 blocks; the salt is read from
-  Dungeon Crawl's structure set file in Phase 0).
+  natural placement grid: spacing 32 chunks = 512 blocks, separation 12,
+  salt 10387313, read from `dungeoncrawl:worldgen/structure_set/dungeons.json`
+  in Dungeon Crawl 2.3.17.
 - Infrastructure hangs off whichever Dungeon Crawl dungeon lands in the lane
   cell. Lightweight fallback halls exist only as an anti-dead-end guard.
 - Floors per layer are variable, 5 to 10 inclusive, deterministic from
@@ -47,11 +48,17 @@ out through the portal they came in by.
   (layerIndex, floorInLayer) as a pure function of position and seed. Loot,
   spawns, waypoints, difficulty, and magicule concentration all derive from
   it.
-- The main datapack adds our biome to Dungeon Crawl's gate additively and
-  ships our own mirror structure set, so the optional suppression datapack
-  (which neutralizes Dungeon Crawl's original set) cannot kill our dimension.
+- The main datapack adds our biome to Dungeon Crawl's biome tag gate
+  `dungeoncrawl:has_structure/dungeon` (the tag declares
+  `"replace": false`, so the addition is safe by construction) and
+  ships our own lane structure set that references `dungeoncrawl:dungeon`
+  directly with our own placement. A structure set may reference any
+  structure, so no mirror structure or generator reuse is needed. The
+  optional suppression datapack, which empties Dungeon Crawl's original
+  set, therefore cannot kill our dimension.
 - Wild bonus Dungeon Crawl dungeons may appear between lanes when the
-  suppression pack is off; they are scaled and filtered like everything else.
+  suppression pack is off (Dungeon Crawl's own set also applies to our
+  biome); they are scaled and filtered like everything else.
 
 ## 4. Portal
 
@@ -370,8 +377,14 @@ client config knob rather than a gameplay integration.
 
 Phase 0 spike checklist:
 
-- [ ] Dungeon Crawl biome-gate JSON shape, structure set file, and salt
-- [ ] Custom generator pipeline for our mirror structure set
+- [x] Dungeon Crawl biome-gate JSON shape, structure set file, and salt
+      (done: gate is the biome tag `dungeoncrawl:has_structure/dungeon`
+      with replace false; set placement is random_spread spacing 32,
+      separation 12, salt 10387313)
+- [x] Custom generator pipeline for our mirror structure set (resolved
+      without generator reuse: our lane set references
+      `dungeoncrawl:dungeon` directly; runtime check remains for
+      empty-structures-list validity and multi-set placement)
 - [ ] Waystones programmatic placement and naming API
 - [ ] Corpse empty-removal API and adventure-lock removal path
 - [ ] PlayerRevive event ordering versus final death
@@ -418,6 +431,10 @@ Resolved during planning:
 
 - Dungeon Crawl placement: accept the natural grid; infrastructure hangs off
   the in-lane dungeon (option Q3=a); fallback halls are anti-dead-end only.
+- The lane structure set references `dungeoncrawl:dungeon` directly
+  (spike finding: structure sets may reference any structure), so the
+  mirror-structure concern dissolved; the biome gate is an additive
+  override of the replace-false biome tag.
 - Suppression is a separate optional datapack, off by default.
 - Dungeon Crawl and Waystones are core and untoggleable; every other
   integration is optional, disable-only, and ModList-gated.

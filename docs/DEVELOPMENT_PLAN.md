@@ -31,12 +31,20 @@ out through the portal they came in by.
 
 ## 3. Dimension and layout
 
-- Dimension type: `min_y: -64`, `height: 2048`. This is locked; changing it
-  later is destructive to existing worlds.
+- Dimension type is The-End-like and open: `min_y: -64`, `height: 2048`,
+  `has_skylight: true`, `has_ceiling: false`, `natural: false`, and a fixed
+  time (no day and night cycle, like The End). `min_y` and `height` are
+  locked; changing them later is destructive to existing worlds.
+- The base generator is a void generator. The dimension has no floor and no
+  ceiling of its own: the only terrain is our structures and Dungeon Crawl's
+  dungeon pieces. Anything off a structure is void, and a fall is a real
+  death that flows through the death policy (section 5).
 - Layers live on X-lanes at `L * laneStride`. `laneStride` is Dungeon Crawl's
   natural placement grid: spacing 32 chunks = 512 blocks, separation 12,
-  salt 10387313, read from `dungeoncrawl:worldgen/structure_set/dungeons.json`
-  in Dungeon Crawl 2.3.17.
+  salt 10387313, as shipped by Dungeon Crawl 2.3.17. Our lane set mirrors
+  Dungeon Crawl's effective registry values read at startup rather than
+  hardcoded constants, so a load-time rewrite by a structure mod (Sparse
+  Structures, section 16) cannot misalign the lanes.
 - Infrastructure hangs off whichever Dungeon Crawl dungeon lands in the lane
   cell. Lightweight fallback halls exist only as an anti-dead-end guard.
 - Floors per layer are variable, 5 to 10 inclusive, deterministic from
@@ -83,6 +91,11 @@ out through the portal they came in by.
   - `portal.reformMissingPortal` (default on).
 - Anchors store a generic dimension id, so entry from any modded dimension
   works and returns there.
+- Additional entry points beyond built frames: Dungeon Crawl's surface tower
+  entrances (its `DungeonEntrance` piece) act as portals whenever they
+  generate, and our own tower-entrance building expands existing village
+  types at generation time (jigsaw pool injection), so packs always have
+  discoverable entrances. Both are optional and toggleable.
 
 ## 5. Adventure lock and death policy
 
@@ -97,13 +110,16 @@ out through the portal they came in by.
 - The Corpse mod behaves normally: the corpse spawns at the death site with
   the inventory and is reclaimed by walking back.
   `integrations.corpse.despawnWhenEmpty` is configurable.
+- Falling into the void is a normal death and follows the same path: Corpse
+  keeps the inventory, PlayerRevive bleed-out is respected, and the lobby
+  teleport happens on final death only.
 
 ## 6. Progression
 
 - One Waystone per layer entrance, named "Layer N". Waystones, like all
   other infrastructure, are placed during chunk generation, never on first
   visit, so Chunky-pregenerated chunks are identical to organic ones
-  (section 15).
+  (section 16).
 - Waypoint policy: `waypoints.mode` = `all` | `layer_only` (default) | `none`,
   filtering Xaero's minimap and world map (in pack). Journeymap is a
   soft-dep with the same filter behind its own toggle.
@@ -113,9 +129,27 @@ out through the portal they came in by.
 - Guardians respawn on chamber entry after `bossRespawnCooldown` seconds
   (default 600), making them repeatable farm content with full boss loot on
   each kill. Within the cooldown the chamber is empty with a flavor message.
-  Each respawn rolls a fresh boss from the boss whitelist, scaled by the
-  current difficulty value and party size at spawn time, with an
-  announcement.
+- Boss identity is fixed per layer and randomized by world seed: layer L always
+  fields the same boss for a given seed, different seeds field different
+  bosses, and respawns re-fight the same boss with an announcement.
+- Roster: when Tensura: Reincarnated and/or Tensura: Not Enough Bosses are
+  loaded, all of their bosses are included and ranked by EP/AP/MP read through
+  the API's entity power stat service. Cross-family interleaving is free (a
+  Tensura boss may be followed by an Ice and Fire boss), but within the Tensura
+  family the order is monotone ascending with depth: a weaker Tensura-family
+  boss never appears deeper than a stronger one from the same family.
+- Layer fit: candidates are filtered by effective power after depth scaling
+  (Tensura-family bosses are depth-exempt, so their raw EP/AP/MP is the metric)
+  against a per-layer band derived from the difficulty curve
+  (`boss.powerBandPercent`, default 30). Selection is seeded within the band;
+  an empty band falls back to the nearest-power candidates so every layer
+  fields a boss.
+- Scaling: every boss scales with party size at spawn time. Tensura and
+  Tensura: Not Enough Bosses bosses are exempt from the difficulty (depth)
+  factor only, via the datapack-populated entity tag
+  `infinite_dungeon:no_depth_scaling` (inert when the mods are absent); every
+  other boss scales by difficulty and party size. Regular Tensura mobs, fodder
+  and elites included, scale normally.
 - Minibosses: `minibossStartLayer` (default 3), one every
   `minibossEveryNFloors` (default 3) counted within the layer, so layers with
   more floors get more minibosses. `minibossStatMultiplier` scales them.
@@ -156,17 +190,31 @@ M(L, f) = magiculeBase + magiculeLinearPerFloor * f
 ```
 
 Config `magicule.*`, starting values: `base` 0, `linearPerFloor` 0.1,
-`quadraticPerLayer` 0.04, `particles` on, `tensuraAttributeScaling` on.
+`quadraticPerLayer` 0.04, `particles` on, `tensuraAttributeScaling` on, plus
+`structureElevation.*` for the amount and radius of each elevation source.
 
-- `getMagiculeConcentration(pos)` is exposed through the public API as a
-  pure position-derived function.
-- M drives ambient magicule particles (density and optional tint keyed to M,
-  vanilla particle textures only) and magicule-specific attribute scaling
-  (Tensura's attributes by default, configurable).
+- The curve is registered with the API library's ambient magicule service as a
+  provider for the dungeon dimension, so everything that consumes ambient
+  magicule (the standalone spawn-safety module, future addons) sees it without
+  depending on this mod.
+- Structure-local elevation: dungeon structures, nether portals, our tower
+  entrances, and other dungeon-like structures raise the ambient magicule of
+  the surrounding area through the API's concentration modifiers.
+  Generation-time elevation is seed-derived, so pregenerated chunks match
+  organic ones; portal-created elevation is applied when the portal forms.
+  Because the spawn-safety gate reads the same service, dungeon mouths become
+  magicule-rich and, for enabled spawn categories, more dangerous.
+- Ambient particles (density and optional tint keyed to M, vanilla particle
+  textures only) and magicule-specific attribute scaling (Tensura's attributes
+  by default, configurable) read the same value.
 - The base mod is gameplay-neutral toward players: player-side magicule
   effects belong to Tensura's own systems reading our value (PR 7).
-- Both functions are pure math and JUnit-tested: growth shape,
-  monotonicity, coefficient edge cases, and independence of the two curves.
+- Writing M into Tensura's per-chunk magicule store is attempted when the
+  Tensura API allows it (spike finding: `ChunkStorage` exposes `setMagicule`,
+  `setMaxMagicule`, and `addBlockModifier`, and may recompute values on chunk
+  initialization, so any write must follow its initialization).
+- All three curve functions are pure math and JUnit-tested: growth shape,
+  monotonicity, coefficient edge cases, and their mutual independence.
 
 Mob density, same shape, a third independent curve:
 
@@ -206,12 +254,22 @@ Config `density.*`, starting values:
   bands, weights, and per-entry `required_mod` filtering.
 - All whitelisted attributes scale with depth; Tensura's attributes are
   included by default.
+- Elite sizing: elites roll a random size clamped to configurable bounds
+  relative to their variant's regular size, and are always at least slightly
+  larger than the regular counterpart of the same variant
+  (`spawns.eliteSizeLower` default 1.05, `spawns.eliteSizeUpper` default 1.4,
+  plus an absolute cap on the scale attribute). Tensura mobs have multiple
+  variants, some with their own sizes, so the baseline is the variant's regular
+  size, not the species base, and sizing uses the scale attribute so hitboxes
+  match. The tensura-apotheosis companion honors the same rule when it grows
+  elites.
 - Integration-seeded defaults: boss tier from Bosses'Rise, Cult of Azazel,
   L_Ender's Cataclysm, and Ice and Fire CE; fodder and elite tiers from
   Mowzie's Mobs, Mobs of Mythology, Variants & Ventures, Realm RPG: Fallen
   Adventurers, and Born in Chaos (soft-dep). Entities with ritual or arena
   scripted fights are excluded from defaults if they degrade when spawned
-  plainly (reviewed during wiring).
+  plainly (reviewed during wiring). With Tensura installed, the Tensura/NEB
+  bosses join the roster through the tensura integration module (section 6).
 
 ## 10. Datapack-first integration architecture
 
@@ -228,12 +286,22 @@ coefficients.
 | Loot tables | standard datapack loot tables, datagen defaults under `src/main/generated` |
 | Behavior toggles | config `integrations.*`, disable-only and ModList-gated |
 | Curves and rules | config `difficulty.*`, `magicule.*`, `portal.*`, `boss.*` |
+| Dimension profiles | `data/<ns>/infinite_dungeon/dimension_profile/*.json`: dimension id, layer limit, pool references, curve overrides, guardian rules, portal policy, announcements, spawn-safety exemption; addons add extra dungeon dimensions through profiles |
 
 Plain tags are not used as the primary pool mechanism because a tag entry
 referencing an absent mod's entity fails datapack validation on reload. Our
 own schema filters registry ids and `required_mod` entries in code, skipping
 missing ones silently, while still accepting tag references inside entries
-(expanded through holder sets, empty tags tolerated).
+(expanded through the holder sets, empty tags tolerated).
+
+We ship exactly one dungeon dimension. Addons and datapacks may add more by
+pairing a vanilla dimension and dimension_type with a dimension profile; every
+gameworld system resolves its settings from the profile of the current
+dimension, with config values supplying the global defaults and profile values
+winning. Code addons register the same profile through the API library's
+registry. A profile dimension inherits the seed-derived generation requirement
+(section 16) and is exempt from spawn safety by default. The profile schema and
+registry live in the API library (section 19).
 
 ## 11. Rooms and events
 
@@ -268,6 +336,11 @@ missing ones silently, while still accepting tag references inside entries
   by depth band: Farmer's Delight and the Delight-series food, Lightman's
   Currency coins, End Remastered and Gateways items as rare deep treasure,
   and Sophisticated Backpacks as jackpot finds.
+- Apotheosis bags appear as depth-tiered entries in the same framework, so
+  deeper bands yield better bags, and Lightman's Currency coins also drop from
+  dungeon mobs through the same depth-scaled modifiers.
+- Skill Study Books join the depth-banded chest loot when that mod is present,
+  with deeper bands carrying higher-tier books.
 - Lootr per-player instancing applies everywhere
   (`integrations.lootr`).
 - Loot containers stay in the vanilla chest and barrel family for Lootr
@@ -320,49 +393,48 @@ gated on ModList presence:
 | `fallenadventurers` | `realmrpg_skeletons-916895:6058914`, decoration blocks (50 skeleton variants, blockstates verified) |
 | `gateways` | `gateways-to-eternity-417802:6926284` (plus `bettergatewaystoeternity-1583270:8325455`) |
 | `borninchaos` | soft-dep only, not in pack |
+| `tensuraNEB` | Tensura: Not Enough Bosses, coordinate at wiring; joins the Tensura family roster |
+| `travelerstitles` | Traveler's Titles, coordinate at wiring; announcements only |
+| `bosschecklist` | Boss Checklist, coordinate at wiring; datapack roster merge |
+| `skillbooks` | Skill Study Books, coordinate at wiring; loot only |
+| `alltheadventure` | Tensura: All the Adventure, coordinate at wiring; spike-gated integration |
+
+Code integrations in this table ship as their own modules in the suite
+(section 19); data-only integrations stay as gated data inside the core mod's
+datapack.
 
 ## 14. Spawn safety
 
-A togglable in-mod feature (not a separate mod) that keeps affected
-dimensions mostly safe and gates spawning on magicule concentration.
+Spawn safety is a standalone module in the suite, not a feature of this mod:
+`infinite-dungeon-spawn-safety` (section 19) owns the config `safety.*`
+surface, the `safety/` datapack schema, the classification application, and the
+gate. Its design source of truth is that repository's plan; this section keeps
+only the parts this mod is responsible for.
 
-Config `safety.*`:
+- The mod never gates spawns itself. It contributes values: the M curve is
+  registered with the API library's ambient magicule service, and Tensura's
+  attributes and per-chunk magicule become available through the tensura
+  integration module's providers.
+- Scope is fixed by the API: only natural spawns are ever gated, by positive
+  allowlist. Spawners, structure placement, commands, eggs, and events are
+  never blocked or allowed by magicule concentration, and chunk generation is
+  untouched.
+- The gate rule itself:
 
-| Key | Default | Meaning |
-|---|---|---|
-| `enabled` | on | master toggle |
-| `hostile` | off | hostiles may spawn at all |
-| `neutral` | on | neutral mobs may spawn |
-| `passive` | on | passive mobs may spawn |
-| `dimensions.mode` | `whitelist` | or `blacklist` |
-| `dimensions.list` | `[minecraft:overworld]` | affected dimensions; our dungeon dimension is exempt by default |
-| `magiculeGate.enabled` | on | attribute-driven magicule gate |
-| `magiculeGate.stat` | `ep` | `ap`, `mp`, or `ep` (AP + MP) |
-| `magiculeGate.deviationPercent` | 10 | tolerance band on the strict rule |
-| `magiculeGate.attributeScale` | 1 | advanced; units are expected to align with Tensura's own values |
-| `magiculeGate.ambientFallback` | 0 | ambient value when Tensura is absent or disabled |
+  `ambientM(chunk) >= statValue * attributeScale * (1 - deviationPercent / 100)`
 
-- Spawns are intercepted at `MobSpawnEvent.FinalizeSpawn` filtered to
-  natural spawns; commands, spawners, and structure placement stay
-  functional.
-- Gate rule: `ambientM(chunk) >= selectedAttribute * attributeScale *
-  (1 - deviationPercent / 100)`. Tensura applies AP and MP to all mobs,
-  vanilla ones included, and exposes a per-chunk magicule concentration,
-  which is the ambient source. Attribute-less mobs (Tensura absent or
-  integration disabled) treat the requirement as zero, so the gate is a
-  harmless no-op there.
-- Mob classification is derived, not curated: datapack override, then
-  the `NeutralMob` interface, then the `Monster` class or MONSTER
-  category, then passive. `classification.json` is override-only and no
-  curated lists ship.
-- Datapack data (`data/<ns>/infinite_dungeon/safety/`):
-  `classification.json` for overrides, and `hostile.json`,
-  `neutral.json`, `passive.json` each carrying whitelist and blacklist
-  entity references. Precedence: a disabled category blocks its mobs;
-  blacklist beats whitelist; a non-empty whitelist restricts.
-- In our dimension, feeding the M curve into Tensura's per-chunk
-  magicule system is attempted if the API allows it (spike item);
-  otherwise the gate reads M directly.
+  where `statValue` is the mob's own AP (aura), MP (magicule), or EP (stored
+  energy), default EP, read through the API's entity power stat service.
+  Mobs without existence data (Tensura absent) have no requirement, so the
+  gate is a harmless no-op.
+- Classification is derived, not curated, through the API's chain: datapack
+  override, then `NeutralMob`, then `Monster` or the `MONSTER` category, then
+  passive. Overrides live in the spawn-safety module's `classification.json`.
+- Our dimension is exempt by default, because the module's default dimension
+  list names only the overworld.
+- In our dimension, feeding the M curve into Tensura's per-chunk magicule
+  system is attempted when the API allows it (spike finding: the write API
+  exists; timing is the risk); otherwise consumers read M through the service.
 
 ## 15. Overworld suppression datapack
 
@@ -372,6 +444,11 @@ Config `safety.*`:
   generation stops. Default off. Affects newly generated chunks only.
 - A one-file override, version-pinned to the Dungeon Crawl version in the
   pack. Phase 0 verifies that an empty structures list is valid.
+- With suppression on, Dungeon Crawl's structure set is neutralized entirely,
+  so its surface tower entrances do not generate either: entry is then through
+  built portal frames and our own village tower-entrance structures
+  (section 4). With suppression off, Dungeon Crawl's own entrances act as
+  portals.
 
 ## 16. Compatibility: Chunky, Distant Horizons, Living Horizons
 
@@ -413,6 +490,25 @@ Living Horizons (Distant Horizons addon, living entities at LOD distance):
   bosses (Bosses'Rise, Cataclysm, Cult of Azazel) at LOD distance.
 - Not in the pack; soft-dep verification at wiring, no toggle expected.
 
+Generation isolation:
+
+- Our biome ships in no vanilla biome tags (`minecraft:is_overworld`,
+  `has_structure/*`, category tags, and so on), so NeoForge biome modifiers
+  from other mods (structure additions, features, spawns) cannot reach our
+  dimension, and dimension-scoped modifiers do not target our dimension key.
+  This is a hard rule for every biome we ship, including profile dimensions.
+- Foreign structure placement: Sparse Structures rewrites every structure
+  set's spacing and separation at load and can optionally rewrite salts
+  (`idBasedSalt`), so our lane set mirrors Dungeon Crawl's effective registry
+  values at startup rather than constants, and companion packaging supplies a
+  Sparse Structures config with factor 1.0 entries for `dungeoncrawl:dungeons`
+  and our lane set.
+- Structure Layout Optimizer patches jigsaw layout computation
+  (performance-oriented and behavior-preserving by design); verification
+  covers Dungeon Crawl halls generating identically with it loaded.
+- Spawn-control mods in the pack target overworld or vanilla biome tags and
+  are excluded by the tag hygiene above.
+
 All three verification items are Phase 0 spikes; any finding that requires
 code (for example a Distant Horizons dimension exclusion option) becomes a
 client config knob rather than a gameplay integration.
@@ -429,17 +525,39 @@ Phase 0 spike checklist:
       without generator reuse: our lane set references
       `dungeoncrawl:dungeon` directly; runtime check remains for
       empty-structures-list validity and multi-set placement)
-- [ ] Waystones programmatic placement and naming API
-- [ ] Corpse empty-removal API and adventure-lock removal path
-- [ ] PlayerRevive event ordering versus final death
-- [ ] Xaero waypoint filter API
-- [ ] Tensura attribute names (AP, MP), attribute tag availability,
-      per-chunk magicule concentration API (read side), whether the
-      per-chunk value can be provided per dimension (write side, to feed
-      M into it), a unit-alignment sample for the attributeScale default,
-      and environment or magicule hooks
+- [x] Waystones programmatic placement and naming API (done:
+      `WaystonesAPI.placeWaystone`, `MutableWaystone.setName`,
+      `activateWaystone`; the open nuance is database writes during chunk
+      generation versus place-then-register)
+- [x] Corpse empty-removal API and adventure-lock removal path (done: corpses
+      are entities, so no block whitelist is needed; `despawnWhenEmpty` is our
+      own tick scan over `isEmpty()` plus `remove()`)
+- [x] PlayerRevive event ordering versus final death (done: bleed-out is not
+      death; `PlayerRevivedEvent` cancels a pending lobby teleport, and real
+      death flows through the vanilla death event)
+- [ ] Xaero waypoint filter API (partly done: no public API; triggers are
+      dimension, biome, and waystone arrival, and the server-callable entries
+      are the title commands)
+- [x] Tensura attribute names (AP, MP), attribute tag availability,
+      per-chunk magicule concentration API (read side and write side), and
+      environment hooks (done: AP = aura, MP = magicule, EP = stored energy on
+      `IExistence`; ambient reads via `AreaMagiculeHelper`; writes via
+      `ChunkStorage` with a reinitialize timing risk; unit alignment still
+      needs an in-game sample)
+- [ ] Tensura unit-alignment sample for the `attributeScale` default
+      (mob MP spans 10 to 25000 while the ambient scale is config-driven)
 - [ ] Attribute instances are populated at MobSpawnEvent.FinalizeSpawn
       for natural spawns (serves both spawn safety and attribute scaling)
+- [ ] Traveler's Titles trigger surface (server-callable title commands,
+      config titles, waystone arrival behavior, sound)
+- [ ] Foreign worldgen isolation audit (dump active structure sets, biome
+      modifiers, and confirm nothing but Dungeon Crawl reaches our biome, tags,
+      or dimension; verify the Sparse Structures salt rewrite and Structure
+      Layout Optimizer against our lane set)
+- [ ] Boss Checklist roster file merge behavior and defeated-tracking keys
+- [ ] Skill Study Books item ids and skill encoding for loot tables
+- [ ] Tensura: All the Adventure contract pools, events, and dangerous
+      encounter summon entrypoints
 - [ ] Gateways activation inside a custom dimension and wave spawner
       interaction with spawn filtering
 - [ ] FTB Teams and Journeymap APIs (soft-dep wiring)
@@ -449,34 +567,43 @@ Phase 0 spike checklist:
 - [ ] Distant Horizons LOD rendering at full dimension height
 - [ ] Living Horizons entity rendering at LOD distance (third-party bosses)
 
-Delivery is one feature per PR and per alpha bump, ordered core first
-with Tensura integration pulled forward:
+Delivery is one feature per PR and per alpha bump. The suite is built in
+dependency order (section 19): the API library first, then the standalone
+spawn-safety module, then the core mod, then the integration modules:
 
 - Wave 1 (core skeleton): scaffold; dimension and dimension type; portal
-  construction and tinted rendering; return anchors and construction
-  toggle; adventure lock; death policy.
-- Wave 2 (core world): Dungeon Crawl wiring; lane and layer geometry
-  with the depth API; fallback halls; layer transitions; waystones and
-  waypoint policy.
+  construction and tinted rendering; return anchors and construction toggle;
+  adventure lock; death policy.
+- Wave 2 (core world): Dungeon Crawl wiring; lane and layer geometry with the
+  depth API; fallback halls; layer transitions; waystones and waypoint policy;
+  dimension profile resolution; tower-entrance portals and village expansion.
 - Wave 3 (Tensura spine): difficulty curve and the attribute-scaling
-  framework; magicule curve, API, and particles; Tensura attribute
-  integration; spawn safety with the attribute-driven magicule gate.
-- Wave 4 (core gameplay): density curve, pool schema, and ambient
-  spawns; party scaling; guardians with gating and respawn; minibosses
-  and keys; safe rooms.
-- Wave 5 (content): monster houses; treasure rooms; trap framework and
-  trap set; mimics; gateway challenge rooms; decoration pass.
-- Wave 6 (loot and integrations): depth loot tables; depth-injection
-  framework with content defaults; Lootr; pity counter; Apotheosis;
-  content roster and palette seeds.
-- Wave 7 (packaging): suppression companion datapack; Chunky and pack
-  integration docs; release 1.0.0.
+  framework; magicule curve, provider registration, particles, and
+  structure-local elevation; the tensura integration module (attributes,
+  existence stats, per-chunk magicule write, Tensura and NEB boss roster).
+- Wave 4 (core gameplay): density curve, pool schema, and ambient spawns;
+  party scaling; the layer boss schedule (fixed per layer, seed-randomized,
+  power-banded, with the depth-scaling exemptions) plus gating and respawn;
+  minibosses and keys; safe rooms with the boundary block.
+- Wave 5 (content): monster houses; treasure rooms; trap framework and trap
+  set; mimics; gateway challenge rooms; decoration pass.
+- Wave 6 (loot and integrations): depth loot tables; depth-injection framework
+  with content defaults (Apotheosis bags, Lightman's Currency, Skill Study
+  Books); Lootr; pity counter; Apotheosis; advancements; content roster and
+  palette seeds; the optional integration modules (Traveler's Titles, Boss
+  Checklist data, All the Adventure).
+- Wave 7 (packaging): suppression companion datapack; Sparse Structures
+  companion config; Chunky and pack integration docs; release 1.0.0.
+
+The API library's own waves (A1-A6) and the spawn-safety module's waves
+(S1-S5) run before Wave 1, in their own repositories (section 19).
 
 Gametest coverage plan: portal round-trip anchoring, anchor-unset fallback,
 construction refusal, depth derivation, per-layer floor-count determinism,
-difficulty, magicule, and density curve math, adventure lock, boss gating
-and respawn cooldown, spawn pool filtering, Lootr instancing, and pool JSON
-reload filtering. Pure math additionally gets direct JUnit suites.
+difficulty, magicule, and density curve math, boss schedule determinism and
+power-band fitting, adventure lock, boss gating and respawn cooldown, spawn
+pool filtering, profile resolution, Lootr instancing, and pool JSON reload
+filtering. Pure math additionally gets direct JUnit suites.
 
 ## 18. Decision record
 
@@ -513,14 +640,80 @@ Resolved during planning:
   seed-derived at chunk-generation time (waystones included), with no
   visitor-triggered edits, and must render and behave correctly under
   Distant Horizons and Living Horizons.
-- Features ship one by one (one PR and one alpha per feature), core
-  first, with Tensura integration pulled forward into the third wave.
-- Spawn safety is an in-mod feature behind `safety.enabled`: per-category
-  spawn toggles with datapack whitelist/blacklist data, dimension
-  whitelist/blacklist filtering (overworld affected, our dimension
-  exempt by default), and a magicule gate comparing the spawn chunk's
-  Tensura concentration against the mob's own AP, MP, or EP with a
-  configurable deviation band.
+- Features ship one by one (one PR and one alpha per feature). The suite is
+  built in dependency order: the API library, then the standalone spawn-safety
+  module, then the core mod, then the integration modules (section 19).
+- Spawn safety is a standalone module: per-category spawn toggles with
+  datapack whitelist/blacklist data, dimension whitelist/blacklist filtering
+  (overworld affected, dungeon dimensions exempt by default), and a magicule
+  gate comparing the ambient concentration against the mob's own AP (aura),
+  MP (magicule), or EP (stored energy), default EP, with a configurable
+  deviation band. Only natural spawns are ever gated.
 - Mob classification is derived (datapack override, then the NeutralMob
   interface, then the Monster class or MONSTER category, then passive)
   rather than curated.
+- Bosses are fixed per layer and randomized by world seed; the Tensura family
+  is ordered monotone ascending by EP/AP/MP with free cross-family
+  interleaving, selection fits a per-layer power band measured after depth
+  scaling, and Tensura and NEB bosses are exempt from the depth factor while
+  still scaling with party size.
+- The dimension is The-End-like: a void generator with no floor or ceiling of
+  its own, and a fixed time with no day and night cycle.
+- We ship one dungeon dimension; datapack dimension profiles (and the API's
+  code registry) let addons add more with their own limits, pools, and curves.
+- Elite mobs are randomly sized within configured bounds and always at least
+  slightly larger than the regular counterpart of the same variant, with
+  Tensura variant sizes as the baseline.
+- Advancements cover layers conquered, bosses slain, and depth records through
+  custom criteria fired by our own events.
+- Dungeon structures, nether portals, and tower entrances raise local magicule
+  concentration through the API's concentration modifiers; generation-time
+  elevation is seed-derived.
+- Traveler's Titles is an optional announcer for dimension entry and waystone
+  arrival; floor and layer titles come from our own announcement system.
+- Foreign worldgen is excluded by biome-tag hygiene, the Sparse Structures
+  companion config exempts our structure sets, and our lane set mirrors
+  Dungeon Crawl's effective registry placement values rather than constants.
+- Boss Checklist, Skill Study Books, and Tensura: All the Adventure are
+  optional integrations; the first two are data-only and the last is
+  spike-gated.
+- Suite modules consume each other from the org's GitHub Packages Maven
+  registry, never from local jars or vendored copies.
+
+## 19. Module suite
+
+The suite is split so no module depends on another by accident. Every module
+is its own repository, its own mod, its own release, and its own issue board.
+
+| Module | Responsibility | Depends on |
+|---|---|---|
+| `infinite-dungeon-api` | Public API and shared mechanics: dimension profiles, ambient magicule service, entity power stats, lifecycle events, datapack utilities, spawn classification | Minecraft, NeoForge |
+| `infinite-dungeon-spawn-safety` | The standalone spawn gate: category toggles, dimension filter, and the magicule gate over natural spawns only | `-api` |
+| `infinite-dungeon` (core) | Dimension, generation, entry, progression, spawns, bosses, rooms, loot, and spawn-safety-free gameplay | `-api`, Dungeon Crawl, Waystones |
+| `infinite-dungeon-tensura` | Attribute scaling, existence stats (AP/MP/EP), per-chunk magicule provider and write, Tensura and NEB boss roster | `-api`, core, Tensura |
+| `infinite-dungeon-apotheosis` | Apotheosis affixes, loot behavior, and elite interplay | `-api`, core, Apotheosis |
+| `infinite-dungeon-gateways` | Gateway challenge rooms inside the dungeon | `-api`, core, Gateways to Eternity |
+| `infinite-dungeon-alltheadventure` | Guild contracts and rank hooks (spike-gated) | `-api`, core, All the Adventure |
+| `infinite-dungeon-travelerstitles` | Dimension-entry and waystone-arrival announcements | `-api`, core, Traveler's Titles |
+| `infinite-dungeon-parties` | OPAC and FTB Teams party providers | `-api`, core, OPAC/FTB |
+| `infinite-dungeon-deathcompat` | Corpse `despawnWhenEmpty` and PlayerRevive bleed-out handling | `-api`, core, Corpse/PlayerRevive |
+| `infinite-dungeon-waypoints` (client) | Xaero and Journeymap waypoint filtering | `-api`, core, Xaero/Journeymap |
+
+Companion datapacks stay release assets of the core repository: overworld
+suppression (section 15), the Boss Checklist roster merge, and the Sparse
+Structures config.
+
+Rules for every module:
+
+- Dependency direction is inward: modules depend on the API library, never on
+  each other.
+- Data-only integrations (rosters, decoration, loot) stay inside the core
+  mod's datapack with `required_mod` gating; only integrations that need code
+  become modules.
+- Third-party dependencies resolve through CurseMaven (or the official
+  Modrinth maven); suite modules resolve through GitHub Packages.
+- Each module carries its own design plan under `docs/DEVELOPMENT_PLAN.md`,
+  with this plan remaining the suite-level source of truth.
+- Repositories are created upfront with their boards and milestones seeded, so
+  work is planned in advance; implementation still proceeds in dependency
+  order.

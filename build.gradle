@@ -74,6 +74,7 @@ def generateModMetadata = tasks.register('generateModMetadata', ProcessResources
             mod_version            : mod_version,
             mod_authors            : mod_authors,
             mod_description        : mod_description,
+            api_version            : api_version,
     ]
     inputs.properties replaceProperties
     expand replaceProperties
@@ -87,6 +88,45 @@ neoForge.ideSyncTask generateModMetadata
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+}
+
+repositories {
+    mavenCentral()
+
+    // infinite-dungeon-api, from the org's GitHub Packages registry. Measured
+    // status codes when resolution fails: 401 means no credentials reached the
+    // registry, while 404 means credentials arrived but the coordinate or
+    // version is wrong. CI injects PACKAGE_READ_TOKEN as GITHUB_TOKEN on the
+    // Gradle steps; locally supply gpr.user / gpr.key in
+    // ~/.gradle/gradle.properties.
+    maven {
+        name = 'GitHubPackages'
+        url = uri('https://maven.pkg.github.com/HexaHexes/infinite-dungeon-api')
+        credentials {
+            username = System.getenv('GITHUB_ACTOR') ?: project.findProperty('gpr.user')
+            password = System.getenv('GITHUB_TOKEN') ?: project.findProperty('gpr.key')
+        }
+    }
+}
+
+dependencies {
+    // infinite-dungeon-api is required in every context: the core consumes its
+    // dimension profiles, services, and events, and neoforge.mods.toml declares
+    // it required. It is never packaged - the API ships as its own mod - and
+    // testImplementation puts it on the JUnit classpath. Dependencies resolve
+    // through Maven, never local folders.
+    compileOnly "org.bitwisemadness.infinitedungeonapi:infinite_dungeon_api:${api_version}"
+    runtimeOnly "org.bitwisemadness.infinitedungeonapi:infinite_dungeon_api:${api_version}"
+    testImplementation "org.bitwisemadness.infinitedungeonapi:infinite_dungeon_api:${api_version}"
+
+    // JUnit wiring for the pure-logic suites the later waves add.
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 // --- GameTest harness -------------------------------------------------------

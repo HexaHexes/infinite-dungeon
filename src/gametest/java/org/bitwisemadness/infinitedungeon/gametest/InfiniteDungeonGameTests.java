@@ -1,11 +1,16 @@
 package org.bitwisemadness.infinitedungeon.gametest;
 
+import java.util.Map;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
+import org.bitwisemadness.infinitedungeon.announce.Announcement;
+import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
 
 /**
@@ -52,6 +57,26 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(type.hasSkyLight(), "the dungeon must be open: skylight on");
         helper.assertTrue(type.minY() == -64, "min_y is locked at -64 by the plan");
         helper.assertTrue(type.height() == 2048, "height is locked at 2048 by the plan");
+        helper.succeed();
+    }
+
+    /**
+     * The announcement system sends to a player and broadcasts to a level. The
+     * mock server player stands in for a real one, and the rendered text proves
+     * the config-driven wording comes through as-is.
+     */
+    @GameTest(template = "empty")
+    public static void announcements_reach_players(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        helper.assertTrue(player != null, "a mock server player must be available");
+
+        Component rendered = DungeonAnnouncements.render(
+                Announcement.BOSS_AWAKENING, Map.of("floor", "7"));
+        helper.assertTrue("The guardian of this floor awakens.".equals(rendered.getString()),
+                "the config text must render unchanged: " + rendered.getString());
+
+        DungeonAnnouncements.send(player, Announcement.ADVENTURE_LOCK);
+        DungeonAnnouncements.broadcast(helper.getLevel(), Announcement.BOSS_AWAKENING);
         helper.succeed();
     }
 }

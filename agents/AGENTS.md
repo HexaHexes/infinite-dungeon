@@ -13,8 +13,8 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
   and untoggleable per the plan's decision record.
 - Optional: everything else, through the suite's integration modules.
 
-**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (2 tests).
-`expectedTests = 2` in `build.gradle` must match the `@GameTest` count.
+**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (3 tests).
+`expectedTests = 3` in `build.gradle` must match the `@GameTest` count.
 
 **Gotchas**
 - `api_version` pins the published API release: bump deliberately, never

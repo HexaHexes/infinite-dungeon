@@ -679,6 +679,8 @@ Resolved during planning:
   spike-gated.
 - Suite modules consume each other from the org's GitHub Packages Maven
   registry, never from local jars or vendored copies.
+- Announcement texts are config-driven so operators can reword them; shipped
+  defaults stay ASCII-only with no emojis.
 
 ## 19. Module suite
 

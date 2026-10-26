@@ -32,6 +32,13 @@ does nothing on its own.
 | Required | NeoForge 21.1.259 | - |
 | Required | Infinite Dungeon API | Dimension profiles, ambient magicule and entity power services, lifecycle events |
 
+## Configuration
+
+Server operators can reword the announcement texts (the adventure lock
+explanation, the anchor fallback note, boss awakenings, and room events) in the
+config file. Placeholders written as `{token}` in the text are filled in by the
+feature that sends the message.
+
 ## Credits
 
 - Built on [NeoForge](https://neoforged.net/).

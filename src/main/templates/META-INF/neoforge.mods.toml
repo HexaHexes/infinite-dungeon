@@ -14,9 +14,6 @@ displayName = "${mod_name}"
 authors = "${mod_authors}"
 description = '''${mod_description}'''
 
-[[mixins]]
-config = "${mod_id}.mixins.json"
-
 [[dependencies.${mod_id}]]
 modId = "neoforge"
 type = "required"
@@ -31,6 +28,16 @@ versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
 
+# infinite-dungeon-api: the core consumes its dimension profiles, services,
+# and events, so it is required rather than optional. The range is derived from
+# api_version in gradle.properties, the same value build.gradle resolves.
+[[dependencies.${mod_id}]]
+modId = "infinite_dungeon_api"
+type = "required"
+versionRange = "[${api_version},)"
+ordering = "BEFORE"
+side = "BOTH"
+
 # Add your mod's dependencies below. Use type = "optional" for anything the mod
-# works without, and gate the code that touches it (mixins, registrations) so it
-# no-ops when the dependency is absent.
+# works without, and gate the code that touches it so it no-ops when the
+# dependency is absent.

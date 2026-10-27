@@ -52,7 +52,9 @@ public final class InfiniteDungeonGameTests {
                 .get(DungeonDimensions.TYPE);
         helper.assertTrue(type != null,
                 "the dungeon dimension_type must load from the mod datapack");
-        helper.assertTrue(type.fixedTime().isPresent(), "the dungeon must have a fixed time");
+        helper.assertTrue(type.fixedTime().isEmpty(),
+                "the type must carry no fixed time: the mod holds the clock so a server can let it flow");
+        helper.assertTrue(type.bedWorks(), "beds must not explode in the dungeon");
         helper.assertTrue(!type.hasCeiling(), "the dungeon must be open: no ceiling");
         helper.assertTrue(type.hasSkyLight(), "the dungeon must be open: skylight on");
         helper.assertTrue(type.minY() == -64, "min_y is locked at -64 by the plan");

@@ -39,6 +39,10 @@ explanation, the anchor fallback note, boss awakenings, and room events) in the
 config file. Placeholders written as `{token}` in the text are filled in by the
 feature that sends the message.
 
+The time section holds whether the dungeon clock runs (`time.flows`, default
+off - the clock is held at noon) and the tick it is held at while frozen
+(`time.fixedTick`, default 6000).
+
 ## Credits
 
 - Built on [NeoForge](https://neoforged.net/).

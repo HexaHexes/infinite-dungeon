@@ -4,6 +4,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.bitwisemadness.infinitedungeon.announce.AnnouncementTexts;
+import org.bitwisemadness.infinitedungeon.time.TimePolicy;
 
 /**
  * The core mod's config file, starting with the announcement texts.
@@ -24,6 +25,8 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.ConfigValue<String> ANCHOR_FALLBACK;
     private static final ModConfigSpec.ConfigValue<String> BOSS_AWAKENING;
     private static final ModConfigSpec.ConfigValue<String> ROOM_EVENT;
+    private static final ModConfigSpec.BooleanValue TIME_FLOWS;
+    private static final ModConfigSpec.IntValue TIME_FIXED_TICK;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -40,6 +43,18 @@ public final class DungeonConfigs {
         ROOM_EVENT = builder
                 .comment("Broadcast to a level when a room event begins.")
                 .define("roomEvent", AnnouncementTexts.ROOM_EVENT);
+        builder.pop();
+        builder.push("time");
+        TIME_FLOWS = builder
+                .comment("Whether the dungeon clock runs. Off holds the time of day at")
+                .comment("fixedTick, which is the default experience; on gives a plain day/night")
+                .comment("cycle that dims skylight at night. Purely atmospheric either way: beds")
+                .comment("never set a respawn point inside the dimension.")
+                .define("flows", TimePolicy.DEFAULT.flows());
+        TIME_FIXED_TICK = builder
+                .comment("The tick the clock is held at while flows is off. 6000 is noon,")
+                .comment("13000 is around dusk, 18000 is midnight.")
+                .defineInRange("fixedTick", TimePolicy.DEFAULT.fixedTick(), 0, TimePolicy.DAY_LENGTH - 1);
         builder.pop();
         SPEC = builder.build();
     }
@@ -70,5 +85,10 @@ public final class DungeonConfigs {
     /** The configured room event text. */
     public static String roomEvent() {
         return ROOM_EVENT.get();
+    }
+
+    /** The dungeon clock policy as the pure record. */
+    public static TimePolicy timePolicy() {
+        return new TimePolicy(TIME_FLOWS.get(), TIME_FIXED_TICK.get());
     }
 }

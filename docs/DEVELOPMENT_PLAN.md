@@ -32,9 +32,14 @@ out through the portal they came in by.
 ## 3. Dimension and layout
 
 - Dimension type is The-End-like and open: `min_y: -64`, `height: 2048`,
-  `has_skylight: true`, `has_ceiling: false`, `natural: false`, and a fixed
-  time (no day and night cycle, like The End). `min_y` and `height` are
+  `has_skylight: true`, `has_ceiling: false`, `natural: false`, `bed_works:
+  true`, and no fixed time at the type level. `min_y` and `height` are
   locked; changing them later is destructive to existing worlds.
+- The clock is held by the mod at `time.fixedTick` (default 6000) while
+  `time.flows` is false - the default experience - and a server option can let
+  it run, which is purely atmospheric. Beds never explode; with the
+  spawn-point invariant they never set a respawn point either, so they are
+  decoration in every configuration.
 - The base generator is a void generator. The dimension has no floor and no
   ceiling of its own: the only terrain is our structures and Dungeon Crawl's
   dungeon pieces. Anything off a structure is void, and a fall is a real
@@ -658,7 +663,8 @@ Resolved during planning:
   scaling, and Tensura and NEB bosses are exempt from the depth factor while
   still scaling with party size.
 - The dimension is The-End-like: a void generator with no floor or ceiling of
-  its own, and a fixed time with no day and night cycle.
+  its own. The clock is held at 6000 by default (`time.flows` false) and can
+  run as a server option; beds are non-explosive decoration.
 - We ship one dungeon dimension; datapack dimension profiles (and the API's
   code registry) let addons add more with their own limits, pools, and curves.
 - Elite mobs are randomly sized within configured bounds and always at least

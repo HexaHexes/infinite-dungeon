@@ -4,7 +4,9 @@ import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.common.NeoForge;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.time.DungeonTime;
 import org.slf4j.Logger;
 
 /**
@@ -24,6 +26,9 @@ public final class InfiniteDungeon {
         // The announcement texts are config-driven; the config file is owned
         // and registered here, and later features add their entries to it.
         DungeonConfigs.register(container);
+        // The dungeon clock is held by the mod (the dimension type carries no
+        // fixed time, so a server can let it flow).
+        NeoForge.EVENT_BUS.addListener(DungeonTime::onLevelTick);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

@@ -24,8 +24,13 @@ Tensura, Apotheosis, and friends build on top.
 ## Getting it in-game
 
 Install the mod and its required dependencies on a NeoForge 1.21.1 server or
-client. Content arrives with the coming alphas; until then the mod loads and
-does nothing on its own.
+client. Build a nether-portal-shaped frame out of stone bricks (any
+nether-portal geometry, corners optional) and light it with flint and steel -
+or with fire - to open a dungeon portal. Portals built from obsidian stay
+vanilla.
+
+The dungeon's floors are still being built; entering one of the first portals
+is a leap of faith.
 
 ## Dependencies
 

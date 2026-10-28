@@ -2,10 +2,13 @@ package org.bitwisemadness.infinitedungeon.gametest;
 
 import java.util.Map;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
@@ -13,6 +16,9 @@ import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
 import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
+import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
+import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
+import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
 
 /**
  * Smoke test: proves the mod loads and the GameTest harness runs.
@@ -103,6 +109,60 @@ public final class InfiniteDungeonGameTests {
 
         helper.assertTrue(!DungeonDimensions.LEVEL.equals(player.getRespawnDimension()),
                 "a stored dungeon respawn must be cleared at death");
+        helper.succeed();
+    }
+
+    /**
+     * A stone-brick frame in nether-portal geometry ignites into a dungeon
+     * portal: the interior fills with portal blocks on the frame's axis, and
+     * the frame itself is untouched.
+     */
+    @GameTest(template = "empty")
+    public static void portal_frame_ignites(GameTestHelper helper) {
+        for (int x = 2; x <= 5; x++) {
+            helper.setBlock(new BlockPos(x, 2, 1), Blocks.STONE_BRICKS);
+            helper.setBlock(new BlockPos(x, 6, 1), Blocks.STONE_BRICKS);
+        }
+        for (int y = 2; y <= 6; y++) {
+            helper.setBlock(new BlockPos(2, y, 1), Blocks.STONE_BRICKS);
+            helper.setBlock(new BlockPos(5, y, 1), Blocks.STONE_BRICKS);
+        }
+
+        boolean ignited = PortalIgnition.tryIgnite(helper.getLevel(),
+                helper.absolutePos(new BlockPos(3, 3, 1)));
+        helper.assertTrue(ignited, "a valid stone-brick frame must ignite");
+
+        BlockState expected = PortalBlocks.DUNGEON_PORTAL.get().defaultBlockState()
+                .setValue(DungeonPortalBlock.AXIS, Direction.Axis.X);
+        for (int x = 3; x <= 4; x++) {
+            for (int y = 3; y <= 5; y++) {
+                BlockState state = helper.getBlockState(new BlockPos(x, y, 1));
+                helper.assertTrue(expected.equals(state),
+                        "the interior must be portal blocks on the X axis: " + state);
+            }
+        }
+        helper.assertTrue(helper.getBlockState(new BlockPos(3, 2, 1)).is(Blocks.STONE_BRICKS),
+                "the frame must stay untouched");
+        helper.succeed();
+    }
+
+    /** A frame too small for vanilla's portal bounds refuses to ignite. */
+    @GameTest(template = "empty")
+    public static void portal_frame_rejects_bad_shape(GameTestHelper helper) {
+        for (int x = 2; x <= 4; x++) {
+            helper.setBlock(new BlockPos(x, 2, 1), Blocks.STONE_BRICKS);
+            helper.setBlock(new BlockPos(x, 4, 1), Blocks.STONE_BRICKS);
+        }
+        for (int y = 2; y <= 4; y++) {
+            helper.setBlock(new BlockPos(2, y, 1), Blocks.STONE_BRICKS);
+            helper.setBlock(new BlockPos(4, y, 1), Blocks.STONE_BRICKS);
+        }
+
+        boolean ignited = PortalIgnition.tryIgnite(helper.getLevel(),
+                helper.absolutePos(new BlockPos(3, 3, 1)));
+        helper.assertTrue(!ignited, "a 1x1 interior is below vanilla's portal bounds");
+        helper.assertTrue(helper.getBlockState(new BlockPos(3, 3, 1)).isAir(),
+                "nothing may be placed in a rejected frame");
         helper.succeed();
     }
 }

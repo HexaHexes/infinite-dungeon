@@ -41,6 +41,11 @@ jobs:
           cache: gradle
 
       - name: Build and run JUnit suite
+        env:
+          # The api resolves from GitHub Packages, and the default GITHUB_TOKEN
+          # cannot read a package owned by another repository - this step needs
+          # the read secret, scoped to Gradle steps only.
+          GITHUB_TOKEN: ${{ secrets.PACKAGE_READ_TOKEN }}
         run: ./gradlew build --no-daemon --stacktrace
 
       # gradlew build reports SUCCESS when there are no test sources at all -
@@ -99,6 +104,8 @@ jobs:
       # still returned BUILD SUCCESSFUL. The success line in the log is the
       # only trustworthy signal, so this step never decides the job outcome.
       - name: Run GameTest server
+        env:
+          GITHUB_TOKEN: ${{ secrets.PACKAGE_READ_TOKEN }}
         run: |
           set +e
           ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log

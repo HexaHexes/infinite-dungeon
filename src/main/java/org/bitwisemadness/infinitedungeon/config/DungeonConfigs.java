@@ -1,5 +1,10 @@
 package org.bitwisemadness.infinitedungeon.config;
 
+import java.util.Objects;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -27,6 +32,7 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.ConfigValue<String> ROOM_EVENT;
     private static final ModConfigSpec.BooleanValue TIME_FLOWS;
     private static final ModConfigSpec.IntValue TIME_FIXED_TICK;
+    private static final ModConfigSpec.ConfigValue<String> PORTAL_FRAME_BLOCK;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -55,6 +61,13 @@ public final class DungeonConfigs {
                 .comment("The tick the clock is held at while flows is off. 6000 is noon,")
                 .comment("13000 is around dusk, 18000 is midnight.")
                 .defineInRange("fixedTick", TimePolicy.DEFAULT.fixedTick(), 0, TimePolicy.DAY_LENGTH - 1);
+        builder.pop();
+        builder.push("portal");
+        PORTAL_FRAME_BLOCK = builder
+                .comment("The block the dungeon portal's frame is built from. Any")
+                .comment("nether-portal-shaped frame of this block ignites into a")
+                .comment("dungeon portal; a nether portal needs obsidian.")
+                .define("frameBlock", "minecraft:stone_bricks");
         builder.pop();
         SPEC = builder.build();
     }
@@ -90,5 +103,20 @@ public final class DungeonConfigs {
     /** The dungeon clock policy as the pure record. */
     public static TimePolicy timePolicy() {
         return new TimePolicy(TIME_FLOWS.get(), TIME_FIXED_TICK.get());
+    }
+
+    /**
+     * The configured portal frame block, resolved against the block registry.
+     * A malformed or unknown id falls back to the stone bricks default, never
+     * to air.
+     */
+    public static Block frameBlock() {
+        String raw = PORTAL_FRAME_BLOCK.get();
+        ResourceLocation id = raw == null ? null : ResourceLocation.tryParse(raw.trim());
+        if (id == null) {
+            return Blocks.STONE_BRICKS;
+        }
+        Block block = BuiltInRegistries.BLOCK.get(id);
+        return block == null || block == Blocks.AIR ? Blocks.STONE_BRICKS : block;
     }
 }

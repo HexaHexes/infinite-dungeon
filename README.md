@@ -13,8 +13,9 @@ alphas it grows:
 - Spawns and bosses tuned to the dungeon's magicule curve, with per-layer
   guardians and minibosses.
 - Safe rooms, monster houses, traps, and loot that scales with depth.
-- Beds never explode, and your spawn point can never be set inside the
-  dungeon dimension - death always follows the dungeon's own exit policy.
+- Beds never explode and you can nap in one; a nap never skips time and never
+  touches your spawn point, which can never be set inside the dungeon
+  dimension - death always follows the dungeon's own exit policy.
 
 The suite's shared mechanics live in [Infinite Dungeon
 API](https://github.com/HexaHexes/infinite-dungeon-api); integration modules for
@@ -42,7 +43,7 @@ config file. Placeholders written as `{token}` in the text are filled in by the
 feature that sends the message.
 
 The time section holds whether the dungeon clock runs (`time.flows`, default
-off - the clock is held at noon) and the tick it is held at while frozen
+on - a plain day/night cycle) and the tick it is held at while frozen
 (`time.fixedTick`, default 6000).
 
 ## Credits

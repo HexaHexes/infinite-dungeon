@@ -5,10 +5,11 @@ package org.bitwisemadness.infinitedungeon.spawn;
  * never settable inside the dungeon dimension.
  *
  * <p>Every path that can set a respawn point consults this policy by dimension
- * id - sleep, the spawn-point command, and the at-death sweep of stored
- * respawn targets. Respawn anchors need no policy: the shipped dimension type
- * already refuses them. Kept free of Minecraft types so the invariant is
- * unit-testable without a game runtime.</p>
+ * id - sleep (which is allowed as flavour and must preserve the stored
+ * respawn), the spawn-point command, and the at-death sweep of stored respawn
+ * targets. Respawn anchors need no policy: the shipped dimension type already
+ * refuses them. Kept free of Minecraft types so the invariant is unit-testable
+ * without a game runtime.</p>
  */
 public final class SpawnPolicy {
 
@@ -19,11 +20,13 @@ public final class SpawnPolicy {
     }
 
     /**
-     * Whether sleep is denied in this dimension. Sleep is denied in the
-     * dungeon: vanilla only sets a respawn position once a player actually
-     * starts sleeping, so denying it at the gate keeps beds decorative.
+     * Whether sleeping in this dimension must preserve the player's stored
+     * respawn target. Vanilla writes the respawn position the moment a player
+     * actually lies down, so in the dungeon the guard snapshots the previous
+     * target first and restores it afterwards: the nap is flavour and touches
+     * nothing.
      */
-    public static boolean deniesSleep(String dimensionId) {
+    public static boolean preservesRespawn(String dimensionId) {
         return isDungeon(dimensionId);
     }
 
@@ -33,9 +36,9 @@ public final class SpawnPolicy {
     }
 
     /**
-     * Whether a respawn target stored in this dimension must be cleared. This
-     * is the safety net: whatever set it - a mod, a datapack - it is wiped at
-     * death, before any respawn could land there.
+     * Whether a respawn target stored in this dimension must be undone. This is
+     * the safety net: whatever set it - a mod, a datapack, a nap - it is put
+     * back the way it was, or cleared if the player had none.
      */
     public static boolean clearsRespawn(String respawnDimensionId) {
         return isDungeon(respawnDimensionId);

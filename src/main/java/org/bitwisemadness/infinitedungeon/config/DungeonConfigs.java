@@ -46,10 +46,10 @@ public final class DungeonConfigs {
         builder.pop();
         builder.push("time");
         TIME_FLOWS = builder
-                .comment("Whether the dungeon clock runs. Off holds the time of day at")
-                .comment("fixedTick, which is the default experience; on gives a plain day/night")
-                .comment("cycle that dims skylight at night. Purely atmospheric either way: beds")
-                .comment("never set a respawn point inside the dimension.")
+                .comment("Whether the dungeon clock runs. The default is a plain day/night")
+                .comment("cycle that dims skylight at night; off holds the time of day at fixedTick.")
+                .comment("Either way: sleeping is flavour only and never sets a spawn point in the")
+                .comment("dungeon.")
                 .define("flows", TimePolicy.DEFAULT.flows());
         TIME_FIXED_TICK = builder
                 .comment("The tick the clock is held at while flows is off. 6000 is noon,")

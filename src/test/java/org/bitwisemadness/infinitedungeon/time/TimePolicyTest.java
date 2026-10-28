@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 class TimePolicyTest {
 
     @Test
-    void shippedDefaultIsFrozenAtNoon() {
-        assertFalse(TimePolicy.DEFAULT.flows());
+    void shippedDefaultFlowsTheClock() {
+        assertTrue(TimePolicy.DEFAULT.flows());
         assertEquals(6000, TimePolicy.DEFAULT.fixedTick());
     }
 

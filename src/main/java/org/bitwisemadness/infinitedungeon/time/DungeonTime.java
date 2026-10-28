@@ -11,10 +11,9 @@ import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
  * <p>The dimension type deliberately carries no {@code fixed_time}: it is
  * baked into a frozen registry object and cannot be toggled at runtime, so the
  * mod owns the clock instead. While {@code time.flows} is false the level's
- * time of day is held at {@code time.fixedTick} after every tick - the shipped
- * frozen-noon default. When a server turns {@code flows} on, this listener
- * stands aside and the clock runs, which is purely atmospheric: the End-style
- * sky render is static, and night only dims skylight.</p>
+ * time of day is held at {@code time.fixedTick} after every tick; the shipped
+ * default lets the clock run, which is purely atmospheric: the End-style sky
+ * render is static, and night only dims skylight.</p>
  */
 public final class DungeonTime {
 

@@ -35,11 +35,11 @@ out through the portal they came in by.
   `has_skylight: true`, `has_ceiling: false`, `natural: false`, `bed_works:
   true`, and no fixed time at the type level. `min_y` and `height` are
   locked; changing them later is destructive to existing worlds.
-- The clock is held by the mod at `time.fixedTick` (default 6000) while
-  `time.flows` is false - the default experience - and a server option can let
-  it run, which is purely atmospheric. Beds never explode; with the
-  spawn-point invariant they never set a respawn point either, so they are
-  decoration in every configuration.
+- The clock is owned by the mod, because the type cannot carry a switchable
+  fixed time: the shipped default lets it run (`time.flows` true, a plain
+  day/night cycle that dims skylight at night), and a server can hold it at
+  `time.fixedTick` instead. Sleeping is allowed as flavour - it never skips
+  time and never leaves a spawn point behind.
 - The base generator is a void generator. The dimension has no floor and no
   ceiling of its own: the only terrain is our structures and Dungeon Crawl's
   dungeon pieces. Anything off a structure is void, and a fall is a real
@@ -110,9 +110,13 @@ out through the portal they came in by.
   they need no whitelist entry (spike finding). Announcements explain
   the lock.
 - Death teleports the player to the dungeon lobby on final death only.
-- No respawn point can ever be set inside the dimension: sleep is denied,
-  respawn anchors already explode, the spawn-point command is refused while
-  standing in the dungeon, and any stored dungeon respawn target is cleared at
+- No respawn point can ever be set inside the dimension: players may nap in
+  beds, but the nap is flavour only - the clock never skips time (with
+  `natural: false` vanilla cannot skip nights, and the mod owns the clock),
+  and the player's stored respawn target is snapshotted before the nap
+  overwrites it and restored the moment the dungeon-bed target appears. The
+  spawn-point command is refused while standing in the dungeon, respawn
+  anchors already explode, and any stored dungeon respawn target is undone at
   death. The lobby teleport is therefore always the respawn path.
   PlayerRevive bleed-out is respected; a successful revive keeps the player
   in the dungeon.
@@ -667,12 +671,12 @@ Resolved during planning:
   scaling, and Tensura and NEB bosses are exempt from the depth factor while
   still scaling with party size.
 - The dimension is The-End-like: a void generator with no floor or ceiling of
-  its own. The clock is held at 6000 by default (`time.flows` false) and can
-  run as a server option; beds are non-explosive decoration.
+  its own. The clock is owned by the mod: it runs by default and can be held
+  at a fixed tick as a server option; players may nap in beds.
 - The player's respawn point is never settable inside the dungeon dimension:
-  sleep is denied there, the spawn-point command is refused, and any stored
-  dungeon respawn is cleared at death, so the lobby teleport is the only
-  respawn path.
+  naps preserve the stored respawn target, the spawn-point command is refused,
+  and any stored dungeon respawn is undone at death, so the lobby teleport is
+  the only respawn path.
 - We ship one dungeon dimension; datapack dimension profiles (and the API's
   code registry) let addons add more with their own limits, pools, and curves.
 - Elite mobs are randomly sized within configured bounds and always at least

@@ -9,7 +9,6 @@ import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
 import org.bitwisemadness.infinitedungeon.time.DungeonTime;
 import org.slf4j.Logger;
-
 /**
  * Infinite Dungeon entry point.
  *
@@ -31,8 +30,11 @@ public final class InfiniteDungeon {
         // fixed time, so a server can let it flow).
         NeoForge.EVENT_BUS.addListener(DungeonTime::onLevelTick);
         // The spawn-point invariant: no player respawn is ever set inside the
-        // dungeon dimension.
+        // dungeon dimension, though players may nap.
         NeoForge.EVENT_BUS.addListener(DungeonSpawnGuard::onCanPlayerSleep);
+        NeoForge.EVENT_BUS.addListener(DungeonSpawnGuard::onPlayerWakeUp);
+        NeoForge.EVENT_BUS.addListener(DungeonSpawnGuard::onPlayerTick);
+        NeoForge.EVENT_BUS.addListener(DungeonSpawnGuard::onPlayerLoggedOut);
         NeoForge.EVENT_BUS.addListener(DungeonSpawnGuard::onCommand);
         NeoForge.EVENT_BUS.addListener(DungeonSpawnGuard::onLivingDeath);
         LOGGER.info("Infinite Dungeon initialized");

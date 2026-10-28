@@ -12,10 +12,10 @@ import org.junit.jupiter.api.Test;
 class SpawnPolicyTest {
 
     @Test
-    void sleepIsDeniedInTheDungeonOnly() {
-        assertTrue(SpawnPolicy.deniesSleep(SpawnPolicy.DUNGEON_DIMENSION));
-        assertFalse(SpawnPolicy.deniesSleep("minecraft:overworld"));
-        assertFalse(SpawnPolicy.deniesSleep(null));
+    void sleepPreservesTheSpawnPointInTheDungeonOnly() {
+        assertTrue(SpawnPolicy.preservesRespawn(SpawnPolicy.DUNGEON_DIMENSION));
+        assertFalse(SpawnPolicy.preservesRespawn("minecraft:overworld"));
+        assertFalse(SpawnPolicy.preservesRespawn(null));
     }
 
     @Test

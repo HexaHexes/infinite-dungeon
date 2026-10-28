@@ -6,6 +6,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
 import org.bitwisemadness.infinitedungeon.time.DungeonTime;
 import org.slf4j.Logger;
 
@@ -29,6 +30,11 @@ public final class InfiniteDungeon {
         // The dungeon clock is held by the mod (the dimension type carries no
         // fixed time, so a server can let it flow).
         NeoForge.EVENT_BUS.addListener(DungeonTime::onLevelTick);
+        // The spawn-point invariant: no player respawn is ever set inside the
+        // dungeon dimension.
+        NeoForge.EVENT_BUS.addListener(DungeonSpawnGuard::onCanPlayerSleep);
+        NeoForge.EVENT_BUS.addListener(DungeonSpawnGuard::onCommand);
+        NeoForge.EVENT_BUS.addListener(DungeonSpawnGuard::onLivingDeath);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

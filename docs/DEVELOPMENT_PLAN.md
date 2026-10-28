@@ -110,6 +110,10 @@ out through the portal they came in by.
   they need no whitelist entry (spike finding). Announcements explain
   the lock.
 - Death teleports the player to the dungeon lobby on final death only.
+- No respawn point can ever be set inside the dimension: sleep is denied,
+  respawn anchors already explode, the spawn-point command is refused while
+  standing in the dungeon, and any stored dungeon respawn target is cleared at
+  death. The lobby teleport is therefore always the respawn path.
   PlayerRevive bleed-out is respected; a successful revive keeps the player
   in the dungeon.
 - The Corpse mod behaves normally: the corpse spawns at the death site with
@@ -665,6 +669,10 @@ Resolved during planning:
 - The dimension is The-End-like: a void generator with no floor or ceiling of
   its own. The clock is held at 6000 by default (`time.flows` false) and can
   run as a server option; beds are non-explosive decoration.
+- The player's respawn point is never settable inside the dungeon dimension:
+  sleep is denied there, the spawn-point command is refused, and any stored
+  dungeon respawn is cleared at death, so the lobby teleport is the only
+  respawn path.
 - We ship one dungeon dimension; datapack dimension profiles (and the API's
   code registry) let addons add more with their own limits, pools, and curves.
 - Elite mobs are randomly sized within configured bounds and always at least

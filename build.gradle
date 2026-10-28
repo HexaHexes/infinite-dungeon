@@ -1,5 +1,6 @@
 plugins {
     id 'java-library'
+    id 'maven-publish'
     id 'net.neoforged.moddev' version '2.0.148'
 }
 
@@ -161,5 +162,41 @@ tasks.matching { it.name == 'runGameTestServer' }.configureEach {
             throw new GradleException("GameTest failed: ${problems.join('; ')} - see ${log}")
         }
         logger.lifecycle("GameTest OK: all ${expectedTests} tests passed")
+    }
+}
+
+// --- Publishing -------------------------------------------------------------
+
+// Every repo in the org publishes its artifact to the org's GitHub Packages
+// Maven registry for alpha, beta and stable releases (see agents/AGENTS.md):
+// release.yml cuts the GitHub release, publish.yml runs on "release published"
+// and drives this block. Credentials come from the workflow token in CI; a
+// local publish can supply gpr.user / gpr.key in ~/.gradle/gradle.properties.
+// Keep the URL pointing at THIS repository - the rename checklist covers it.
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+            artifactId = mod_id
+            pom {
+                name = mod_name
+                description = mod_description
+                licenses {
+                    license {
+                        name = mod_license
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = uri('https://maven.pkg.github.com/HexaHexes/infinite-dungeon')
+            credentials {
+                username = System.getenv('GITHUB_ACTOR') ?: project.findProperty('gpr.user')
+                password = System.getenv('GITHUB_TOKEN') ?: project.findProperty('gpr.key')
+            }
+        }
     }
 }

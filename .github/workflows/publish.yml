@@ -44,6 +44,10 @@ jobs:
 
       - name: Publish to GitHub Packages
         env:
+          # One token cannot both publish this repo's artifact and read the
+          # cross-repo dependency: GITHUB_TOKEN (packages: write) does the
+          # upload, PACKAGE_READ_TOKEN resolves the compile classpath.
+          PACKAGE_READ_TOKEN: ${{ secrets.PACKAGE_READ_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
         run: ./gradlew publish --no-daemon --stacktrace

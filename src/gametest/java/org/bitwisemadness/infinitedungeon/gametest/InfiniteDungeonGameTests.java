@@ -1,6 +1,7 @@
 package org.bitwisemadness.infinitedungeon.gametest;
 
 import java.util.Map;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
@@ -79,6 +80,29 @@ public final class InfiniteDungeonGameTests {
 
         DungeonAnnouncements.send(player, Announcement.ADVENTURE_LOCK);
         DungeonAnnouncements.broadcast(helper.getLevel(), Announcement.BOSS_AWAKENING);
+        helper.succeed();
+    }
+
+    /**
+     * The safety net of the spawn-point invariant: a respawn position stored
+     * in the dungeon is cleared the moment the player dies. The mock player
+     * makes this exercisable in the harness because the net keys off the
+     * stored respawn dimension, not where the death happens.
+     */
+    @GameTest(template = "empty")
+    public static void dungeon_respawn_is_cleared_at_death(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        helper.assertTrue(player != null, "a mock server player must be available");
+
+        player.setRespawnPosition(DungeonDimensions.LEVEL,
+                helper.absolutePos(BlockPos.ZERO), 0.0F, true, false);
+        helper.assertTrue(DungeonDimensions.LEVEL.equals(player.getRespawnDimension()),
+                "the dungeon respawn must be stored before death");
+
+        player.kill();
+
+        helper.assertTrue(!DungeonDimensions.LEVEL.equals(player.getRespawnDimension()),
+                "a stored dungeon respawn must be cleared at death");
         helper.succeed();
     }
 }

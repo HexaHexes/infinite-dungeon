@@ -13,6 +13,8 @@ alphas it grows:
 - Spawns and bosses tuned to the dungeon's magicule curve, with per-layer
   guardians and minibosses.
 - Safe rooms, monster houses, traps, and loot that scales with depth.
+- Beds never explode, and your spawn point can never be set inside the
+  dungeon dimension - death always follows the dungeon's own exit policy.
 
 The suite's shared mechanics live in [Infinite Dungeon
 API](https://github.com/HexaHexes/infinite-dungeon-api); integration modules for

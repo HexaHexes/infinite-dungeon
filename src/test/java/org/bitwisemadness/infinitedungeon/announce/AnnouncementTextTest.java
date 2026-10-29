@@ -36,7 +36,8 @@ class AnnouncementTextTest {
                 AnnouncementTexts.ADVENTURE_LOCK,
                 AnnouncementTexts.ANCHOR_FALLBACK,
                 AnnouncementTexts.BOSS_AWAKENING,
-                AnnouncementTexts.ROOM_EVENT}) {
+                AnnouncementTexts.ROOM_EVENT,
+                AnnouncementTexts.PORTAL_NOT_ALLOWED}) {
             for (int i = 0; i < text.length(); i++) {
                 assertTrue(text.charAt(i) < 128,
                         "announcement texts must stay ASCII-only: " + text);

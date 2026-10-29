@@ -21,6 +21,9 @@ public final class AnnouncementTexts {
     /** Broadcast when a room event begins. */
     public static final String ROOM_EVENT = "Something stirs in this room.";
 
+    /** Shown when a dungeon portal may not be built in this dimension. */
+    public static final String PORTAL_NOT_ALLOWED = "This dimension does not accept dungeon portals.";
+
     private AnnouncementTexts() {
     }
 }

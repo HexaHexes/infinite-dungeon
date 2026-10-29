@@ -4,11 +4,16 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import org.bitwisemadness.infinitedungeon.announce.Announcement;
+import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 
 /**
@@ -55,6 +60,16 @@ public final class PortalIgnition {
         if (!event.getItemStack().is(net.minecraft.world.item.Items.FLINT_AND_STEEL)) {
             return;
         }
+        // Dimension gate first: no portal may be built here at all, so the
+        // whole interaction is refused and the player is told why.
+        if (!DungeonConfigs.portalBuildableDimensions()
+                .allows(event.getLevel().dimension().location().toString())) {
+            event.setCanceled(true);
+            event.setCancellationResult(
+                    InteractionResult.sidedSuccess(event.getLevel().isClientSide));
+            notifyRefusal(event.getEntity());
+            return;
+        }
         if (!event.getLevel().getBlockState(event.getPos()).is(DungeonConfigs.frameBlock())) {
             return;
         }
@@ -66,14 +81,26 @@ public final class PortalIgnition {
 
     /**
      * Fire an entity placed inside a frame: ignite in place, replacing the
-     * fire with portal blocks.
+     * fire with portal blocks - unless the dimension allows no portal.
      */
     public static void onEntityPlace(BlockEvent.EntityPlaceEvent event) {
         if (!event.getPlacedBlock().is(Blocks.FIRE)) {
             return;
         }
         if (event.getLevel() instanceof Level level) {
+            if (!DungeonConfigs.portalBuildableDimensions()
+                    .allows(level.dimension().location().toString())) {
+                notifyRefusal(event.getEntity());
+                return;
+            }
             tryIgnite(level, event.getPos());
+        }
+    }
+
+    /** The shared refusal message: also reused by the construction toggle. */
+    private static void notifyRefusal(Entity entity) {
+        if (entity instanceof ServerPlayer player) {
+            DungeonAnnouncements.send(player, Announcement.PORTAL_NOT_ALLOWED);
         }
     }
 

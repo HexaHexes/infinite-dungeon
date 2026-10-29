@@ -7,6 +7,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import org.bitwisemadness.infinitedungeon.client.PortalTint;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
@@ -44,6 +45,11 @@ public final class InfiniteDungeon {
         NeoForge.EVENT_BUS.addListener(DungeonLock::onDimensionChange);
         NeoForge.EVENT_BUS.addListener(DungeonLock::onLoggedIn);
         NeoForge.EVENT_BUS.addListener(DungeonLock::onBlockBreak);
+        // Death policy: a dungeon death continues at the lobby - the first
+        // layer. The marker attachment rides through respawn.
+        LobbyReturn.register(modBus);
+        NeoForge.EVENT_BUS.addListener(LobbyReturn::onDeath);
+        NeoForge.EVENT_BUS.addListener(LobbyReturn::onRespawn);
         // The dungeon clock is held by the mod (the dimension type carries no
         // fixed time, so a server can let it flow).
         NeoForge.EVENT_BUS.addListener(DungeonTime::onLevelTick);

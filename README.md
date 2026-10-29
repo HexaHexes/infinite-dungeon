@@ -60,6 +60,11 @@ The portal section holds where portals may be built: `portal.buildableDimensions
 `portal.buildableDimensions.list`, which defaults to the overworld and the
 dungeon. Travel through an already-formed portal is never gated.
 
+A separate **client** config file holds the portal tint: `portal.tint`, six
+hex digits (`#` optional), applied to the portal's rendering over the vanilla
+nether portal texture. The default `FFFFFF` leaves the texture exactly as it
+ships.
+
 ## Credits
 
 - Built on [NeoForge](https://neoforged.net/).

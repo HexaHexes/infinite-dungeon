@@ -5,6 +5,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import org.bitwisemadness.infinitedungeon.client.PortalTint;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
@@ -29,6 +30,9 @@ public final class InfiniteDungeon {
         // The announcement texts are config-driven; the config file is owned
         // and registered here, and later features add their entries to it.
         DungeonConfigs.register(container);
+        // The portal tint renders client-side; registering the CLIENT spec
+        // here is safe on both distributions (it is only loaded on the client).
+        PortalTint.register(container);
         PortalBlocks.register(modBus);
         // The per-player entry anchor is a data attachment: registered here,
         // persisted with the player.

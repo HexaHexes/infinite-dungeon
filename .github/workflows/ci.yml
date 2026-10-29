@@ -13,6 +13,12 @@ name: CI
 # checkout. Mod repos derived from it resolve their dependencies through
 # CurseMaven coordinates (never gitignored libs/ or testmods/ folders) - keep
 # it that way or CI cannot run.
+#
+# The junit job also carries a datapack drift gate: where a repo commits
+# generated output at src/generated/resources, runData must reproduce it
+# byte-identically and the jar must ship every file. It activates on that
+# directory's presence, so this template and non-datagen derivatives skip
+# with a notice (see issue #20).
 
 on:
   pull_request:
@@ -41,11 +47,6 @@ jobs:
           cache: gradle
 
       - name: Build and run JUnit suite
-        env:
-          # The api resolves from GitHub Packages, and the default GITHUB_TOKEN
-          # cannot read a package owned by another repository - this step needs
-          # the read secret, scoped to Gradle steps only.
-          GITHUB_TOKEN: ${{ secrets.PACKAGE_READ_TOKEN }}
         run: ./gradlew build --no-daemon --stacktrace
 
       # gradlew build reports SUCCESS when there are no test sources at all -
@@ -77,6 +78,72 @@ jobs:
           fi
           echo "JUnit suite ran $TOTAL tests, all passing."
 
+      # Datapack drift gate (issue #20). Self-adapting on the org convention:
+      # repos that ship generated output commit it at src/generated/resources,
+      # and only they have a runData task - so the directory's presence is the
+      # activation signal and this template (and every non-datagen derivative)
+      # skips with a notice instead of failing on a task that does not exist.
+      # The checks themselves are the ones proven green on
+      # tensura-iaf-growth's build job and tensura-iss-growth#18.
+      - name: Regenerate the datapack and fail on drift
+        run: |
+          set -euo pipefail
+
+          if [ ! -d src/generated/resources ]; then
+            echo "::notice::No committed generated output at src/generated/resources - datapack drift gate does not apply."
+            exit 0
+          fi
+
+          ./gradlew runData --no-daemon --stacktrace
+
+          COUNT=$(find src/generated/resources/data -name '*.json' 2>/dev/null | wc -l)
+          echo "generated datapack files: $COUNT"
+          if [ "$COUNT" -le 0 ]; then
+            echo "::error::Datagen wrote no datapack files, so an unchanged tree would prove nothing."
+            exit 1
+          fi
+
+          STATUS=$(git status --porcelain -- src/generated/resources)
+          if [ -n "$STATUS" ]; then
+            echo "$STATUS"
+            echo "::error::src/generated/resources is stale. Run ./gradlew runData and commit the result."
+            exit 1
+          fi
+
+          echo "Committed datapack is byte-identical to the datagen output."
+
+      # The datapack lives inside the jar, not beside it. Missing it would
+      # ship a mod that loads and then does nothing; path sets are asserted by
+      # count so a template-derived repo needs no edits here.
+      - name: Assert the jar ships the datapack
+        run: |
+          set -euo pipefail
+
+          if [ ! -d src/generated/resources ]; then
+            echo "::notice::No committed generated output - jar assertion does not apply."
+            exit 0
+          fi
+
+          MOD_ID=$(grep '^mod_id=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')
+          JAR=$(ls build/libs/"$MOD_ID"-*.jar | head -1)
+          echo "jar: $JAR"
+
+          # Subset, not count equality: a repo may also hand-author data/**
+          # files that belong in the jar alongside the generated ones
+          # (tiered-echoes ships three), and the failure that matters is a
+          # GENERATED file left out of the jar.
+          unzip -l "$JAR" | awk '{print $NF}' | grep '^data/.*\.json$' | sort > jar_files.txt
+          (cd src/generated/resources && find data -name '*.json' | sort) > disk_files.txt
+          MISSING=$(comm -23 disk_files.txt jar_files.txt)
+
+          if [ -n "$MISSING" ]; then
+            echo "::error::Generated datapack files missing from the jar:"
+            echo "$MISSING"
+            exit 1
+          fi
+
+          echo "Jar ships all $(wc -l < disk_files.txt) generated datapack files."
+
       - name: Upload jar
         if: always()
         uses: actions/upload-artifact@v7
@@ -105,8 +172,6 @@ jobs:
       # still returned BUILD SUCCESSFUL. The success line in the log is the
       # only trustworthy signal, so this step never decides the job outcome.
       - name: Run GameTest server
-        env:
-          GITHUB_TOKEN: ${{ secrets.PACKAGE_READ_TOKEN }}
         run: |
           set +e
           ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log
@@ -166,6 +231,7 @@ jobs:
       - name: SpotBugs
         env:
           PACKAGE_READ_TOKEN: ${{ secrets.PACKAGE_READ_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PACKAGE_READ_TOKEN || github.token }}
         run: ./gradlew spotbugsMain --no-daemon --stacktrace
 
       # Report-only during the grace period: violations print in the log
@@ -174,6 +240,7 @@ jobs:
       - name: Spotless check
         env:
           PACKAGE_READ_TOKEN: ${{ secrets.PACKAGE_READ_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PACKAGE_READ_TOKEN || github.token }}
         run: ./gradlew spotlessCheck --no-daemon --stacktrace
         continue-on-error: true
 

@@ -403,11 +403,11 @@ gated on ModList presence:
 | `apotheosis` | `apotheosis-313970:8826922` (plus `placebo-283644:9153039`, `apothic-attributes-898963:9006294`) |
 | `lootr` | `lootr-361276:8968561` |
 | `opac` | `open-parties-and-claims-636608:9221991` |
-| `ftbTeams` | soft-dep, not in pack, coordinate at wiring |
+| `ftbTeams` | soft-dep, not in pack; `dev.ftb.mods:ftb-teams-neoforge:2101.1.11` from maven.ftb.dev (CF 404468 file 8724782), needs architectury + ftblibrary |
 | `corpse` | `corpse-316582:9188333` (plus `despawnWhenEmpty`) |
 | `playerRevive` | `playerrevive-266890:8057637` |
 | `xaero` | `xaeroworldmap-317780:9067277`, `xaerominimap-263420:9067173` |
-| `journeymap` | soft-dep only |
+| `journeymap` | soft-dep only; API `info.journeymap:journeymap-api-neoforge:2.0.0-1.21.1` from maven.blamejared (compileOnly, jarjar'ed into JM at runtime; JM 6.0.x = CF 32274 file 8923668) |
 | `mowziesmobs` | `mowziesmobs-250498:7760267` |
 | `bossesrise` | `block_factorys_bosses-1314084:8123167` |
 | `cultofazazel` | `cultofazazelneoforge-1571005:8655331` |
@@ -575,9 +575,13 @@ Phase 0 spike checklist:
 - [x] PlayerRevive event ordering versus final death (done: bleed-out is not
       death; `PlayerRevivedEvent` cancels a pending lobby teleport, and real
       death flows through the vanilla death event)
-- [ ] Xaero waypoint filter API (partly done: no public API; triggers are
-      dimension, biome, and waystone arrival, and the server-callable entries
-      are the title commands)
+- [x] Xaero waypoint filter API (done: no public API - no api package, no
+      events, no waypoint packets; waypoint data is client-local and the
+      `serverWaypoints` field is a world-folder bucket, not a sync channel;
+      the one supported ingress is Xaero's own Waystones compat mirror,
+      config-gated by origin; `layer_only` must be source-side through
+      waystones or client reflection - decision in issue #33, findings on
+      issue #5)
 - [x] Tensura attribute names (AP, MP), attribute tag availability,
       per-chunk magicule concentration API (read side and write side), and
       environment hooks (done: AP = aura, MP = magicule, EP = stored energy on
@@ -598,14 +602,74 @@ Phase 0 spike checklist:
 - [ ] Skill Study Books item ids and skill encoding for loot tables
 - [ ] Tensura: All the Adventure contract pools, events, and dangerous
       encounter summon entrypoints
-- [ ] Gateways activation inside a custom dimension and wave spawner
-      interaction with spawn filtering
-- [ ] FTB Teams and Journeymap APIs (soft-dep wiring)
-- [ ] Fallen Adventurers blockstate properties (MCreator blocks)
-- [ ] Sophisticated Storage versus Lootr interop (expected: decoration only)
-- [ ] Chunky pregeneration determinism and throughput measurement
-- [ ] Distant Horizons LOD rendering at full dimension height
-- [ ] Living Horizons entity rendering at LOD distance (third-party bosses)
+- [x] Gateways activation inside a custom dimension and wave spawner
+      interaction with spawn filtering (done: `GatePearlItem.useOn` carries no
+      dimension check, so arenas open in the dungeon; waves spawn via
+      `addFreshEntityWithPassengers` and the jar never references
+      `MobSpawnEvent`, so the PositionCheck pool filter and gateway waves
+      cannot interfere in either direction; `GateEvent` Opened / WaveStarted /
+      WaveEnd / Completed are the challenge-room hooks of issue #49, and gates
+      are datapack JSON under `data/gateways/gateways/` - issue #7)
+- [x] FTB Teams and Journeymap APIs (soft-dep wiring) (done: FTB Teams
+      2101.1.11 ships its API inside the jar - `FTBTeamsAPI.api().getManager()
+      .getTeamForPlayerID` resolves the party, size = `Team.getMembers()`,
+      leader = `getOwner()`, change events on the Architectury bus - all
+      references confined to one class gated on ModList, else the resolver
+      skips to vanilla; Journeymap 6.0.x carries API v2.0.0 at
+      `info.journeymap:journeymap-api-neoforge:2.0.0-1.21.1` from
+      maven.blamejared (compileOnly, never shade) with a SERVER-side waypoint
+      CRUD API plus a cancellable client WaypointEvent, so `layer_only` is
+      implementable with clean no-op degradation - issues #8 and #9)
+- [x] Fallen Adventurers blockstate properties (MCreator blocks) (done: all
+      49 skeleton blocks are single-property - `facing` north/east/south/west
+      mapped to y rotations 0/90/180/270 and nothing else anywhere, no
+      multipart and no uv_lock - so generation sets one horizontal facing and
+      the blockstate file handles the rest; the 51 block loot tables are these
+      49 plus two modelless `_no_spawn` blocks that stay out of decoration
+      palettes - issue #10)
+- [x] Sophisticated Storage versus Lootr interop (expected: decoration only)
+      (confirmed: zero Lootr references in Sophisticated Storage or Core, and
+      Lootr's `ILootrBlockEntityConverter` is never registered by SS, so SS
+      containers are ordinary block entities that per-player instancing
+      skips - SS stays decoration only and dungeon loot stays in vanilla
+      containers, which Lootr instances by default; flag for issue #53:
+      confirm our dimension converts by default, Lootr's dimension lists
+      default empty - issue #11)
+- [x] Chunky pregeneration determinism and throughput measurement (done:
+      coordinate pinned - Curse 485681 file 6383261, Chunky-NeoForge-1.4.23,
+      mod id chunky, no runtime deps; `/chunky world infinite_dungeon:dungeon`
+      is source-verified; Chunky generates nothing itself - it drives the
+      vanilla chunk pipeline through a load ticket, skips existing full chunks
+      untouched, and never ticks generated chunks by default, so same seed
+      plus same pack equals identical chunks; the verification protocol on
+      issue #12 compares SHA256 of `r.X.Z.mca` under the dungeon's
+      `dimensions/infinite_dungeon/dungeon/region` between a pregen world and
+      an organic world, escalating to volatile-field-normalized NBT comparison
+      on raw mismatch; throughput method pinned - cps from `/chunky progress`,
+      budget equals `ceil(R/8)^2 / cps` with a 1.5-2x safety factor - the
+      NeoForge dungeon number is the timed run left to the Wave 7 pack docs -
+      issue #12)
+- [x] Distant Horizons LOD rendering at full dimension height (done: DH
+      3.3.3-1.21.1 generates LODs in custom dimensions automatically -
+      denylist-only config with `ignoredDimensionCsv` empty - and reads world
+      min/max Y dynamically from LevelHeightAccessor, so the 2048-high open
+      dimension is supported; three known visual regressions are recorded on
+      issue #13 with decisions pending: barrier is ignored by default so the
+      ceiling is invisible at LOD (removing it renders a red band instead),
+      draw-time colour multipliers are not sampled so the portal tint is lost
+      at LOD unless baked into textures or supplied via the DH API
+      color-override event, and a sealed ceiling may cave-cull below y60; the
+      in-game protocol is on the issue)
+- [x] Living Horizons entity rendering at LOD distance (third-party bosses)
+      (premise corrected on issue #14: no such Distant Horizons addon exists -
+      the Curse project of that name is an unrelated cosmetic mod with no
+      1.21.1 builds; the real mod is LOD Entity Rendering, Modrinth EUtzxmSy
+      and CF 1058409, released for 1.20.1 only with an unreleased 1.21.1
+      branch, and it renders flat average-coloured boxes with a black fallback
+      rather than models - GeckoLib bosses need an
+      `average_colors/entity/*.json` resource pack and box scaling follows the
+      server bounding box, which Tensura scaling leaves unverified; pursuing
+      it would be a new feature issue)
 
 Delivery is one feature per PR and per alpha bump. The suite is built in
 dependency order (section 19): the API library first, then the standalone

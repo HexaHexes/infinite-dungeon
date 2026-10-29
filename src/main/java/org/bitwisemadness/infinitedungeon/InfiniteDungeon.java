@@ -7,6 +7,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import org.bitwisemadness.infinitedungeon.client.PortalTint;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
@@ -50,6 +51,9 @@ public final class InfiniteDungeon {
         LobbyReturn.register(modBus);
         NeoForge.EVENT_BUS.addListener(LobbyReturn::onDeath);
         NeoForge.EVENT_BUS.addListener(LobbyReturn::onRespawn);
+        // Corpse cleanup: an emptied corpse is swept from the dungeon floors
+        // while the integration config allows it (ModList-gated inside).
+        NeoForge.EVENT_BUS.addListener(CorpseCleanup::onLevelTick);
         // The dungeon clock is held by the mod (the dimension type carries no
         // fixed time, so a server can let it flow).
         NeoForge.EVENT_BUS.addListener(DungeonTime::onLevelTick);

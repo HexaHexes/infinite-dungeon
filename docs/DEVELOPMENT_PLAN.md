@@ -143,7 +143,8 @@ out through the portal they came in by.
   death. The lobby teleport is therefore always the respawn path.
 - The Corpse mod behaves normally: the corpse spawns at the death site with
   the inventory and is reclaimed by walking back.
-  `integrations.corpse.despawnWhenEmpty` is configurable.
+  `integrations.corpse.despawnWhenEmpty` is configurable, and the mod's own
+  sweep of emptied corpses runs in the dungeon only.
 - Falling into the void is a normal death and follows the same path: Corpse
   keeps the inventory, PlayerRevive bleed-out is respected, and the lobby
   teleport happens on final death only.

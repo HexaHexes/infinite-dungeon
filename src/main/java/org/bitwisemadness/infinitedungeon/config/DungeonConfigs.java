@@ -42,6 +42,7 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.ConfigValue<List<? extends String>> PORTAL_BUILDABLE_LIST;
     private static final ModConfigSpec.BooleanValue PORTAL_ALLOW_CONSTRUCTION;
     private static final ModConfigSpec.ConfigValue<List<? extends String>> ADVENTURE_BREAKABLE;
+    private static final ModConfigSpec.BooleanValue CORPSE_DESPAWN_WHEN_EMPTY;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -124,6 +125,15 @@ public final class DungeonConfigs {
                                 && org.bitwisemadness.infinitedungeonapi.data.ResourceRef
                                         .isValidLocation(text.trim()));
         builder.pop();
+        builder.push("integrations");
+        builder.push("corpse");
+        CORPSE_DESPAWN_WHEN_EMPTY = builder
+                .comment("In the dungeon, remove a corpse once its inventory has been")
+                .comment("fully reclaimed (Corpse's isEmpty), so emptied corpses do not")
+                .comment("litter the floors. Off leaves every corpse in place.")
+                .define("despawnWhenEmpty", true);
+        builder.pop();
+        builder.pop();
         SPEC = builder.build();
     }
 
@@ -205,5 +215,10 @@ public final class DungeonConfigs {
     /** Blocks still breakable inside the dungeon under the adventure lock. */
     public static java.util.Set<String> adventureLockBreakableBlocks() {
         return new HashSet<>(ADVENTURE_BREAKABLE.get());
+    }
+
+    /** Whether a fully reclaimed corpse is swept from the dungeon (section 5). */
+    public static boolean corpseDespawnWhenEmpty() {
+        return CORPSE_DESPAWN_WHEN_EMPTY.get();
     }
 }

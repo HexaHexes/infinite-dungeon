@@ -19,7 +19,8 @@ alphas it grows:
 - Safe rooms, monster houses, traps, and loot that scales with depth.
 - Inside the dungeon you play in adventure mode: block breaking is refused
   except for blocks a config whitelist allows, and your gamemode is restored
-  the moment you leave.
+  the moment you leave. Dying in the dungeon sends you to its lobby - the
+  first layer - rather than your ordinary respawn point.
 - Beds never explode and you can nap in one; a nap never skips time and never
   touches your spawn point, which can never be set inside the dungeon
   dimension - death always follows the dungeon's own exit policy.

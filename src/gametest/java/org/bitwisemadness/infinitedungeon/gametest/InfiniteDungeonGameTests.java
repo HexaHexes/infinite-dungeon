@@ -20,6 +20,7 @@ import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
 import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
+import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchor;
@@ -296,6 +297,25 @@ public final class InfiniteDungeonGameTests {
                 "release must restore the gamemode exactly");
         helper.assertTrue(!DungeonLock.holdsSnapshot(player),
                 "release must forget the snapshot");
+        helper.succeed();
+    }
+
+    /**
+     * The lobby-return marker: set on a dungeon death, carried through respawn
+     * (the attachment copies on death), consumed afterwards. The teleport
+     * itself needs the dungeon level, which the harness cannot host.
+     */
+    @GameTest(template = "empty")
+    public static void lobby_marker_marks_and_clears(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        helper.assertTrue(player != null, "a mock server player must be available");
+        helper.assertTrue(!LobbyReturn.holdsMarker(player), "a fresh player carries no marker");
+
+        LobbyReturn.mark(player);
+        helper.assertTrue(LobbyReturn.holdsMarker(player), "a dungeon death must be marked");
+
+        LobbyReturn.clear(player);
+        helper.assertTrue(!LobbyReturn.holdsMarker(player), "the marker must be consumed at respawn");
         helper.succeed();
     }
 }

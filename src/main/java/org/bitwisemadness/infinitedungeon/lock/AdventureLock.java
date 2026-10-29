@@ -18,7 +18,7 @@ public final class AdventureLock {
 
     /** Whether the lock governs this dimension: the dungeon and nothing else. */
     public static boolean applies(String dimensionId) {
-        return SpawnPolicy.DUNGEON_DIMENSION.equals(dimensionId);
+        return SpawnPolicy.isDungeon(dimensionId);
     }
 
     /**

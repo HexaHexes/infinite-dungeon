@@ -30,6 +30,10 @@ public final class EntryAnchors {
     public static final Supplier<AttachmentType<EntryAnchor>> ENTRY_ANCHOR =
             TYPES.register("entry_anchor", () -> AttachmentType.builder(EntryAnchor::empty)
                     .serialize(EntryAnchor.CODEC)
+                    // Anchors persist with the player across sessions AND
+                    // deaths: dying in the dungeon must not take your way home
+                    // away from you, or the lobby return would strand you.
+                    .copyOnDeath()
                     .build());
 
     private EntryAnchors() {

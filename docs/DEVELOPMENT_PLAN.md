@@ -57,6 +57,10 @@ out through the portal they came in by.
   `floorsPerLayerMin` and `floorsPerLayerMax` are configurable.
 - Floors stack vertically within a layer; the band height is derived to fit
   the dimension.
+- The first layer is special: of fixed construction - the lobby players arrive
+  in and die back into - and exempt from the seed-derived floor rule above;
+  layers above it follow that rule. (Wave 1's fixed, build-on-arrival entrance
+  point is today's stand-in for this lobby; Wave 2's lobby supersedes it.)
 - Depth is position-derivable everywhere: depth maps to
   (layerIndex, floorInLayer) as a pure function of position and seed. Loot,
   spawns, waypoints, difficulty, and magicule concentration all derive from
@@ -122,7 +126,13 @@ out through the portal they came in by.
   player-placeable blocks. Corpse corpses are entities, not blocks, so
   they need no whitelist entry (spike finding). Announcements explain
   the lock.
-- Death teleports the player to the dungeon lobby on final death only.
+- Death teleports the player to the dungeon lobby on final death only, and the
+  lobby is the first layer of the dungeon - special, of fixed construction.
+  PlayerRevive bleed-out is respected; a successful revive keeps the player in
+  the dungeon. That integration is deferred indefinitely (issue #25), so until
+  it lands every death is final and this trigger reads "on death in the
+  dungeon"; the guard point is the death hook, so narrowing it later is a
+  one-branch change.
 - No respawn point can ever be set inside the dimension: players may nap in
   beds, but the nap is flavour only - the clock never skips time (with
   `natural: false` vanilla cannot skip nights, and the mod owns the clock),
@@ -131,8 +141,6 @@ out through the portal they came in by.
   spawn-point command is refused while standing in the dungeon, respawn
   anchors already explode, and any stored dungeon respawn target is undone at
   death. The lobby teleport is therefore always the respawn path.
-  PlayerRevive bleed-out is respected; a successful revive keeps the player
-  in the dungeon.
 - The Corpse mod behaves normally: the corpse spawns at the death site with
   the inventory and is reclaimed by walking back.
   `integrations.corpse.despawnWhenEmpty` is configurable.
@@ -698,6 +706,11 @@ Resolved during planning:
   overworld and the dungeon itself), matching the spawn-safety module's
   overworld whitelist: no entrances sprout in the Nether, the End, or another
   mod's dimension. The gate covers construction only; travel is never gated.
+- The dungeon's lobby is its first layer, of fixed construction (user ruling):
+  death returns players there, the seed-derived floor rules apply to the layers
+  above it, and Wave 2's fixed lobby replaces the Wave-1 arrival placeholder.
+  PlayerRevive integration is deferred indefinitely (#25), so the lobby trigger
+  currently applies to every death in the dungeon.
 - We ship one dungeon dimension; datapack dimension profiles (and the API's
   code registry) let addons add more with their own limits, pools, and curves.
 - Elite mobs are randomly sized within configured bounds and always at least

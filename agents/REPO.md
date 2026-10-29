@@ -19,8 +19,8 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
   and untoggleable per the plan's decision record.
 - Optional: everything else, through the suite's integration modules.
 
-**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (9 tests).
-`expectedTests = 9` in `build.gradle` must match the `@GameTest` count.
+**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (10 tests).
+`expectedTests = 10` in `build.gradle` must match the `@GameTest` count.
 
 **Remote:** `github.com/HexaHexes/infinite-dungeon` (public, default branch
 `main`).

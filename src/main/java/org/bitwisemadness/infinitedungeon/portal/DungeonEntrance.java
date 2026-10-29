@@ -28,6 +28,13 @@ public final class DungeonEntrance {
     /** The block a player materialises in: the portal's lower-left interior cell. */
     private static final BlockPos ARRIVAL = new BlockPos(1, 65, 0);
 
+    /**
+     * Where the lobby return lands: on the platform in front of the portal,
+     * never inside a portal cell - a landing there would read as an exit on
+     * the cooldown's expiry.
+     */
+    private static final BlockPos LOBBY_SPOT = new BlockPos(1, 64, 1);
+
     private DungeonEntrance() {
     }
 
@@ -46,5 +53,14 @@ public final class DungeonEntrance {
             }
         }
         return PortalFrameBuilder.build(level, ARRIVAL, Direction.Axis.X) ? ARRIVAL : null;
+    }
+
+    /**
+     * The lobby return's landing spot: the entrance must exist first, so this
+     * builds it on demand and returns where a returning player lands beside
+     * the portal - or null when the space is blocked.
+     */
+    public static BlockPos lobby(ServerLevel level) {
+        return ensure(level) == null ? null : LOBBY_SPOT;
     }
 }

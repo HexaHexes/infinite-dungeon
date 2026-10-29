@@ -44,7 +44,8 @@ public final class SpawnPolicy {
         return isDungeon(respawnDimensionId);
     }
 
-    private static boolean isDungeon(String dimensionId) {
+    /** Whether the dimension id is the dungeon. */
+    public static boolean isDungeon(String dimensionId) {
         return DUNGEON_DIMENSION.equals(dimensionId);
     }
 }

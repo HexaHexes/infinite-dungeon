@@ -18,7 +18,12 @@ Before starting any new development in this repo:
 
 1. **Open issues for the work.** Every piece of work begins as an issue - or
    several, for complex tasks - detailing what needs to be done; the PR
-   references them. No tracking issue, no work.
+   references them. No tracking issue, no work. Use the issue forms in
+   `.github/ISSUE_TEMPLATE/`: **Bug** (one bug per issue, with reproduction,
+   severity and regression-test requirements), **Feature** (one verifiable
+   outcome per issue, with upstream evidence and an acceptance gate) and
+   **Investigation** (resolve an unknown first - closes only with verified
+   findings and the follow-up implementation issues already created).
 2. **Check rule freshness.** Compare this repo's `agents/AGENTS.md` against the
    template's and reconcile any drift before touching code - rules changed in
    the template must have been pulled here first.
@@ -176,14 +181,42 @@ file into this repo verbatim as its own PR - never re-type or patch it by hand.
   `protect-main` required checks (with `junit`/`gametest`/`version-bump`). The
   build step carries the step-scoped `PACKAGE_READ_TOKEN` so a derived repo
   resolving cross-repo Packages works on a cold cache.
-- `version-bump.yml` opens an isolated version-bump PR (only the version file changes).
+- `ci.yml` also runs a **static** job: SpotBugs (`spotbugsMain`, `effort=MAX`)
+  and Spotless (minimal profile - trailing whitespace, final newline,
+  import order on `src/*/java` only; no formatter, so no repo-wide rewrites).
+  Both are **report-only during the grace period**: SpotBugs runs with
+  `ignoreFailures`, Spotless with `continue-on-error` in CI and
+  `enforceCheck false` in Gradle - so neither the `static` job nor the junit
+  job's `./gradlew build` can fail on findings. The SpotBugs HTML report is
+  uploaded as the `spotbugs-report` artifact every run. Gating turns on in a
+  follow-up once the finding volume is known (0 on the template at adoption);
+  that same follow-up runs one `spotlessApply` per repo to clear the baseline
+  and flips the four switches. The tools are pinned in `build.gradle`
+  (`com.github.spotbugs` 6.5.x, `com.diffplug.spotless` 8.x).
+- `dependency-submission.yml` + `dependency-review.yml` form the **dependency
+  review** gate: submission pushes a Gradle dependency snapshot on PRs and
+  default-branch pushes (Gradle cannot be parsed statically and no lockfiles
+  are committed, so review without submission would compare nothing and pass
+  vacuously - snapshots on default-branch pushes are also what makes the diff
+  meaningful: pre-existing advisories sit in base and never block, only
+  *introduced* vulnerable or license-incompatible dependencies do), and the
+  review fails a PR on those findings, waiting up to 10 min for the head
+  snapshot (`retry-on-snapshot-warnings`). Defaults only - no license
+  allow/deny lists yet; that policy is a separate decision. Free on public
+  repos. **Required in `protect-main`** alongside junit/gametest/version-bump/
+  analyze/static (gated after the post-transition observation, template issue
+  #43); the only exclusions are data-only repos where the workflows do not
+  exist (they must never require a check that can never run).- `version-bump.yml` opens an isolated version-bump PR (only the version file changes).
 - `release.yml` publishes a GitHub release for `v<mod_version>` on a push to the default
   branch when that release does not exist yet, attaching the jar the build produced. The
   jar name is read from `mod_id`, so a rename needs no edit here. Pre-releases are
-  opt-in: an `-alpha`/`-beta` version publishes only when the repository variable
-  `ALPHA_RELEASES` is `true`, otherwise it is skipped with a log line rather than a
-  failure. Promoted from `tensura-iaf-growth`, the org's reference implementation, and
-  its release notes are player-facing - rewrite them when promoting the file into a mod.
+  enabled by default: an `-alpha`/`-beta` version publishes on the first push
+  that would create it (the default lives in release.yml as
+  `${ALPHA_RELEASES:-true}` - repository variables cannot ship in template
+  content, so the file carries it); set `ALPHA_RELEASES` to `false` on a repo
+  to opt out, which skips with a log line rather than a failure. Promoted from
+  `tensura-iaf-growth`, the org's reference implementation, and its release
+  notes are player-facing - rewrite them when promoting the file into a mod.
 - `publish.yml` publishes the jar as a Maven artifact to the org's GitHub Packages
   registry whenever a GitHub release is published, via the `maven-publish` block in
   `build.gradle` (artifactId is `mod_id`; pom metadata comes from `gradle.properties`;

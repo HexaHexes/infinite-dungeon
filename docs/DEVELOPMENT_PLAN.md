@@ -590,8 +590,16 @@ Phase 0 spike checklist:
       needs an in-game sample)
 - [ ] Tensura unit-alignment sample for the `attributeScale` default
       (mob MP spans 10 to 25000 while the ambient scale is config-driven)
-- [ ] Attribute instances are populated at MobSpawnEvent.FinalizeSpawn
-      for natural spawns (serves both spawn safety and attribute scaling)
+- [x] Natural-spawn attribute population hook (falsified as originally
+      written, issue #82: on NeoForge 21.1.259 FinalizeSpawnEvent is
+      dispatched only by BaseSpawner and TrialSpawner while NaturalSpawner
+      reaches Mob.finalizeSpawn without it; the natural path's real hook is
+      MobSpawnEvent.PositionCheck, posted by EventHooks.checkSpawnPosition
+      after the mob is built and positioned but before it joins the world -
+      verified in the spawn-safety module's S4 work; issue #37 therefore hooks
+      PositionCheck or applies attributes at EntityJoinLevelEvent for spawns
+      it cannot touch there, and the API's EntityPowerStatProvider javadoc
+      wording is corrected in the api repo)
 - [ ] Traveler's Titles trigger surface (server-callable title commands,
       config titles, waystone arrival behavior, sound)
 - [ ] Foreign worldgen isolation audit (dump active structure sets, biome

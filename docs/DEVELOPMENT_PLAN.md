@@ -433,9 +433,11 @@ gated on ModList presence:
 | `bosschecklist` | Boss Checklist, coordinate at wiring; datapack roster merge |
 | `skillbooks` | Skill Study Books, coordinate at wiring; loot only |
 | `alltheadventure` | Tensura: All the Adventure, coordinate at wiring; spike-gated integration |
-| `easynpc` | EasyNPC, coordinate at wiring; NPC characters only - every transaction is a Lightman's Currency trader |
+| `easynpc` | `easy-npc-core-1308987:9310906` (core 7.17.1; the pack installs bundle `559312:9310929`); NPC characters only - every transaction is a Lightman's Currency trader |
 | `irons_spellbooks` | Iron's Spells and Spellbooks, coordinate at wiring; advanced shop stock only |
 | `bountiful` | Bountiful, coordinate at wiring; dungeon bounties only |
+| `alltheadventure` | `tensura-all-the-adventure-1672789:9140357`; authoritative adventurer rank (section 20); needs `tensura` >= 2.0.1.2 (pinned `8793360` is 2.0.1.3) and `manascore` |
+| `manascore` | `manascore-619025:8022425` (4.0.0.2); required by All The Adventure - verify the pack carries it, else the rank provider degrades to the fallback |
 
 Code integrations in this table ship as their own modules in the suite
 (section 19); data-only integrations stay as gated data inside the core mod's
@@ -634,9 +636,9 @@ spawn-safety module, then the core mod, then the integration modules:
   companion config; Chunky and pack integration docs; release 1.0.0.
 - Wave 8 (guild and shops): the Adventurer Rank system, the populated lobby
   (reception, tiered shops on Lightman's Currency, waystone room), and
-  rank-presented tasks and bounties. Its spikes run in Phase 0 alongside the
-  remaining Wave 1 work; the design lives in section 20 and the wave carries
-  milestone "Wave 8 - guild and shops".
+  rank-presented tasks and bounties. Its Phase 0 spikes (#132-#135) are
+  complete and their findings are folded into section 20; the design lives
+  there and the wave carries milestone "Wave 8 - guild and shops".
 
 The API library's own waves (A1-A6) and the spawn-safety module's waves
 (S1-S5) run before Wave 1, in their own repositories (section 19).
@@ -814,9 +816,23 @@ decoration that neither explodes nor sets a spawn point.
 - Ranks are per player. Tasks and bounties are shared with the team.
 - The source is a provider menu: Tensura: All The Adventure's own rank system
   is authoritative when it is loaded - integrated through its public API, no
-  mixins; a third-party system may join instead if the Phase 0 survey finds one
-  that maps cleanly; the core's own thin storage is the fallback. Consumers
-  read one facade and never care which provider is live.
+  mixins; the core's own thin storage is the fallback. Consumers read one
+  facade and never care which provider is live, and the facade stays
+  adapter-shaped so a future provider slots in without redesign. The Phase 0
+  survey (#135) found no third system worth adopting - no NeoForge 1.21.1
+  mod ships an earned adventurer rank with a public API - so the menu holds
+  exactly those two entries for now.
+- Spike findings (#134) pinning the authoritative side: ranks read through
+  All The Adventure's public statics (`adventurerRank(player)`, a rank enum
+  from RANKLESS through SS) - public but unofficial and alpha-cadenced, so
+  the pinned coordinate is re-inspected at wiring. There is no rank-change
+  event: gating does not need one (the rank is read at each evaluation), but
+  future rank-up announcements must poll a snapshot diff. `/tata rank
+  set|advance` covers admin and tests. Pack flag from #135: TenSura Guild
+  ships a rival F..S guild rank for the same base mod - the pack runs one
+  guild-rank source, and ours reads All The Adventure. Apotheosis world
+  tiers and Tensura awakening status are readable signals to map later,
+  never sources.
 - Shared offer lists resolve the team through PartySizeResolver precedence
   (OPAC, then FTB Teams, then vanilla teams - section 8). Offer policy:
   `guild.averageTeamRank` (default true) averages the team's ranks,
@@ -836,10 +852,44 @@ decoration that neither explodes nor sets a spawn point.
   category, priced in Lightman's Currency, gated by rank - purchase, and
   optionally selling or selling at full price - with each integration family's
   pack (Tensura, Apotheosis, Iron's Spells and Spellbooks, Ice and Fire CE)
-  entering through required_mod.
+  entering through required_mod. Lightman's ships no native datapack trades
+  (#133): the data is ours, applied when the lobby is built - pushed into
+  traders through `TraderAPI` at construction, or embedded with `/lcadmin
+  traderdata prepareForStructure` - chosen at wiring, with the stock data
+  always reviewable in this repo.
+- Rank gating is Lightman-native (#134): availability rides a custom
+  `TradeRuleType` registered through `TraderAPI` (every `TradeContext`
+  carries the acting player), full-price versus discounted selling rides
+  `TradeCostEvent` (`giveDiscount`/`hikePrice`/`setPricePercentage`), and
+  per-player stock limits plus player discounts ship built in. Trader
+  furniture is placement - display cases, shelves, vending machines - with
+  terminals and network traders available per floor; traders persist in
+  Lightman's storage keyed by their global id.
 - Wares gaps: NPC shops deliberately exclude player-trade goods - dragon
   materials, mob eggs and the like - so players fill those gaps themselves and
   the player economy keeps moving.
+
+### Populating the lobby (EasyNPC)
+
+- NPCs are characters only: dialog, flavour, and task hand-out. Every
+  transaction happens on the adjacent Lightman's trader block - both spikes
+  confirmed no open-a-trader-for-player bridge exists (#133's command
+  surface, #132's fake-player `Interact Block`) - so the receptionist stands
+  beside the counter rather than behind a screen.
+- Lobby NPCs are authored content, never generated: built once as EasyNPC
+  presets and imported at fixed positions during lobby construction, not
+  per-seed and not visitor-triggered (section 16 fit); spawner blocks are
+  avoided in favour of preset imports.
+- Double-economy guard: NPC trading mode is `None` and the default `Open
+  Trading` action is stripped - EasyNPC ships a full merchant system that
+  new NPCs pre-attach, and only Lightman's Currency may move money. Record
+  retention is set to keep authored NPCs forever (`killedNPCRetentionDays=0`).
+- The core mod carries zero EasyNPC class references: the mod is optional,
+  glue lives in infinite-dungeon-easynpc behind ModList, and absence leaves
+  empty rooms with core unaffected. Its API is explicitly unstable until
+  declared stable (#132), so presets and commands come before API coupling;
+  a five-floor lobby wants tens of NPCs, within normal entity budgets, with
+  the mod's pause system available if needed.
 
 ### Tasks and bounties
 
@@ -847,9 +897,27 @@ decoration that neither explodes nor sets a spawn point.
   presented dynamically from the Adventurer Rank and both shared with the
   team; both optional, degrade-only.
 
-### Spikes that gate this work (Phase 0)
+### Spike findings (Phase 0, complete)
 
-EasyNPC capabilities (#132), Lightman's Currency trader API (#133), Adventurer
-Rank gating of trader wares (#134), and the third-party rank survey (#135).
-No Wave 8 code lands before their findings, which amend the Shops and Ranks
-subsections above. The wave carries milestone "Wave 8 - guild and shops".
+All four spikes are closed with source-cited findings on their issues:
+
+- EasyNPC capabilities (#132): strong fit - modid `easy_npc`, coordinate
+  pinned in section 13; preset-authored NPCs, `None` trading, dialogs with
+  scoreboard conditions and actions; the lobby subsection above carries its
+  risks (double economy, record retention, unstable API, section 16 fit).
+- Lightman's Currency trader API (#133): programmatic trader creation and
+  custom trade rules through `TraderAPI`, the acting player on every
+  `TradeContext`, no native datapack trades (stock applied by us at
+  construction), no open-trader-for-player command (adjacency is the
+  architecture).
+- Adventurer Rank gating (#134): All The Adventure exists and loads in this
+  pack (the pinned tensura 2.0.1.3 plus manascore 4.0.0.2); rank reads are
+  public statics; rank gates are a custom `TradeRuleType`, rank prices are
+  `TradeCostEvent`.
+- Third-party rank survey (#135): nothing worth adopting; the provider menu
+  stays All The Adventure plus the core fallback, adapter-shaped, with
+  TenSura Guild recorded as the only alternative and a pack-level flag
+  against running two guild-rank sources.
+
+With these findings folded into the sections above, Wave 8 code may proceed
+in milestone "Wave 8 - guild and shops".

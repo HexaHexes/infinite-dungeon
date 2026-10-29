@@ -60,10 +60,12 @@ public final class PortalIgnition {
         if (!event.getItemStack().is(net.minecraft.world.item.Items.FLINT_AND_STEEL)) {
             return;
         }
-        // Dimension gate first: no portal may be built here at all, so the
-        // whole interaction is refused and the player is told why.
-        if (!DungeonConfigs.portalBuildableDimensions()
-                .allows(event.getLevel().dimension().location().toString())) {
+        // The construction toggle and the dimension gate share one refusal:
+        // the whole interaction is cancelled and the player is told why.
+        if (!ConstructionPolicy.mayIgnite(
+                DungeonConfigs.portalAllowConstruction(),
+                DungeonConfigs.portalBuildableDimensions()
+                        .allows(event.getLevel().dimension().location().toString()))) {
             event.setCanceled(true);
             event.setCancellationResult(
                     InteractionResult.sidedSuccess(event.getLevel().isClientSide));
@@ -88,8 +90,10 @@ public final class PortalIgnition {
             return;
         }
         if (event.getLevel() instanceof Level level) {
-            if (!DungeonConfigs.portalBuildableDimensions()
-                    .allows(level.dimension().location().toString())) {
+            if (!ConstructionPolicy.mayIgnite(
+                    DungeonConfigs.portalAllowConstruction(),
+                    DungeonConfigs.portalBuildableDimensions()
+                            .allows(level.dimension().location().toString()))) {
                 notifyRefusal(event.getEntity());
                 return;
             }
@@ -97,7 +101,7 @@ public final class PortalIgnition {
         }
     }
 
-    /** The shared refusal message: also reused by the construction toggle. */
+    /** The shared refusal message: the dimension gate and the construction toggle both use it. */
     private static void notifyRefusal(Entity entity) {
         if (entity instanceof ServerPlayer player) {
             DungeonAnnouncements.send(player, Announcement.PORTAL_NOT_ALLOWED);

@@ -65,6 +65,10 @@ hex digits (`#` optional), applied to the portal's rendering over the vanilla
 nether portal texture. The default `FFFFFF` leaves the texture exactly as it
 ships.
 
+`portal.allowConstruction` (default on) is the admin-fixture switch: when off,
+every ignition attempt is refused with a message while already-formed portals
+keep working.
+
 ## Credits
 
 - Built on [NeoForge](https://neoforged.net/).

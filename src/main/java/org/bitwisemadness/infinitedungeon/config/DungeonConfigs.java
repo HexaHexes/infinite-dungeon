@@ -40,6 +40,7 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.BooleanValue PORTAL_REFORM_MISSING;
     private static final ModConfigSpec.ConfigValue<String> PORTAL_BUILDABLE_MODE;
     private static final ModConfigSpec.ConfigValue<List<? extends String>> PORTAL_BUILDABLE_LIST;
+    private static final ModConfigSpec.BooleanValue PORTAL_ALLOW_CONSTRUCTION;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -57,7 +58,8 @@ public final class DungeonConfigs {
                 .comment("Broadcast to a level when a room event begins.")
                 .define("roomEvent", AnnouncementTexts.ROOM_EVENT);
         PORTAL_NOT_ALLOWED = builder
-                .comment("Shown when a dungeon portal may not be built in this dimension.")
+                .comment("Shown when a portal may not be built here: the dimension gate")
+                .comment("or the allowConstruction toggle refused it.")
                 .define("portalNotAllowed", AnnouncementTexts.PORTAL_NOT_ALLOWED);
         builder.pop();
         builder.push("time");
@@ -105,6 +107,11 @@ public final class DungeonConfigs {
                                 org.bitwisemadness.infinitedungeon.spawn.SpawnPolicy.DUNGEON_DIMENSION),
                         () -> "minecraft:overworld",
                         value -> value instanceof String);
+        PORTAL_ALLOW_CONSTRUCTION = builder
+                .comment("When off, ignition attempts are refused with a message while")
+                .comment("already-formed portals keep working: the 'entrance is an")
+                .comment("admin-placed fixture' server mode.")
+                .define("allowConstruction", true);
         builder.pop();
         SPEC = builder.build();
     }
@@ -177,5 +184,10 @@ public final class DungeonConfigs {
     /** The message a player sees when a portal may not be built here. */
     public static String portalNotAllowed() {
         return PORTAL_NOT_ALLOWED.get();
+    }
+
+    /** Whether new portal ignition is allowed at all (admin-fixture mode). */
+    public static boolean portalAllowConstruction() {
+        return PORTAL_ALLOW_CONSTRUCTION.get();
     }
 }

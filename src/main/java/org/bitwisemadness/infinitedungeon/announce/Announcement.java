@@ -25,7 +25,7 @@ public enum Announcement {
     /** Broadcast to a level when a room event begins. */
     ROOM_EVENT(DungeonConfigs::roomEvent),
 
-    /** Shown when a dungeon portal may not be built in this dimension. */
+    /** Shown when a dungeon portal may not be built here: the dimension gate or the construction toggle refused it. */
     PORTAL_NOT_ALLOWED(DungeonConfigs::portalNotAllowed);
 
     private final Supplier<String> text;

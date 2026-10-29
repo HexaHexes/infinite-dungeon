@@ -1,1 +1,1 @@
-{"variants": {"axis=x": {"model": "minecraft:block/nether_portal_ns"}, "axis=z": {"model": "minecraft:block/nether_portal_ew"}}}
+{"variants": {"axis=x": {"model": "infinite_dungeon:block/dungeon_portal_ns"}, "axis=z": {"model": "infinite_dungeon:block/dungeon_portal_ew"}}}

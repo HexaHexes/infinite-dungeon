@@ -4,6 +4,8 @@ import com.mojang.serialization.MapCodec;
 import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -60,6 +62,12 @@ public final class DungeonPortalBlock extends Block {
             return Blocks.AIR.defaultBlockState();
         }
         return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+    }
+
+    /** A portal step: bind or read the anchor and teleport (travel wave). */
+    @Override
+    protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+        DungeonPortalTravel.handle(level, pos, entity);
     }
 
     private static boolean isPortalOrFrame(BlockState state, LevelAccessor level) {

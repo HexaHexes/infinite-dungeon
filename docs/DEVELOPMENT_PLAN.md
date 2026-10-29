@@ -101,6 +101,13 @@ out through the portal they came in by.
   generate, and our own tower-entrance building expands existing village
   types at generation time (jigsaw pool injection), so packs always have
   discoverable entrances. Both are optional and toggleable.
+- Wave 1 arrival placeholder (ruling recorded): the dungeon-side entrance -
+  platform, frame, and lit portal at fixed coordinates - is built once on
+  first arrival. It is position-deterministic, so pregenerated and organic
+  worlds converge after the first visit, and it is a deliberate deviation from
+  the no-visitor-edits rule (sections 16 and 18) made for a playable alpha;
+  Wave 2's lane geometry and structure sets generate entrances properly and
+  replace it.
 
 ## 5. Adventure lock and death policy
 
@@ -677,6 +684,10 @@ Resolved during planning:
   naps preserve the stored respawn target, the spawn-point command is refused,
   and any stored dungeon respawn is undone at death, so the lobby teleport is
   the only respawn path.
+- The Wave-1 dungeon entrance is built once on first arrival at fixed
+  coordinates: position-deterministic, so pregenerated and organic worlds
+  converge - a deliberate, recorded deviation from the no-visitor-edits rule,
+  pending Wave 2's generated entrances.
 - We ship one dungeon dimension; datapack dimension profiles (and the API's
   code registry) let addons add more with their own limits, pools, and curves.
 - Elite mobs are randomly sized within configured bounds and always at least

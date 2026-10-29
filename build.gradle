@@ -110,6 +110,23 @@ repositories {
             password = System.getenv('PACKAGE_READ_TOKEN') ?: System.getenv('GITHUB_TOKEN') ?: project.findProperty('gpr.key')
         }
     }
+
+    // Third-party integration coordinates (section 13), pinned exactly: the
+    // Corpse mod, compile-side only - the mod is optional at runtime and the
+    // gate is ModList-based, so nothing here ships or forces a load.
+    maven {
+        name = 'CurseMaven'
+        url = uri('https://cursemaven.com')
+    }
+}
+
+// A dev-runs-only dependency bucket. The runs resolve
+// configurations.runtimeClasspath; extending it from this bucket puts the
+// entry on every dev run (and the gametest server, which folds in this
+// configuration) while runtimeElements - and therefore the published POM -
+// stays free of optional mods that consumers never need transitively.
+configurations {
+    devRuntime
 }
 
 dependencies {
@@ -122,11 +139,21 @@ dependencies {
     runtimeOnly "org.bitwisemadness.infinitedungeonapi:infinite_dungeon_api:${api_version}"
     testImplementation "org.bitwisemadness.infinitedungeonapi:infinite_dungeon_api:${api_version}"
 
+    // Corpse integration (section 13's pinned coordinate): compile-side so the
+    // entity type can be identified by class; never packaged, never required
+    // by consumers. devRuntime puts the jar on the dev runs and the gametest
+    // server, so the sweep's wiring is proven in CI against the real classes
+    // and the ModList gate is exercised for real.
+    compileOnly "curse.maven:corpse-316582:9188333"
+    devRuntime "curse.maven:corpse-316582:9188333"
+
     // JUnit wiring for the pure-logic suites the later waves add.
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
+
+configurations.runtimeClasspath.extendsFrom(configurations.devRuntime)
 
 test {
     useJUnitPlatform()
@@ -138,7 +165,7 @@ test {
 // "All N required tests passed :)" when every required test succeeds. Keep
 // expectedTests in sync with the @GameTest methods in src/gametest.
 tasks.matching { it.name == 'runGameTestServer' }.configureEach {
-    def expectedTests = 10
+    def expectedTests = 11
     doLast {
         def log = file('run/logs/latest.log')
         if (!log.exists()) {

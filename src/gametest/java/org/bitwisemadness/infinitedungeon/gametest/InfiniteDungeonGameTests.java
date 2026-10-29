@@ -1,5 +1,7 @@
 package org.bitwisemadness.infinitedungeon.gametest;
 
+import de.maxhenkel.corpse.corelib.death.Death;
+import de.maxhenkel.corpse.entities.CorpseEntity;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -9,6 +11,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -20,6 +24,7 @@ import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
 import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
+import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
@@ -316,6 +321,56 @@ public final class InfiniteDungeonGameTests {
 
         LobbyReturn.clear(player);
         helper.assertTrue(!LobbyReturn.holdsMarker(player), "the marker must be consumed at respawn");
+        helper.succeed();
+    }
+
+    /**
+     * The Corpse cleanup: a corpse whose inventory has been fully reclaimed is
+     * removed by the sweep, while a corpse still holding items and an
+     * unrelated entity are left alone. The pure decision is covered in JUnit;
+     * this proves the ModList-gated wiring against the real Corpse classes
+     * (the gametest runtime carries Corpse). The sweep is invoked directly
+     * because the harness cannot host the dungeon dimension - the dimension
+     * gate is the same one-line check DungeonTime uses, in the tick listener.
+     */
+    @GameTest(template = "empty")
+    public static void reclaimed_corpse_is_swept(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.assertTrue(owner != null, "a mock server player must be available");
+
+        // A corpse with nothing left: the mock player carries no items, so
+        // every inventory Death snapshots from them is empty.
+        Death emptyDeath = Death.fromPlayer(owner);
+        CorpseEntity empty = CorpseEntity.createFromDeath(owner, emptyDeath);
+        BlockPos spot = helper.absolutePos(new BlockPos(2, 1, 2));
+        empty.setPos(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+        helper.assertTrue(helper.getLevel().addFreshEntity(empty),
+                "the empty corpse must spawn in the level");
+
+        // A corpse still holding its owner's items, from a second player so
+        // the two corpses never share an identity.
+        ServerPlayer ladenOwner = helper.makeMockServerPlayerInLevel();
+        helper.assertTrue(ladenOwner != null, "a second mock server player must be available");
+        ladenOwner.getInventory().add(new ItemStack(Items.STONE, 5));
+        Death ladenDeath = Death.fromPlayer(ladenOwner);
+        CorpseEntity laden = CorpseEntity.createFromDeath(ladenOwner, ladenDeath);
+        laden.setPos(spot.getX() + 2.5, spot.getY(), spot.getZ() + 0.5);
+        helper.assertTrue(helper.getLevel().addFreshEntity(laden),
+                "the laden corpse must spawn in the level");
+
+        // An unrelated entity that must never be swept.
+        var litter = helper.spawnItem(Items.STONE, new BlockPos(4, 1, 2));
+
+        helper.assertTrue(!empty.isRemoved(), "the empty corpse must be present before the sweep");
+        helper.assertTrue(!laden.isRemoved(), "the laden corpse must be present before the sweep");
+
+        CorpseCleanup.scan(helper.getLevel());
+
+        helper.assertTrue(empty.isRemoved(),
+                "a fully reclaimed corpse must be removed by the sweep");
+        helper.assertTrue(!laden.isRemoved(),
+                "a corpse holding items must stay for its owner to reclaim");
+        helper.assertTrue(!litter.isRemoved(), "an unrelated entity must never be swept");
         helper.succeed();
     }
 }

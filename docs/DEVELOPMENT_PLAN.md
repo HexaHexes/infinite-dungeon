@@ -94,6 +94,12 @@ out through the portal they came in by.
     "entrance is an admin-placed fixture" server mode.
   - `portal.returnMode` = `entry_portal` (default) | `world_spawn`.
   - `portal.reformMissingPortal` (default on).
+  - `portal.buildableDimensions.mode` = `whitelist` (default) | `blacklist`,
+    with `portal.buildableDimensions.list` (default: the overworld and the
+    dungeon): where a dungeon portal may be *built*. Construction only -
+    travel through an already-formed portal and the mod's own dungeon
+    entrance are never gated, so existing entrances and a stranded player
+    building a way out keep working.
 - Anchors store a generic dimension id, so entry from any modded dimension
   works and returns there.
 - Additional entry points beyond built frames: Dungeon Crawl's surface tower
@@ -688,6 +694,10 @@ Resolved during planning:
   coordinates: position-deterministic, so pregenerated and organic worlds
   converge - a deliberate, recorded deviation from the no-visitor-edits rule,
   pending Wave 2's generated entrances.
+- Dungeon portals build only in whitelisted dimensions by default (the
+  overworld and the dungeon itself), matching the spawn-safety module's
+  overworld whitelist: no entrances sprout in the Nether, the End, or another
+  mod's dimension. The gate covers construction only; travel is never gated.
 - We ship one dungeon dimension; datapack dimension profiles (and the API's
   code registry) let addons add more with their own limits, pools, and curves.
 - Elite mobs are randomly sized within configured bounds and always at least

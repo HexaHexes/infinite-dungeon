@@ -1,5 +1,7 @@
 package org.bitwisemadness.infinitedungeon.config;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -30,11 +32,14 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.ConfigValue<String> ANCHOR_FALLBACK;
     private static final ModConfigSpec.ConfigValue<String> BOSS_AWAKENING;
     private static final ModConfigSpec.ConfigValue<String> ROOM_EVENT;
+    private static final ModConfigSpec.ConfigValue<String> PORTAL_NOT_ALLOWED;
     private static final ModConfigSpec.BooleanValue TIME_FLOWS;
     private static final ModConfigSpec.IntValue TIME_FIXED_TICK;
     private static final ModConfigSpec.ConfigValue<String> PORTAL_FRAME_BLOCK;
     private static final ModConfigSpec.ConfigValue<String> PORTAL_RETURN_MODE;
     private static final ModConfigSpec.BooleanValue PORTAL_REFORM_MISSING;
+    private static final ModConfigSpec.ConfigValue<String> PORTAL_BUILDABLE_MODE;
+    private static final ModConfigSpec.ConfigValue<List<? extends String>> PORTAL_BUILDABLE_LIST;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -51,6 +56,9 @@ public final class DungeonConfigs {
         ROOM_EVENT = builder
                 .comment("Broadcast to a level when a room event begins.")
                 .define("roomEvent", AnnouncementTexts.ROOM_EVENT);
+        PORTAL_NOT_ALLOWED = builder
+                .comment("Shown when a dungeon portal may not be built in this dimension.")
+                .define("portalNotAllowed", AnnouncementTexts.PORTAL_NOT_ALLOWED);
         builder.pop();
         builder.push("time");
         TIME_FLOWS = builder
@@ -81,6 +89,22 @@ public final class DungeonConfigs {
                 .comment("frame has been destroyed (nether behaviour). When off, a")
                 .comment("destroyed anchor falls back to the world spawn with a message.")
                 .define("reformMissingPortal", true);
+        PORTAL_BUILDABLE_MODE = builder
+                .comment("Where dungeon portals may be built: 'whitelist' allows only the")
+                .comment("listed dimensions, 'blacklist' allows every dimension except them.")
+                .comment("Construction only: travel through an already-formed portal and the")
+                .comment("mod's own dungeon entrance are never gated.")
+                .define("buildableDimensions.mode", "whitelist",
+                        value -> "whitelist".equals(value) || "blacklist".equals(value));
+        PORTAL_BUILDABLE_LIST = builder
+                .comment("The dimensions involved. The default keeps entrances to the")
+                .comment("overworld and the dungeon itself, so nothing sprouts in the")
+                .comment("Nether, the End, or another mod's dimension.")
+                .defineListAllowEmpty("buildableDimensions.list",
+                        List.of("minecraft:overworld",
+                                org.bitwisemadness.infinitedungeon.spawn.SpawnPolicy.DUNGEON_DIMENSION),
+                        () -> "minecraft:overworld",
+                        value -> value instanceof String);
         builder.pop();
         SPEC = builder.build();
     }
@@ -141,5 +165,17 @@ public final class DungeonConfigs {
     /** Whether a destroyed anchor frame is re-formed at its old coordinates. */
     public static boolean reformMissingPortal() {
         return PORTAL_REFORM_MISSING.get();
+    }
+
+    /** Which dimensions a dungeon portal may be built in. */
+    public static org.bitwisemadness.infinitedungeon.portal.BuildableDimensions portalBuildableDimensions() {
+        return new org.bitwisemadness.infinitedungeon.portal.BuildableDimensions(
+                org.bitwisemadness.infinitedungeon.portal.BuildableDimensions.parseMode(PORTAL_BUILDABLE_MODE.get()),
+                new HashSet<>(PORTAL_BUILDABLE_LIST.get()));
+    }
+
+    /** The message a player sees when a portal may not be built here. */
+    public static String portalNotAllowed() {
+        return PORTAL_NOT_ALLOWED.get();
     }
 }

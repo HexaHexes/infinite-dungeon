@@ -23,8 +23,10 @@ import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchor;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
+import org.bitwisemadness.infinitedungeon.portal.PortalFrameBuilder;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
 import org.bitwisemadness.infinitedungeon.portal.TravelPolicy;
+import org.bitwisemadness.infinitedungeonapi.profile.PortalReturnMode;
 
 /**
  * Smoke test: proves the mod loads and the GameTest harness runs.
@@ -133,6 +135,13 @@ public final class InfiniteDungeonGameTests {
             helper.setBlock(new BlockPos(2, y, 1), Blocks.STONE_BRICKS);
             helper.setBlock(new BlockPos(5, y, 1), Blocks.STONE_BRICKS);
         }
+        // The world around a random test position is not guaranteed empty:
+        // clear the interior so the scan sees a genuine portal space.
+        for (int x = 3; x <= 4; x++) {
+            for (int y = 3; y <= 5; y++) {
+                helper.setBlock(new BlockPos(x, y, 1), Blocks.AIR);
+            }
+        }
 
         boolean ignited = PortalIgnition.tryIgnite(helper.getLevel(),
                 helper.absolutePos(new BlockPos(3, 3, 1)));
@@ -163,6 +172,9 @@ public final class InfiniteDungeonGameTests {
             helper.setBlock(new BlockPos(2, y, 1), Blocks.STONE_BRICKS);
             helper.setBlock(new BlockPos(4, y, 1), Blocks.STONE_BRICKS);
         }
+        // Clear the interior: whatever the world holds there is not part of
+        // this test, and the postcondition is "stays air".
+        helper.setBlock(new BlockPos(3, 3, 1), Blocks.AIR);
 
         boolean ignited = PortalIgnition.tryIgnite(helper.getLevel(),
                 helper.absolutePos(new BlockPos(3, 3, 1)));
@@ -184,7 +196,7 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(player != null, "a mock server player must be available");
         helper.assertTrue(!EntryAnchors.has(player), "a fresh player has no anchor");
 
-        helper.assertTrue(TravelPolicy.decide(false, EntryAnchors.has(player))
+        helper.assertTrue(TravelPolicy.decide(false, EntryAnchors.has(player), PortalReturnMode.ENTRY_PORTAL)
                         == TravelPolicy.Action.BIND_AND_ENTER,
                 "walking in from a normal dimension binds and enters");
 
@@ -196,7 +208,7 @@ public final class InfiniteDungeonGameTests {
         EntryAnchor anchor = EntryAnchors.get(player).orElseThrow();
         helper.assertTrue(anchor.dimension().equals(home), "the anchor keeps the entry dimension");
         helper.assertTrue(anchor.position().equals(portal), "the anchor keeps the entry position");
-        helper.assertTrue(TravelPolicy.decide(true, EntryAnchors.has(player))
+        helper.assertTrue(TravelPolicy.decide(true, EntryAnchors.has(player), PortalReturnMode.ENTRY_PORTAL)
                         == TravelPolicy.Action.RETURN_TO_ANCHOR,
                 "walking out inside the dungeon returns to the anchor");
 
@@ -208,6 +220,53 @@ public final class InfiniteDungeonGameTests {
 
         EntryAnchors.clear(player);
         helper.assertTrue(!EntryAnchors.has(player), "the anchor must be clearable");
+        helper.succeed();
+    }
+
+    /**
+     * Re-forming a destroyed anchor: an empty space accepts the whole portal,
+     * a blocked frame ring refuses the build outright - nothing half-built,
+     * which is what lets the travel code fall back to the world spawn.
+     */
+    @GameTest(template = "empty")
+    public static void reform_rebuilds_a_destroyed_anchor_portal(GameTestHelper helper) {
+        // 1. A genuinely empty space accepts a re-formed portal: clear the
+        // whole footprint first, since the world's own stone below the
+        // template would - correctly - refuse the build.
+        for (int x = 1; x <= 4; x++) {
+            for (int y = 2; y <= 6; y++) {
+                helper.setBlock(new BlockPos(x, y, 1), Blocks.AIR);
+            }
+        }
+        BlockPos cell = new BlockPos(2, 3, 1);
+        boolean built = PortalFrameBuilder.build(helper.getLevel(), helper.absolutePos(cell),
+                Direction.Axis.X);
+        helper.assertTrue(built, "an empty space must accept a re-formed portal");
+        helper.assertTrue(helper.getBlockState(cell).getBlock() instanceof DungeonPortalBlock,
+                "the anchor cell must hold a lit portal");
+        helper.assertTrue(helper.getBlockState(new BlockPos(1, 3, 1)).is(Blocks.STONE_BRICKS),
+                "the frame's left column must be rebuilt");
+        helper.assertTrue(helper.getBlockState(new BlockPos(2, 2, 1)).is(Blocks.STONE_BRICKS),
+                "the frame's bottom row must be rebuilt");
+        helper.assertTrue(helper.getBlockState(new BlockPos(3, 5, 1)).getBlock()
+                        instanceof DungeonPortalBlock,
+                "the whole 2x3 interior must be lit");
+
+        // 2. A solid block in the frame ring refuses the whole build: clear
+        // the footprint, then block the ring with a block that is not the
+        // frame material (stone bricks ARE the frame, so they would pass).
+        for (int x = 7; x <= 10; x++) {
+            for (int y = 2; y <= 6; y++) {
+                helper.setBlock(new BlockPos(x, y, 1), Blocks.AIR);
+            }
+        }
+        helper.setBlock(new BlockPos(7, 3, 1), Blocks.STONE);
+        BlockPos blocked = new BlockPos(8, 3, 1);
+        boolean refused = PortalFrameBuilder.build(helper.getLevel(), helper.absolutePos(blocked),
+                Direction.Axis.X);
+        helper.assertTrue(!refused, "a blocked frame ring must refuse the build");
+        helper.assertTrue(helper.getBlockState(blocked).isAir(),
+                "nothing may be half-built: the interior stays untouched");
         helper.succeed();
     }
 }

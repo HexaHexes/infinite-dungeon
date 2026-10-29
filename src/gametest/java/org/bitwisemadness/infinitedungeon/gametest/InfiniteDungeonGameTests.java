@@ -9,6 +9,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -19,6 +20,7 @@ import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
 import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
+import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchor;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
@@ -267,6 +269,33 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(!refused, "a blocked frame ring must refuse the build");
         helper.assertTrue(helper.getBlockState(blocked).isAir(),
                 "nothing may be half-built: the interior stays untouched");
+        helper.succeed();
+    }
+
+    /**
+     * The adventure lock's swing: applying swaps the player to adventure and
+     * remembers what they were; releasing restores exactly that and forgets
+     * the snapshot. The dimension scoping and the break whitelist are pure and
+     * covered in JUnit.
+     */
+    @GameTest(template = "empty")
+    public static void adventure_lock_swaps_and_restores(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        helper.assertTrue(player != null, "a mock server player must be available");
+        GameType before = player.gameMode.getGameModeForPlayer();
+        helper.assertTrue(!DungeonLock.holdsSnapshot(player), "a fresh player holds no lock snapshot");
+
+        DungeonLock.apply(player);
+        helper.assertTrue(player.gameMode.getGameModeForPlayer() == GameType.ADVENTURE,
+                "the lock must swap the player into adventure mode");
+        helper.assertTrue(DungeonLock.holdsSnapshot(player),
+                "the previous gamemode must be remembered while locked");
+
+        DungeonLock.release(player);
+        helper.assertTrue(player.gameMode.getGameModeForPlayer() == before,
+                "release must restore the gamemode exactly");
+        helper.assertTrue(!DungeonLock.holdsSnapshot(player),
+                "release must forget the snapshot");
         helper.succeed();
     }
 }

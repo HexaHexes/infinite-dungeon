@@ -17,6 +17,9 @@ alphas it grows:
 - Spawns and bosses tuned to the dungeon's magicule curve, with per-layer
   guardians and minibosses.
 - Safe rooms, monster houses, traps, and loot that scales with depth.
+- Inside the dungeon you play in adventure mode: block breaking is refused
+  except for blocks a config whitelist allows, and your gamemode is restored
+  the moment you leave.
 - Beds never explode and you can nap in one; a nap never skips time and never
   touches your spawn point, which can never be set inside the dungeon
   dimension - death always follows the dungeon's own exit policy.

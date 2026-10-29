@@ -41,6 +41,7 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.ConfigValue<String> PORTAL_BUILDABLE_MODE;
     private static final ModConfigSpec.ConfigValue<List<? extends String>> PORTAL_BUILDABLE_LIST;
     private static final ModConfigSpec.BooleanValue PORTAL_ALLOW_CONSTRUCTION;
+    private static final ModConfigSpec.ConfigValue<List<? extends String>> ADVENTURE_BREAKABLE;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -112,6 +113,16 @@ public final class DungeonConfigs {
                 .comment("already-formed portals keep working: the 'entrance is an")
                 .comment("admin-placed fixture' server mode.")
                 .define("allowConstruction", true);
+        builder.pop();
+        builder.push("adventureLock");
+        ADVENTURE_BREAKABLE = builder
+                .comment("Blocks that may still be broken inside the dungeon while the")
+                .comment("adventure lock holds. The default breaks nothing.")
+                .defineListAllowEmpty("breakableBlocks", List.of(),
+                        () -> "minecraft:stone",
+                        value -> value instanceof String text
+                                && org.bitwisemadness.infinitedungeonapi.data.ResourceRef
+                                        .isValidLocation(text.trim()));
         builder.pop();
         SPEC = builder.build();
     }
@@ -189,5 +200,10 @@ public final class DungeonConfigs {
     /** Whether new portal ignition is allowed at all (admin-fixture mode). */
     public static boolean portalAllowConstruction() {
         return PORTAL_ALLOW_CONSTRUCTION.get();
+    }
+
+    /** Blocks still breakable inside the dungeon under the adventure lock. */
+    public static java.util.Set<String> adventureLockBreakableBlocks() {
+        return new HashSet<>(ADVENTURE_BREAKABLE.get());
     }
 }

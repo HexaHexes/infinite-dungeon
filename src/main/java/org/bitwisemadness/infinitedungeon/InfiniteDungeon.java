@@ -7,6 +7,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import org.bitwisemadness.infinitedungeon.client.PortalTint;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
@@ -37,6 +38,12 @@ public final class InfiniteDungeon {
         // The per-player entry anchor is a data attachment: registered here,
         // persisted with the player.
         EntryAnchors.register(modBus);
+        // The adventure lock: the previous gamemode snapshot, persisted with
+        // the player, plus the three events that apply, release, and enforce it.
+        DungeonLock.register(modBus);
+        NeoForge.EVENT_BUS.addListener(DungeonLock::onDimensionChange);
+        NeoForge.EVENT_BUS.addListener(DungeonLock::onLoggedIn);
+        NeoForge.EVENT_BUS.addListener(DungeonLock::onBlockBreak);
         // The dungeon clock is held by the mod (the dimension type carries no
         // fixed time, so a server can let it flow).
         NeoForge.EVENT_BUS.addListener(DungeonTime::onLevelTick);

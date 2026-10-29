@@ -429,9 +429,9 @@ gated on ModList presence:
 | `gateways` | `gateways-to-eternity-417802:6926284` (plus `bettergatewaystoeternity-1583270:8325455`) |
 | `borninchaos` | soft-dep only, not in pack |
 | `tensuraNEB` | Tensura: Not Enough Bosses, coordinate at wiring; joins the Tensura family roster |
-| `travelerstitles` | Traveler's Titles, coordinate at wiring; announcements only |
-| `bosschecklist` | Boss Checklist, coordinate at wiring; datapack roster merge |
-| `skillbooks` | Skill Study Books, coordinate at wiring; loot only |
+| `travelerstitles` | `travelers-titles-neoforge-1015155:6294123` (5.1.3, CLIENT-ONLY, required dep YUNG's API); announcements - integration is lang keys plus waystone naming, zero Java coupling |
+| `bosschecklist` | `boss-checklist-1355708:9109104` (5.3.2); data-only roster - display in assets/boss_checklist/bosses.json, server ids in data/boss_checklist/server_bosses_ids.json, defeated key = plain entity type id |
+| `skillbooks` | `tensura-skill-books-1418495:9055170` (2.2.3, needs tensura + manascore); loot only - one item id with minecraft:custom_data.skill_id, gated by neoforge:conditions in its own pool |
 | `alltheadventure` | Tensura: All the Adventure, coordinate at wiring; spike-gated integration |
 | `easynpc` | `easy-npc-core-1308987:9310906` (core 7.17.1; the pack installs bundle `559312:9310929`); NPC characters only - every transaction is a Lightman's Currency trader |
 | `irons_spellbooks` | Iron's Spells and Spellbooks, coordinate at wiring; advanced shop stock only |
@@ -588,8 +588,16 @@ Phase 0 spike checklist:
       `IExistence`; ambient reads via `AreaMagiculeHelper`; writes via
       `ChunkStorage` with a reinitialize timing risk; unit alignment still
       needs an in-game sample)
-- [ ] Tensura unit-alignment sample for the `attributeScale` default
-      (mob MP spans 10 to 25000 while the ambient scale is config-driven)
+- [x] Tensura unit-alignment sample for the `attributeScale` default
+      (done from the pinned Tensura jar's entity_existence datapack: 152
+      files; the vanilla namespace spans exactly 10..25000 with median 120
+      while Tensura's own roster runs 100..1200000 with median 8000 - the old
+      note was vanilla-only; recommended default attributeScale = 0.001 maps
+      stats onto the M curve so vanilla p75 spawns near layer 7, Tensura
+      median near layer 14, the vanilla ceiling near layer 25, and 1.2M
+      boss-tier never spawns ambient; flags filed for the M=0 origin cell
+      (#34 and spawn-safety) and EP-versus-MP stat sourcing (#55) - issue
+      #154)
 - [x] Natural-spawn attribute population hook (falsified as originally
       written, issue #82: on NeoForge 21.1.259 FinalizeSpawnEvent is
       dispatched only by BaseSpawner and TrialSpawner while NaturalSpawner
@@ -600,16 +608,73 @@ Phase 0 spike checklist:
       PositionCheck or applies attributes at EntityJoinLevelEvent for spawns
       it cannot touch there, and the API's EntityPowerStatProvider javadoc
       wording is corrected in the api repo)
-- [ ] Traveler's Titles trigger surface (server-callable title commands,
-      config titles, waystone arrival behavior, sound)
-- [ ] Foreign worldgen isolation audit (dump active structure sets, biome
+- [x] Traveler's Titles trigger surface (server-callable title commands,
+      config titles, waystone arrival behavior, sound) (done: coordinate pinned
+      - NeoForge 1.21.1 is travelers-titles-neoforge CF 1015155 file 6294123,
+      mod id travelerstitles, required dep YUNG's API; the mod is CLIENT-ONLY
+      so its permission-2 commands (/biometitle, /dimensiontitle, /tt_reload)
+      never register on a dedicated server - not server, datapack or mod
+      callable; waystone arrival titles fire AUTOMATICALLY by proximity
+      (nearest discovered waystone within 30 blocks, rescanned every 10 ticks),
+      so "Layer N" waystones show their name for free while dimension titles
+      come from lang keys shipped in our own assets; sounds are one per
+      category, volume-configurable; the integration is data-only with zero
+      Java coupling, and the one runtime check (programmatic waystones versus
+      the discovered list) is recorded on the issue - issue #153)
+- [x] Foreign worldgen isolation audit (dump active structure sets, biome
       modifiers, and confirm nothing but Dungeon Crawl reaches our biome, tags,
       or dimension; verify the Sparse Structures salt rewrite and Structure
-      Layout Optimizer against our lane set)
-- [ ] Boss Checklist roster file merge behavior and defeated-tracking keys
-- [ ] Skill Study Books item ids and skill encoding for loot tables
-- [ ] Tensura: All the Adventure contract pools, events, and dangerous
-      encounter summon entrypoints
+      Layout Optimizer against our lane set) (static half done: Sparse
+      Structures rewrites structure-set JSON at datapack-registry load -
+      spacing and separation scale by config factor (default 2, companion
+      config pins 1.0) on every build, and on 3.0 only the salt is replaced
+      by abs(setId.hashCode) when idBasedSalt is true (default), all
+      deterministic but requiring our lane set's mirror-read to observe
+      POST-rewrite values; Structure Layout Optimizer mixins jigsaw assembly
+      only and never placement, so fixed-salt random_spread starts stay
+      identical, with vanilla parity conditional on
+      deduplicateShuffledTemplatePoolElementList=false and files at or above
+      1.0.10; the audit tool list is recorded on the issue - /dumpstructuresets
+      (ids only), per-dimension /locate as the isolation oracle, static greps
+      of structure_set, neoforge/biome_modifier, biome tags and structure
+      biomes fields, and our own startup log for the placement values no
+      command prints - and today our datapack ships no biome, tags, sets or
+      modifiers at all; the live half runs against a real world after Wave 2's
+      #27 and #28 and again before release (#65) - issue #155)
+- [x] Boss Checklist roster file merge behavior and defeated-tracking keys
+      (done: coordinate pinned - Yori3o, CF 1355708 file 9109104, mod id
+      boss_checklist, dependencies NeoForge + Minecraft only; the roster is
+      data-only but SPLIT: display entries live in the asset file
+      assets/boss_checklist/bosses.json (resource-stack merge, deduped by id,
+      field-merged on collision unless replace is true) while
+      data/boss_checklist/server_bosses_ids.json is a pure additive union on
+      /reload; defeated state is a per-world map keyed by the PLAIN entity
+      type id with the killer name as value, synced by payload and pruned when
+      an id disappears, so every checklist boss needs its own distinct
+      EntityType - flagged for the boss issues; our integration is three
+      resources in our jar and inert without the mod - issue #156)
+- [x] Skill Study Books item ids and skill encoding for loot tables (done:
+      coordinate pinned - tensura_skill_books, CF 1418495 file 9055170,
+      requires tensura + manascore; exactly ONE item id
+      tensura_skill_books:skill_study_book with the skill carried in the
+      vanilla minecraft:custom_data component as skill_id (random books use
+      random_category), added in loot JSON via set_components; critical
+      degrade finding: a table referencing the item fails to parse and is
+      REPLACED WITH AN EMPTY TABLE when the mod is absent, so books live in a
+      separate optional pool or a GLM behind neoforge:conditions and are never
+      co-mingled with required dungeon loot - issue #157)
+- [x] Tensura: All the Adventure contract pools, events, and dangerous
+      encounter summon entrypoints (done from the pinned jar: pools are
+      CODE-defined - 76 rank-gated ContractDefinition records in a static
+      ContractCatalog, no datapack - with ContractCatalog.board(player, rank,
+      ...) as the read-only presentation API for #143 and ContractRarity for
+      reward scaling; acceptance and progress flow through their network
+      payloads (Accept, Submit, Abandon, Reroll, Track) with no server-side
+      accept call, a decision left to #143 and #144; encounter entrypoints are
+      public static (GuildThreatManager.spawnPendingThreat,
+      GuildEncounterSpawns ready/failed/succeeded, GuildExpeditionManager);
+      there are no public events anywhere (AdventureServerEvents is internal);
+      alpha volatility carried from #134 - issue #158, feeding #144)
 - [x] Gateways activation inside a custom dimension and wave spawner
       interaction with spawn filtering (done: `GatePearlItem.useOn` carries no
       dimension check, so arenas open in the dungeon; waves spawn via

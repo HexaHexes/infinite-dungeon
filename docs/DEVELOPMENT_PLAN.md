@@ -432,6 +432,9 @@ gated on ModList presence:
 | `bosschecklist` | Boss Checklist, coordinate at wiring; datapack roster merge |
 | `skillbooks` | Skill Study Books, coordinate at wiring; loot only |
 | `alltheadventure` | Tensura: All the Adventure, coordinate at wiring; spike-gated integration |
+| `easynpc` | EasyNPC, coordinate at wiring; NPC characters only - every transaction is a Lightman's Currency trader |
+| `irons_spellbooks` | Iron's Spells and Spellbooks, coordinate at wiring; advanced shop stock only |
+| `bountiful` | Bountiful, coordinate at wiring; dungeon bounties only |
 
 Code integrations in this table ship as their own modules in the suite
 (section 19); data-only integrations stay as gated data inside the core mod's
@@ -628,6 +631,11 @@ spawn-safety module, then the core mod, then the integration modules:
   Checklist data, All the Adventure).
 - Wave 7 (packaging): suppression companion datapack; Sparse Structures
   companion config; Chunky and pack integration docs; release 1.0.0.
+- Wave 8 (guild and shops): the Adventurer Rank system, the populated lobby
+  (reception, tiered shops on Lightman's Currency, waystone room), and
+  rank-presented tasks and bounties. Its spikes run in Phase 0 alongside the
+  remaining Wave 1 work; the design lives in section 20 and the wave carries
+  milestone "Wave 8 - guild and shops".
 
 The API library's own waves (A1-A6) and the spawn-safety module's waves
 (S1-S5) run before Wave 1, in their own repositories (section 19).
@@ -711,6 +719,12 @@ Resolved during planning:
   above it, and Wave 2's fixed lobby replaces the Wave-1 arrival placeholder.
   PlayerRevive integration is deferred indefinitely (#25), so the lobby trigger
   currently applies to every death in the dungeon.
+- The lobby is the dungeon's guild society, in five fixed floors (section 20):
+  shops trade through Lightman's Currency traders - optional, degrade-only,
+  with no custom screen anywhere; ranks are per player, authoritative from All
+  The Adventure when it is loaded; tasks and bounties are shared with the team
+  with rank averaging on by default; and NPC shops deliberately leave
+  player-trade goods unsold so the player economy has gaps to fill.
 - We ship one dungeon dimension; datapack dimension profiles (and the API's
   code registry) let addons add more with their own limits, pools, and curves.
 - Elite mobs are randomly sized within configured bounds and always at least
@@ -752,6 +766,8 @@ is its own repository, its own mod, its own release, and its own issue board.
 | `infinite-dungeon-parties` | OPAC and FTB Teams party providers | `-api`, core, OPAC/FTB |
 | `infinite-dungeon-deathcompat` | Corpse `despawnWhenEmpty` and PlayerRevive bleed-out handling | `-api`, core, Corpse/PlayerRevive |
 | `infinite-dungeon-waypoints` (client) | Xaero and Journeymap waypoint filtering | `-api`, core, Xaero/Journeymap |
+| `infinite-dungeon-easynpc` | NPC characters for the guild lobby: receptionist, guild master, adventurers | `-api`, core, EasyNPC |
+| `infinite-dungeon-bountiful` | Bounties inside the dungeon, presented by Adventurer Rank | `-api`, core, Bountiful |
 
 Companion datapacks stay release assets of the core repository: overworld
 suppression (section 15), the Boss Checklist roster merge, and the Sparse
@@ -771,3 +787,68 @@ Rules for every module:
 - Repositories are created upfront with their boards and milestones seeded, so
   work is planned in advance; implementation still proceeds in dependency
   order.
+
+## 20. The Adventurer Guild and shops
+
+The lobby - the dungeon's first layer, of fixed construction (section 3) - is
+the dungeon's society: a guild that registers adventurers, shops that trade
+them in, and a waystone room where parties gather.
+
+### Lobby floors
+
+| Floor | Purpose |
+|---|---|
+| 1 | Guild reception: adventurer registration, where ranks are granted, plus task and bounty handling, private reception rooms, the guild master's office, and decorative temporary lodging rooms |
+| 2 | Guild-backed shops: adventurer essentials, and the guild buying monster materials and magic crystals |
+| 3 | Specialised shops |
+| 4 | Advanced specialised shops |
+| 5 | Waystone room / respawn room: the arrival room for lobby teleports, littered with adventurer parties |
+
+Two caveats apply throughout: the respawn room is a landing room and never a
+respawn point (the no-spawn-point rule of section 5), and lodging beds are
+decoration that neither explodes nor sets a spawn point.
+
+### Adventurer Ranks
+
+- Ranks are per player. Tasks and bounties are shared with the team.
+- The source is a provider menu: Tensura: All The Adventure's own rank system
+  is authoritative when it is loaded - integrated through its public API, no
+  mixins; a third-party system may join instead if the Phase 0 survey finds one
+  that maps cleanly; the core's own thin storage is the fallback. Consumers
+  read one facade and never care which provider is live.
+- Shared offer lists resolve the team through PartySizeResolver precedence
+  (OPAC, then FTB Teams, then vanilla teams - section 8). Offer policy:
+  `guild.averageTeamRank` (default true) averages the team's ranks,
+  `guild.highestTeamRank` (default false) picks the highest, and the team
+  leader's rank is the base rule when both are off. Providers without a leader
+  concept - vanilla teams - fall through to averaging, which is the default
+  anyway.
+
+### Shops
+
+- Selling and buying are handled by Lightman's Currency traders: no custom
+  screen and no vanilla merchant interface anywhere. Dungeon loot injects the
+  same currency (section 12), so one economy closes the loop.
+- Lightman's Currency is optional: when absent, shops and buy-back degrade
+  disable-only with a clear reason, ModList-gated.
+- Stock is data, per section 19's data-only rule: keyed by floor tier and shop
+  category, priced in Lightman's Currency, gated by rank - purchase, and
+  optionally selling or selling at full price - with each integration family's
+  pack (Tensura, Apotheosis, Iron's Spells and Spellbooks, Ice and Fire CE)
+  entering through required_mod.
+- Wares gaps: NPC shops deliberately exclude player-trade goods - dragon
+  materials, mob eggs and the like - so players fill those gaps themselves and
+  the player economy keeps moving.
+
+### Tasks and bounties
+
+- Bounties come from Bountiful and tasks from Tensura: All The Adventure, both
+  presented dynamically from the Adventurer Rank and both shared with the
+  team; both optional, degrade-only.
+
+### Spikes that gate this work (Phase 0)
+
+EasyNPC capabilities (#132), Lightman's Currency trader API (#133), Adventurer
+Rank gating of trader wares (#134), and the third-party rank survey (#135).
+No Wave 8 code lands before their findings, which amend the Shops and Ranks
+subsections above. The wave carries milestone "Wave 8 - guild and shops".

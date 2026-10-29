@@ -5,8 +5,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.dimension.DimensionType;
@@ -17,8 +20,11 @@ import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
+import org.bitwisemadness.infinitedungeon.portal.EntryAnchor;
+import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
+import org.bitwisemadness.infinitedungeon.portal.TravelPolicy;
 
 /**
  * Smoke test: proves the mod loads and the GameTest harness runs.
@@ -163,6 +169,45 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(!ignited, "a 1x1 interior is below vanilla's portal bounds");
         helper.assertTrue(helper.getBlockState(new BlockPos(3, 3, 1)).isAir(),
                 "nothing may be placed in a rejected frame");
+        helper.succeed();
+    }
+
+    /**
+     * The entry anchor binds to a player and persists into their attachment
+     * data - the payload that travels in the player's own NBT. The travel
+     * decision itself is pure and covered in JUnit; the dungeon-side teleport
+     * needs the dungeon level, which the GameTest harness cannot host.
+     */
+    @GameTest(template = "empty")
+    public static void entry_anchor_binds_and_persists(GameTestHelper helper) {
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        helper.assertTrue(player != null, "a mock server player must be available");
+        helper.assertTrue(!EntryAnchors.has(player), "a fresh player has no anchor");
+
+        helper.assertTrue(TravelPolicy.decide(false, EntryAnchors.has(player))
+                        == TravelPolicy.Action.BIND_AND_ENTER,
+                "walking in from a normal dimension binds and enters");
+
+        ResourceKey<Level> home = helper.getLevel().dimension();
+        BlockPos portal = helper.absolutePos(BlockPos.ZERO);
+        EntryAnchors.bind(player, home, portal);
+
+        helper.assertTrue(EntryAnchors.has(player), "the anchor must bind");
+        EntryAnchor anchor = EntryAnchors.get(player).orElseThrow();
+        helper.assertTrue(anchor.dimension().equals(home), "the anchor keeps the entry dimension");
+        helper.assertTrue(anchor.position().equals(portal), "the anchor keeps the entry position");
+        helper.assertTrue(TravelPolicy.decide(true, EntryAnchors.has(player))
+                        == TravelPolicy.Action.RETURN_TO_ANCHOR,
+                "walking out inside the dungeon returns to the anchor");
+
+        // Persistence: the attachments payload exists only once data is set,
+        // which is what gets written into the player's NBT on save.
+        helper.assertTrue(helper.getLevel().registryAccess() != null, "the server exposes registries");
+        CompoundTag empty = player.serializeAttachments(helper.getLevel().registryAccess());
+        helper.assertTrue(!empty.isEmpty(), "the bound anchor must serialize with the player");
+
+        EntryAnchors.clear(player);
+        helper.assertTrue(!EntryAnchors.has(player), "the anchor must be clearable");
         helper.succeed();
     }
 }

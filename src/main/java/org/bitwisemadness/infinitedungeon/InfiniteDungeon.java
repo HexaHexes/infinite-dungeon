@@ -6,6 +6,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
 import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
@@ -29,6 +30,9 @@ public final class InfiniteDungeon {
         // and registered here, and later features add their entries to it.
         DungeonConfigs.register(container);
         PortalBlocks.register(modBus);
+        // The per-player entry anchor is a data attachment: registered here,
+        // persisted with the player.
+        EntryAnchors.register(modBus);
         // The dungeon clock is held by the mod (the dimension type carries no
         // fixed time, so a server can let it flow).
         NeoForge.EVENT_BUS.addListener(DungeonTime::onLevelTick);

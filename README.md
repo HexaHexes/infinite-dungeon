@@ -9,7 +9,10 @@ In development - this early alpha ships the mod's foundation. Over the coming
 alphas it grows:
 
 - A dungeon dimension of seed-derived floors and layers, entered through a
-  portal and exited through your own return anchor.
+  portal and exited through your own return anchor: walking in through a
+  portal in your world stores it as yours, and walking back out of the dungeon
+  through a portal returns you to it - parties who entered separately each
+  exit at their own portal.
 - Spawns and bosses tuned to the dungeon's magicule curve, with per-layer
   guardians and minibosses.
 - Safe rooms, monster houses, traps, and loot that scales with depth.

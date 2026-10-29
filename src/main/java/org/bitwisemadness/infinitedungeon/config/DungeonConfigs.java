@@ -33,6 +33,8 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.BooleanValue TIME_FLOWS;
     private static final ModConfigSpec.IntValue TIME_FIXED_TICK;
     private static final ModConfigSpec.ConfigValue<String> PORTAL_FRAME_BLOCK;
+    private static final ModConfigSpec.ConfigValue<String> PORTAL_RETURN_MODE;
+    private static final ModConfigSpec.BooleanValue PORTAL_REFORM_MISSING;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -68,6 +70,17 @@ public final class DungeonConfigs {
                 .comment("nether-portal-shaped frame of this block ignites into a")
                 .comment("dungeon portal; a nether portal needs obsidian.")
                 .define("frameBlock", "minecraft:stone_bricks");
+        PORTAL_RETURN_MODE = builder
+                .comment("Where an exit portal sends you: 'entry_portal' returns to the")
+                .comment("portal you entered through, 'world_spawn' always exits at the")
+                .comment("overworld world spawn.")
+                .define("returnMode", "entry_portal",
+                        value -> "entry_portal".equals(value) || "world_spawn".equals(value));
+        PORTAL_REFORM_MISSING = builder
+                .comment("Re-form your anchor's portal at its old coordinates when the")
+                .comment("frame has been destroyed (nether behaviour). When off, a")
+                .comment("destroyed anchor falls back to the world spawn with a message.")
+                .define("reformMissingPortal", true);
         builder.pop();
         SPEC = builder.build();
     }
@@ -118,5 +131,15 @@ public final class DungeonConfigs {
         }
         Block block = BuiltInRegistries.BLOCK.get(id);
         return block == null || block == Blocks.AIR ? Blocks.STONE_BRICKS : block;
+    }
+
+    /** Where an exit portal sends the player (`entry_portal` or `world_spawn`). */
+    public static org.bitwisemadness.infinitedungeonapi.profile.PortalReturnMode portalReturnMode() {
+        return org.bitwisemadness.infinitedungeonapi.profile.PortalReturnMode.parse(PORTAL_RETURN_MODE.get());
+    }
+
+    /** Whether a destroyed anchor frame is re-formed at its old coordinates. */
+    public static boolean reformMissingPortal() {
+        return PORTAL_REFORM_MISSING.get();
     }
 }

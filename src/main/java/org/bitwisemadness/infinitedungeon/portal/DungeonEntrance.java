@@ -3,24 +3,22 @@ package org.bitwisemadness.infinitedungeon.portal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 
 /**
  * The dungeon-side entrance: where an arriving player materialises.
  *
- * <p><strong>Wave-1 placeholder, flagged for the plan.</strong> The plan
+ * <p><strong>Wave-1 placeholder, recorded in the plan.</strong> The plan
  * forbids visitor-triggered world edits (Chunky pregeneration parity: all
  * content is seed-derived at chunk-generation time), so this fixed,
- * position-deterministic entrance - built once, identically in every world,
- * at fixed coordinates - is a deliberate deviation pending a ruling; Wave 2's
- * lane geometry and structure sets generate entrances properly and supersede
- * it.</p>
+ * position-deterministic entrance - built once, identically in every world, at
+ * fixed coordinates - is a recorded deviation; Wave 2's lane geometry and
+ * structure sets generate entrances properly and replace it.</p>
  *
- * <p>Layout: a 5x5 platform of the configured frame block one block below the
- * entrance, a nether-portal-shaped frame on it, and the interior lit as a
- * dungeon portal. Idempotent: once the portal exists, it is left alone.</p>
+ * <p>Layout: a 5x5 platform of the configured frame block below, then the
+ * shared minimal portal from {@link PortalFrameBuilder#build}. Idempotent:
+ * once the portal exists it is left alone. Returns {@code null} when the
+ * space is blocked, and the travel code leaves the player where they stand.</p>
  */
 public final class DungeonEntrance {
 
@@ -33,39 +31,20 @@ public final class DungeonEntrance {
     private DungeonEntrance() {
     }
 
-    /**
-     * Ensures the entrance exists and returns the position to materialise at.
-     */
+    /** Ensures the entrance exists and returns the position to materialise at, or null when blocked. */
     public static BlockPos ensure(ServerLevel level) {
         if (level.getBlockState(ARRIVAL).getBlock() instanceof DungeonPortalBlock) {
             return ARRIVAL;
         }
-        Block frame = DungeonConfigs.frameBlock();
-        BlockState frameState = frame.defaultBlockState();
-
         // Platform: 5x5 under and around the frame.
         for (int x = -1; x <= 4; x++) {
             for (int z = -1; z <= 1; z++) {
-                level.setBlockAndUpdate(new BlockPos(x, 63, z), frameState);
+                BlockPos under = new BlockPos(x, 63, z);
+                if (level.getBlockState(under).isAir()) {
+                    level.setBlockAndUpdate(under, DungeonConfigs.frameBlock().defaultBlockState());
+                }
             }
         }
-        // Frame: bottom and top rows, side columns (corners optional, but built).
-        for (int x = 0; x <= 3; x++) {
-            level.setBlockAndUpdate(new BlockPos(x, 64, 0), frameState);
-            level.setBlockAndUpdate(new BlockPos(x, 68, 0), frameState);
-        }
-        for (int y = 65; y <= 67; y++) {
-            level.setBlockAndUpdate(new BlockPos(0, y, 0), frameState);
-            level.setBlockAndUpdate(new BlockPos(3, y, 0), frameState);
-        }
-        // Interior: light it.
-        BlockState portal = PortalBlocks.DUNGEON_PORTAL.get().defaultBlockState()
-                .setValue(DungeonPortalBlock.AXIS, Direction.Axis.X);
-        for (int x = 1; x <= 2; x++) {
-            for (int y = 65; y <= 67; y++) {
-                level.setBlockAndUpdate(new BlockPos(x, y, 0), portal);
-            }
-        }
-        return ARRIVAL;
+        return PortalFrameBuilder.build(level, ARRIVAL, Direction.Axis.X) ? ARRIVAL : null;
     }
 }

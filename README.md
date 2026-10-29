@@ -12,7 +12,8 @@ alphas it grows:
   portal and exited through your own return anchor: walking in through a
   portal in your world stores it as yours, and walking back out of the dungeon
   through a portal returns you to it - parties who entered separately each
-  exit at their own portal.
+  exit at their own portal. Destroyed anchors are re-formed on the way out;
+  a missing anchor sends you to the world spawn with a message.
 - Spawns and bosses tuned to the dungeon's magicule curve, with per-layer
   guardians and minibosses.
 - Safe rooms, monster houses, traps, and loot that scales with depth.

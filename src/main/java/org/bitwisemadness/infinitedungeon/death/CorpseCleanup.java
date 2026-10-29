@@ -32,7 +32,9 @@ import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
  * <p>Gameplay-only wiring, proven by the GameTest suite, which invokes
  * {@link #scan} directly because the harness cannot host the dungeon
  * dimension - the dimension gate is the same one-line check
- * {@code DungeonTime} uses, in the tick listener.</p>
+ * {@code DungeonTime} uses, in the tick listener. The suite's mock players
+ * never declare Corpse's particle payload channel, so every removal there
+ * exercises the contained-failure path in {@link #removeCorpse}.</p>
  */
 public final class CorpseCleanup {
 
@@ -76,9 +78,24 @@ public final class CorpseCleanup {
         // Discard after the iteration: removal mutates the level's entity
         // storage that the iterable walks over.
         for (Entity entity : reclaimed) {
-            InfiniteDungeon.LOGGER.debug("Removing reclaimed corpse at {}",
-                    entity.blockPosition());
+            removeCorpse(entity);
+        }
+    }
+
+    /**
+     * One removal, contained: Corpse's own {@code remove} override notifies
+     * every player within 64 blocks with a particle payload, and a client that
+     * never declared that channel - a vanilla client in production, the
+     * harness's mock players in tests - makes the send throw. The corpse is
+     * already removed by the time the notification fires, so the sweep logs
+     * and continues rather than let a client-side detail abort the floors.
+     */
+    private static void removeCorpse(Entity entity) {
+        try {
             entity.discard();
+        } catch (UnsupportedOperationException ex) {
+            InfiniteDungeon.LOGGER.warn("Corpse removal could not notify nearby players at {}: {}",
+                    entity.blockPosition(), ex.getMessage());
         }
     }
 

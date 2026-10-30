@@ -597,6 +597,20 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(!laden.isRemoved(),
                 "a corpse holding items must stay for its owner to reclaim");
         helper.assertTrue(!litter.isRemoved(), "an unrelated entity must never be swept");
+
+        // Leftovers leave through the contained path the sweep uses (issue
+        // #189): mock players never declare Corpse's particle channel, and a
+        // corpse left ticking would age out mid-batch - Corpse's own tick
+        // discard bypasses removeCorpse's catch and crashes the run.
+        try {
+            laden.discard();
+        } catch (UnsupportedOperationException ex) {
+            // Same contract as CorpseCleanup.removeCorpse: already removed
+            // by the time the notification throws.
+            helper.assertTrue(laden.isRemoved(),
+                    "the corpse must be gone even when its notification fails");
+        }
+        litter.discard();
         helper.succeed();
     }
 

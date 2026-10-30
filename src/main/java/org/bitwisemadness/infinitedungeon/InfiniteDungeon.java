@@ -22,6 +22,7 @@ import org.bitwisemadness.infinitedungeon.portal.LobbyEntranceFeature;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
 import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
+import org.bitwisemadness.infinitedungeon.spawn.SpawnAttributeScaling;
 import org.bitwisemadness.infinitedungeon.time.DungeonTime;
 import org.bitwisemadness.infinitedungeonapi.magicule.AmbientMagicule;
 import org.slf4j.Logger;
@@ -98,6 +99,14 @@ public final class InfiniteDungeon {
         NeoForge.EVENT_BUS.addListener(MagiculeElevation::onLevelLoad);
         NeoForge.EVENT_BUS.addListener(MagiculeElevation::onLevelUnload);
         NeoForge.EVENT_BUS.addListener(MagiculeElevation::onChunkLoad);
+        // Spawn attribute scaling (plan sections 7/9, issue #37): the default
+        // rows join the API's list (core configures, API holds - I32), and the
+        // fresh-join hook scales in-dungeon mob spawns. The magicule toggle
+        // pushes at first level load - config values do not exist yet at
+        // construction time (the gate caught exactly that).
+        SpawnAttributeScaling.registerDefaultRows();
+        NeoForge.EVENT_BUS.addListener(SpawnAttributeScaling::onLevelLoad);
+        NeoForge.EVENT_BUS.addListener(SpawnAttributeScaling::onEntityJoin);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

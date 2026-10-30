@@ -16,6 +16,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
@@ -26,6 +28,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
@@ -1142,6 +1146,28 @@ public final class InfiniteDungeonGameTests {
         }
         helper.assertTrue(AmbientMagicule.query(level, far) == AmbientMagicule.COLD,
                 "cleanup must restore COLD for the batch");
+        helper.succeed();
+    }
+    /**
+     * Spawn attribute scaling's decline path (issue #37): the fresh-join
+     * hook never touches anything outside the dungeon dimension - posting
+     * the event for a fresh zombie in the harness leaves its base health
+     * exactly as spawned. The positive path cannot run here (the harness
+     * can never host the dungeon dimension), so the factor math lives in
+     * SpawnFactor's JUnit suite - the standing split.
+     */
+    @GameTest(template = "empty")
+    public static void spawn_attribute_scaling_declines_outside_the_dungeon(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var zombie = EntityType.ZOMBIE.create(level);
+        helper.assertTrue(zombie != null, "the probe zombie must be creatable");
+        var health = zombie.getAttribute(Attributes.MAX_HEALTH);
+        helper.assertTrue(health != null, "zombies carry max health");
+        double before = health.getBaseValue();
+        NeoForge.EVENT_BUS.post(new EntityJoinLevelEvent(zombie, level));
+        helper.assertTrue(health.getBaseValue() == before,
+                "outside the dungeon the hook must decline - base moved from "
+                        + before + " to " + health.getBaseValue());
         helper.succeed();
     }
 }

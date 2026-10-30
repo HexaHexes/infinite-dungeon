@@ -13,13 +13,17 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.dimension.DimensionType;
+import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
+import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
@@ -30,7 +34,9 @@ import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.depth.DungeonLayout;
 import org.bitwisemadness.infinitedungeon.depth.LayoutParameters;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
+import org.bitwisemadness.infinitedungeon.lanes.FallbackHallFeature;
 import org.bitwisemadness.infinitedungeon.lanes.FloorSchedule;
+import org.bitwisemadness.infinitedungeon.lanes.LaneGeometry;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
@@ -650,4 +656,80 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(dungeon.findGenerationPoint(floorContext).isPresent(),
                 "terrain worlds must keep generating exactly as before");
         helper.succeed();
+    }
+
+    /**
+     * The fallback hall (issue #30): guards exactly the lane cells whose
+     * dungeon is absent. Four paths against the real placement read from
+     * LaneGrid: a non-candidate chunk of a region is skipped, the lobby region
+     * (lane 0) is skipped, the cell's actual candidate builds the hall, and
+     * the room lands on the dungeon's own envelope - floor at the base plane,
+     * ceiling just under the ground plane, both inside the build height. The
+     * dungeon-present path cannot be staged here (the harness has no dungeon
+     * starts); its logic is the same local start lookup documented on the
+     * feature.
+     */
+    @GameTest(template = "empty")
+    public static void fallback_hall_guards_the_dungeon_less_cell(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var placement = LaneGrid.placement();
+        helper.assertTrue(placement != null,
+                "the lane placement must be read for the hall filter");
+        long seed = level.getSeed();
+        int minBuild = level.getMinBuildHeight();
+
+        var generator = level.getChunkSource().getGenerator();
+        var feature = FallbackHallFeature.FALLBACK_HALL.get();
+
+        // Region (0,0) candidates all fall in lane 0 - the lobby layer is
+        // reserved for issue #131, so the hall must refuse.
+        var lobbyCell = placement.getPotentialStructureChunk(seed, 0, 0);
+        helper.assertTrue(LaneGeometry.laneIndex(lobbyCell.getMiddleBlockX(),
+                        LaneGrid.laneStride()) == 0,
+                "region zero must map to the lobby lane by construction");
+        var lobbyOrigin = new BlockPos(lobbyCell.x << 4, minBuild + 1, lobbyCell.z << 4);
+        helper.assertTrue(!feature.place(context(level, generator, seed, lobbyOrigin)),
+                "the lobby lane must never get a hall");
+
+        // Region (1,0) candidates are lane 1+.
+        var cell = placement.getPotentialStructureChunk(seed, placement.spacing(), 0);
+        helper.assertTrue(LaneGeometry.laneIndex(cell.getMiddleBlockX(),
+                        LaneGrid.laneStride()) >= 1,
+                "region one must map past the lobby lane");
+
+        // Negative control: a non-candidate chunk inside the same region.
+        int regionX = Math.floorDiv(cell.x, placement.spacing());
+        int regionZ = Math.floorDiv(cell.z, placement.spacing());
+        ChunkPos other = null;
+        for (int step = 0; step < placement.spacing(); step++) {
+            var probe = new ChunkPos(regionX * placement.spacing() + step, regionZ * placement.spacing());
+            if (probe.x != cell.x || probe.z != cell.z) {
+                other = probe;
+                break;
+            }
+        }
+        helper.assertTrue(other != null, "the region must hold a non-candidate chunk");
+        var otherOrigin = new BlockPos(other.x << 4, minBuild + 1, other.z << 4);
+        helper.assertTrue(!feature.place(context(level, generator, seed, otherOrigin)),
+                "a non-candidate chunk must stay empty");
+
+        // Positive: the candidate cell itself builds the hall.
+        var origin = new BlockPos(cell.x << 4, minBuild + 1, cell.z << 4);
+        helper.assertTrue(feature.place(context(level, generator, seed, origin)),
+                "the dungeon-less candidate cell must get the hall");
+        helper.assertTrue(level.getBlockState(cell.getMiddleBlockPosition(minBuild + 21))
+                        .is(Blocks.STONE_BRICKS),
+                "the hall floor must sit on the dungeon's base plane");
+        helper.assertTrue(level.getBlockState(cell.getMiddleBlockPosition(minBuild + 44))
+                        .is(Blocks.STONE_BRICKS),
+                "the hall ceiling must stop under the ground plane, in-bounds");
+        helper.succeed();
+    }
+
+    private static FeaturePlaceContext<NoneFeatureConfiguration> context(
+            net.minecraft.world.level.WorldGenLevel level,
+            net.minecraft.world.level.chunk.ChunkGenerator generator,
+            long seed, BlockPos origin) {
+        return new FeaturePlaceContext<>(java.util.Optional.empty(), level, generator,
+                RandomSource.create(seed), origin, NoneFeatureConfiguration.INSTANCE);
     }}

@@ -24,8 +24,8 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
   (#68 chunk-gen placement, #33 waypoint policy).
 - Optional: everything else, through the suite's integration modules.
 
-**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (17 tests).
-`expectedTests = 17` in `build.gradle` must match the `@GameTest` count.
+**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (18 tests).
+`expectedTests = 18` in `build.gradle` must match the `@GameTest` count.
 
 **Remote:** `github.com/HexaHexes/infinite-dungeon` (public, default branch
 `main`).

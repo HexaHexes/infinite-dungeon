@@ -238,15 +238,23 @@ The org's approved rewrite of record is `tensura-jade` PR #27
 - `ci.yml` also runs a **static** job: SpotBugs (`spotbugsMain`, `effort=MAX`)
   and Spotless (minimal profile - trailing whitespace, final newline,
   import order on `src/*/java` only; no formatter, so no repo-wide rewrites).
-  Both are **report-only during the grace period**: SpotBugs runs with
-  `ignoreFailures`, Spotless with `continue-on-error` in CI and
-  `enforceCheck false` in Gradle - so neither the `static` job nor the junit
-  job's `./gradlew build` can fail on findings. The SpotBugs HTML report is
-  uploaded as the `spotbugs-report` artifact every run. Gating turns on in a
-  follow-up once the finding volume is known (0 on the template at adoption);
-  that same follow-up runs one `spotlessApply` per repo to clear the baseline
-  and flips the four switches. The tools are pinned in `build.gradle`
+  Both are **enforced** (since #52): SpotBugs findings fail their step and,
+  SpotBugs sitting on Gradle's `check` graph, also junit's `./gradlew build`;
+  Spotless violations fail their step and so the `static` check, while
+  `enforceCheck false` keeps Spotless out of `check` - junit stays
+  style-agnostic and `static` is the style gate. The SpotBugs HTML report
+  uploads as the `spotbugs-report` artifact every run (`if: always()`). A repo
+  pulling this flip clears its baseline first (one `spotlessApply` plus
+  SpotBugs findings fixed or suppressed) or its next PR's required `static`
+  check goes red; the org-wide survey on #52 recorded 174 findings across 14
+  repos at flip time. The tools are pinned in `build.gradle`
   (`com.github.spotbugs` 6.5.x, `com.diffplug.spotless` 8.x).
+  SpotBugs exclusions live in `config/spotbugs-exclude.xml` (wired via
+  `excludeFilter`): the `EI_EXPOSE_REP`/`EI_EXPOSE_REP2` pair only -
+  reference exposure is idiomatic NeoForge (fields hold `Level`/`ItemStack`/
+  capability objects by design), everything else stays enforced. Adding a
+  pattern to that file needs an issue-first decision (#52) - never grow it
+  silently.
 - `dependency-submission.yml` + `dependency-review.yml` form the **dependency
   review** gate: submission pushes a Gradle dependency snapshot on PRs and
   default-branch pushes (Gradle cannot be parsed statically and no lockfiles

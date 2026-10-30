@@ -128,11 +128,29 @@ public final class InfiniteDungeonGameTests {
         try {
             var json = net.minecraft.util.GsonHelper.parse(
                     new String(dimension.get().open().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
-            var stem = net.minecraft.world.level.dimension.LevelStem.CODEC
-                    .parse(registries.createSerializationContext(
-                            com.mojang.serialization.JsonOps.INSTANCE), json);
+            var ops = registries.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);
+            var stem = net.minecraft.world.level.dimension.LevelStem.CODEC.parse(ops, json);
             helper.assertTrue(stem.result().isPresent(),
                     "the dungeon dimension must parse with its biome reference: " + stem.error());
+
+            // The 2026-10-30 ruling: Dungeon Crawl's natural generation stays
+            // disabled on this dimension - our lane set is the sole placement
+            // authority, so we control what generates and when while still
+            // reusing dungeoncrawl:dungeon through our own set.
+            var settings = net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings.CODEC
+                    .parse(ops, json.getAsJsonObject().get("generator")
+                            .getAsJsonObject().get("settings"))
+                    .getOrThrow();
+            helper.assertTrue(settings.structureOverrides().isPresent(),
+                    "the dimension must pin its structure sets explicitly");
+            var sets = settings.structureOverrides().get();
+            java.util.List<String> keys = new java.util.ArrayList<>();
+            sets.stream().forEach(entry -> entry.unwrapKey()
+                    .ifPresent(key -> keys.add(key.location().toString())));
+            helper.assertTrue(keys.size() == 1 && keys.contains("infinite_dungeon:lanes"),
+                    "our lane set must be the sole placement authority: " + keys);
+            helper.assertTrue(!keys.contains("dungeoncrawl:dungeons"),
+                    "Dungeon Crawl's natural generation must stay disabled here: " + keys);
         } catch (Exception e) {
             helper.assertTrue(false, "the dungeon dimension json must parse: " + e);
         }

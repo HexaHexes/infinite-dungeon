@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "org.bitwisemadness.infinitedungeon.mixins",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "DungeonVoidPlacement"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

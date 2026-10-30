@@ -55,6 +55,11 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.BooleanValue MAGICULE_PARTICLES;
     private static final ModConfigSpec.DoubleValue MAGICULE_PARTICLE_DENSITY;
     private static final ModConfigSpec.ConfigValue<String> MAGICULE_PARTICLE_TINT;
+    private static final ModConfigSpec.DoubleValue DENSITY_BASE;
+    private static final ModConfigSpec.DoubleValue DENSITY_LINEAR_PER_FLOOR;
+    private static final ModConfigSpec.DoubleValue DENSITY_QUADRATIC_PER_LAYER;
+    private static final ModConfigSpec.DoubleValue DENSITY_PER_POINT;
+    private static final ModConfigSpec.IntValue DENSITY_MAX_PER_CHUNK;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -198,6 +203,30 @@ public final class DungeonConfigs {
                 .define("particleTint", "",
                         value -> !(value instanceof String text)
                                 || text.isEmpty() || text.matches("[0-9a-fA-F]{6}"));
+        builder.pop();
+        builder.push("density");
+        DENSITY_BASE = builder
+                .comment("S(L,f) = base + linearPerFloor*f + quadraticPerLayer*L^2")
+                .comment("(plan section 7) - drives HOW MANY mobs spawn, never how")
+                .comment("strong: per-mob strength is difficulty.*'s number.")
+                .defineInRange("base", 0D, 0D, 100D);
+        DENSITY_LINEAR_PER_FLOOR = builder
+                .comment("The per-floor increment: density grows linearly within a")
+                .comment("layer as floors deepen (floor 0 is the entry band).")
+                .defineInRange("linearPerFloor", 0.1D, 0D, 100D);
+        DENSITY_QUADRATIC_PER_LAYER = builder
+                .comment("The per-layer squared increment: density grows quadratically")
+                .comment("between layers. 0 yields pure linear progression.")
+                .defineInRange("quadraticPerLayer", 0.03D, 0D, 100D);
+        DENSITY_PER_POINT = builder
+                .comment("Converts curve points to a spawn-target multiplier: the")
+                .comment("effective target is base target * (1 + S * perPoint).")
+                .comment("0 pins spawn targets to the baseline regardless of depth.")
+                .defineInRange("perPoint", 0.5D, 0D, 100D);
+        DENSITY_MAX_PER_CHUNK = builder
+                .comment("Absolute safety clamp: a chunk's spawn target never exceeds")
+                .comment("this, whatever the curve says.")
+                .defineInRange("maxPerChunk", 24, 0, 1024);
         builder.pop();
         builder.push("integrations");
         builder.push("corpse");
@@ -354,5 +383,30 @@ public final class DungeonConfigs {
     /** The optional particle tint as RRGGBB hex, empty for the default look. */
     public static String magiculeParticleTint() {
         return MAGICULE_PARTICLE_TINT.get();
+    }
+
+    /** The density curve's origin value (plan section 7; default 0). */
+    public static double densityBase() {
+        return DENSITY_BASE.get();
+    }
+
+    /** The per-floor density increment (plan section 7; default 0.1). */
+    public static double densityLinearPerFloor() {
+        return DENSITY_LINEAR_PER_FLOOR.get();
+    }
+
+    /** The per-layer squared density increment (plan section 7; default 0.03). */
+    public static double densityQuadraticPerLayer() {
+        return DENSITY_QUADRATIC_PER_LAYER.get();
+    }
+
+    /** Points-to-multiplier conversion for spawn targets (plan section 7; default 0.5). */
+    public static double densityPerPoint() {
+        return DENSITY_PER_POINT.get();
+    }
+
+    /** The absolute per-chunk spawn-target clamp (plan section 7; default 24). */
+    public static int densityMaxPerChunk() {
+        return DENSITY_MAX_PER_CHUNK.get();
     }
 }

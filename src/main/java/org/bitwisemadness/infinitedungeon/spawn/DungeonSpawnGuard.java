@@ -119,7 +119,9 @@ public final class DungeonSpawnGuard {
         }
         StoredRespawn stored = PRE_SLEEP_RESPAWN.remove(player.getUUID());
         if (stored == null) {
-            player.setRespawnPosition(null, null, 0.0F, false, false);
+            // setRespawnPosition ignores its dimension argument on the null-position
+            // path (it always resets to OVERWORLD); pass the non-null value it stores.
+            player.setRespawnPosition(Level.OVERWORLD, null, 0.0F, false, false);
             return;
         }
         player.setRespawnPosition(stored.dimension(), stored.position(),
@@ -143,8 +145,7 @@ public final class DungeonSpawnGuard {
     }
 
     private static String respawnDimensionId(ServerPlayer player) {
-        ResourceKey<Level> respawnDimension = player.getRespawnDimension();
-        return respawnDimension == null ? null : respawnDimension.location().toString();
+        return player.getRespawnDimension().location().toString();
     }
 
     private static String dimensionId(Level level) {

@@ -83,3 +83,7 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
   `publish.yml` publishes the Maven artifact to the org's GitHub Packages
   registry when that release is published - see the org rulebook for the
   consumer-side auth details (`PACKAGE_READ_TOKEN`).
+
+## GameTest harness persistence
+
+- The harness world's chunks and saved data persist across `runGameTestServer` runs (`run/world`), so tests driving features at SEED-DERIVED positions must clear their spot first: a leftover from a previous run (e.g. a standing waystone) makes the feature correctly refuse and the test fail. Fixed-position tests (the lobby at chunk 0,0) are naturally idempotent.

@@ -902,6 +902,18 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(Math.floorDiv(cell.z, placement.spacing()) == 0,
                 "the probe cell must be the rz-0 entrance region");
         var origin = new BlockPos(cell.x << 4, minBuild + 1, cell.z << 4);
+        // The harness world persists between runs (its chunks survive in
+        // run/world), and this spot is seed-derived - so a waystone from a
+        // previous run can still stand there. Production refuses to overwrite
+        // a standing waystone BY DESIGN; the test clears the two blocks
+        // first, the same "not guaranteed empty" accommodation the other
+        // world-writing tests make.
+        int clearFloors = FloorSchedule.floorsInLayer(seed, lane,
+                DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+        BlockPos spotToClear = LaneTransitions.arrivalInterior(minBuild, level.getHeight(), clearFloors, cell)
+                .offset(0, 0, 3);
+        level.setBlock(spotToClear, Blocks.AIR.defaultBlockState(), 3);
+        level.setBlock(spotToClear.above(), Blocks.AIR.defaultBlockState(), 3);
         helper.assertTrue(feature.place(context(level, generator, seed, origin)),
                 "the canonical entrance cell must get its waystone");
 

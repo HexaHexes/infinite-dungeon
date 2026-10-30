@@ -46,6 +46,9 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.BooleanValue CORPSE_DESPAWN_WHEN_EMPTY;
     private static final ModConfigSpec.IntValue FLOORS_PER_LAYER_MIN;
     private static final ModConfigSpec.IntValue FLOORS_PER_LAYER_MAX;
+    private static final ModConfigSpec.DoubleValue DIFFICULTY_BASE;
+    private static final ModConfigSpec.DoubleValue DIFFICULTY_LINEAR_PER_FLOOR;
+    private static final ModConfigSpec.DoubleValue DIFFICULTY_QUADRATIC_PER_LAYER;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -144,6 +147,21 @@ public final class DungeonConfigs {
                 .comment("The most floors a dungeon layer may field (see floorsPerLayerMin).")
                 .comment("The first layer is the fixed-construction lobby and ignores both.")
                 .defineInRange("floorsPerLayerMax", 10, 1, 64);
+        builder.push("difficulty");
+        DIFFICULTY_BASE = builder
+                .comment("D(L,f) = base + linearPerFloor*f + quadraticPerLayer*L^2")
+                .comment("(plan section 7). The curve's value at the lobby's entry")
+                .comment("floor; 0 starts difficulty at pure scaling.")
+                .defineInRange("base", 0D, 0D, 100D);
+        DIFFICULTY_LINEAR_PER_FLOOR = builder
+                .comment("The per-floor increment: difficulty grows linearly within a")
+                .comment("layer as floors deepen (floor 0 is the entry band).")
+                .defineInRange("linearPerFloor", 0.15D, 0D, 100D);
+        DIFFICULTY_QUADRATIC_PER_LAYER = builder
+                .comment("The per-layer squared increment: difficulty grows quadratically")
+                .comment("between layers. 0 yields pure linear progression.")
+                .defineInRange("quadraticPerLayer", 0.05D, 0D, 100D);
+        builder.pop();
         builder.push("integrations");
         builder.push("corpse");
         CORPSE_DESPAWN_WHEN_EMPTY = builder
@@ -254,5 +272,20 @@ public final class DungeonConfigs {
     /** The most floors a layer may field (plan section 3; default 10). */
     public static int floorsPerLayerMax() {
         return FLOORS_PER_LAYER_MAX.get();
+    }
+
+    /** The difficulty curve's origin value (plan section 7; default 0). */
+    public static double difficultyBase() {
+        return DIFFICULTY_BASE.get();
+    }
+
+    /** The per-floor difficulty increment (plan section 7; default 0.15). */
+    public static double difficultyLinearPerFloor() {
+        return DIFFICULTY_LINEAR_PER_FLOOR.get();
+    }
+
+    /** The per-layer squared difficulty increment (plan section 7; default 0.05). */
+    public static double difficultyQuadraticPerLayer() {
+        return DIFFICULTY_QUADRATIC_PER_LAYER.get();
     }
 }

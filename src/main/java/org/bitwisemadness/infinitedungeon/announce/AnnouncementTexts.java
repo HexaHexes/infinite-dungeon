@@ -24,6 +24,10 @@ public final class AnnouncementTexts {
     /** Shown when a dungeon portal may not be built here. */
     public static final String PORTAL_NOT_ALLOWED = "Dungeon portals cannot be built here.";
 
+    /** Shown when a layer transition refuses passage. */
+    public static final String LANE_SEALED =
+            "This passage is sealed until the layer's guardian falls.";
+
     private AnnouncementTexts() {
     }
 }

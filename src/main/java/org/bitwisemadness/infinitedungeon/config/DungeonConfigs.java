@@ -33,6 +33,7 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.ConfigValue<String> BOSS_AWAKENING;
     private static final ModConfigSpec.ConfigValue<String> ROOM_EVENT;
     private static final ModConfigSpec.ConfigValue<String> PORTAL_NOT_ALLOWED;
+    private static final ModConfigSpec.ConfigValue<String> LANE_SEALED;
     private static final ModConfigSpec.BooleanValue TIME_FLOWS;
     private static final ModConfigSpec.IntValue TIME_FIXED_TICK;
     private static final ModConfigSpec.ConfigValue<String> PORTAL_FRAME_BLOCK;
@@ -65,6 +66,10 @@ public final class DungeonConfigs {
                 .comment("Shown when a portal may not be built here: the dimension gate")
                 .comment("or the allowConstruction toggle refused it.")
                 .define("portalNotAllowed", AnnouncementTexts.PORTAL_NOT_ALLOWED);
+        LANE_SEALED = builder
+                .comment("Shown when a layer transition portal refuses passage:")
+                .comment("the layer's guardian has not fallen yet (boss gating).")
+                .define("laneSealed", AnnouncementTexts.LANE_SEALED);
         builder.pop();
         builder.push("time");
         TIME_FLOWS = builder
@@ -219,6 +224,11 @@ public final class DungeonConfigs {
     /** The message a player sees when a portal may not be built here. */
     public static String portalNotAllowed() {
         return PORTAL_NOT_ALLOWED.get();
+    }
+
+    /** The message a player sees when a sealed layer transition refuses them. */
+    public static String laneSealed() {
+        return LANE_SEALED.get();
     }
 
     /** Whether new portal ignition is allowed at all (admin-fixture mode). */

@@ -29,6 +29,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
 import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
+import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.depth.DungeonLayout;
@@ -38,8 +39,12 @@ import org.bitwisemadness.infinitedungeon.lanes.FallbackHallFeature;
 import org.bitwisemadness.infinitedungeon.lanes.FloorSchedule;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGeometry;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
+import org.bitwisemadness.infinitedungeon.lanes.LaneTransitions;
+import org.bitwisemadness.infinitedungeon.lanes.LayerUnlocks;
+import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
+import org.bitwisemadness.infinitedungeon.portal.DungeonPortalTravel;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchor;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
@@ -735,4 +740,124 @@ public final class InfiniteDungeonGameTests {
             long seed, BlockPos origin) {
         return new FeaturePlaceContext<>(java.util.Optional.empty(), level, generator,
                 RandomSource.create(seed), origin, NoneFeatureConfiguration.INSTANCE);
-    }}
+    }
+
+    /**
+     * The transition frames (issue #31): at the candidate cell both slots of
+     * the pair build - departure on the east edge of the deepest floor,
+     * arrival on the west edge of the entry band - and both interiors stay
+     * unlit so the sealed ignition gate owns the first light.
+     */
+    @GameTest(template = "empty")
+    public static void transition_frames_build_unlit_pairs(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var placement = LaneGrid.placement();
+        helper.assertTrue(placement != null, "the lane placement must be read");
+        long seed = level.getSeed();
+        int minBuild = level.getMinBuildHeight();
+
+        var cell = placement.getPotentialStructureChunk(seed, placement.spacing(), 0);
+        helper.assertTrue(LaneGeometry.laneIndex(cell.getMiddleBlockX(), LaneGrid.laneStride()) >= 1,
+                "the probe cell must sit past the lobby lane");
+
+        // The harness world is a flat preset with ground at the bottom, so
+        // both slot volumes are cleared first - the same accommodation the
+        // portal-frame tests make. In the dungeon's void they are air.
+        int floors = FloorSchedule.floorsInLayer(seed, 1,
+                DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+        var departure = LaneTransitions.departureInterior(minBuild, cell);
+        var arrival = LaneTransitions.arrivalInterior(minBuild, level.getHeight(), floors, cell);
+        clearFootprint(level, departure);
+        clearFootprint(level, arrival);
+
+        var origin = new BlockPos(cell.x << 4, minBuild + 1, cell.z << 4);
+        var feature = TransitionFramesFeature.TRANSITION_FRAMES.get();
+        helper.assertTrue(feature.place(context(level, level.getChunkSource().getGenerator(), seed, origin)),
+                "the candidate cell must get its transition frames");
+
+        helper.assertTrue(level.getBlockState(departure).isAir(),
+                "the departure interior must stay unlit");
+        helper.assertTrue(level.getBlockState(departure.offset(-1, 0, 0)).is(Blocks.STONE_BRICKS),
+                "the departure ring must be built of the frame block");
+        helper.assertTrue(level.getBlockState(arrival).isAir(),
+                "the arrival interior must stay unlit");
+        helper.assertTrue(level.getBlockState(arrival.offset(-1, 0, 0)).is(Blocks.STONE_BRICKS),
+                "the arrival ring must be built of the frame block");
+        helper.succeed();
+    }
+
+    /**
+     * Clears a frame's full footprint (ring included) to air - absolute
+     * positions, since helper.setBlock addresses test-local space.
+     */
+    private static void clearFootprint(net.minecraft.world.level.WorldGenLevel level, BlockPos interior) {
+        for (int dx = -1; dx <= 2; dx++) {
+            for (int dy = -1; dy <= 3; dy++) {
+                level.setBlock(interior.offset(dx, dy, 0), Blocks.AIR.defaultBlockState(), 3);
+            }
+        }
+    }
+    /**
+     * The transition seal gate end to end (issue #31): one test owns the
+     * guardian seam - vanilla runs batch tests concurrently, so a shared
+     * set/reset from two tests would race - and locks its layers first,
+     * because harness world data survives between runs. Unassigned layers are
+     * open (the interim-alpha rule), assigned layers seal, ignition refuses
+     * while sealed, travel refuses while sealed, and unlocking opens both.
+     */
+    @GameTest(template = "empty")
+    public static void layer_transitions_seal_gate_and_travel(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var placement = LaneGrid.placement();
+        helper.assertTrue(placement != null, "the lane placement must be read");
+        long seed = level.getSeed();
+        int minBuild = level.getMinBuildHeight();
+
+        var cell = placement.getPotentialStructureChunk(seed, placement.spacing(), 0);
+        var departure = LaneTransitions.departureInterior(minBuild, cell);
+        int lane = LaneGeometry.laneIndex(departure.getX(), LaneGrid.laneStride());
+        var unlocks = LayerUnlocks.of(level);
+        try {
+            // Deterministic preconditions for any starting state.
+            unlocks.lock(lane);
+            unlocks.lock(lane + 1);
+            LayerUnlocks.setGuardianAssigned(layer -> layer == lane);
+
+            helper.assertTrue(!LayerUnlocks.isSealed(level, lane + 1),
+                    "an unassigned layer must be open (interim alpha rule)");
+            helper.assertTrue(LayerUnlocks.isSealed(level, lane),
+                    "assigned and not unlocked must seal");
+            helper.assertTrue(PortalIgnition.sealedAt(level, departure),
+                    "a sealed departure must refuse its first light");
+
+            ServerPlayer sealedPlayer = helper.makeMockServerPlayerInLevel();
+            sealedPlayer.setPos(departure.getX() + 0.5, departure.getY() + 0.5, departure.getZ() + 0.5);
+            DungeonPortalTravel.laneHop(level, departure, sealedPlayer);
+            helper.assertTrue(sealedPlayer.blockPosition().equals(departure),
+                    "a sealed layer must not move the player: " + sealedPlayer.blockPosition());
+
+            unlocks.unlock(lane);
+            helper.assertTrue(!LayerUnlocks.isSealed(level, lane),
+                    "a fallen guardian must open the layer");
+            unlocks.unlock(lane);
+            helper.assertTrue(!LayerUnlocks.isSealed(level, lane), "unlocking is idempotent");
+            helper.assertTrue(!PortalIgnition.sealedAt(level, departure),
+                    "an unlocked departure must allow ignition");
+
+            var target = LaneTransitions.pairTarget(level, departure);
+            helper.assertTrue(target.isPresent(), "a departure slot must pair to the next lane");
+            helper.assertTrue(LaneGeometry.laneIndex(target.get().getX(), LaneGrid.laneStride()) == lane + 1,
+                    "the pair must land in the next lane");
+
+            ServerPlayer openPlayer = helper.makeMockServerPlayerInLevel();
+            openPlayer.setPos(departure.getX() + 0.5, departure.getY() + 0.5, departure.getZ() + 0.5);
+            DungeonPortalTravel.laneHop(level, departure, openPlayer);
+            helper.assertTrue(openPlayer.blockPosition().equals(target.get()),
+                    "an open departure must teleport to its arrival: " + openPlayer.blockPosition());
+        } finally {
+            LayerUnlocks.setGuardianAssigned(layer -> false);
+            unlocks.lock(lane);
+        }
+        helper.succeed();
+    }
+}

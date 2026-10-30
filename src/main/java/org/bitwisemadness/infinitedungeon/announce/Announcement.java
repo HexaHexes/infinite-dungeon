@@ -26,7 +26,10 @@ public enum Announcement {
     ROOM_EVENT(DungeonConfigs::roomEvent),
 
     /** Shown when a dungeon portal may not be built here: the dimension gate or the construction toggle refused it. */
-    PORTAL_NOT_ALLOWED(DungeonConfigs::portalNotAllowed);
+    PORTAL_NOT_ALLOWED(DungeonConfigs::portalNotAllowed),
+
+    /** Shown when a layer transition refuses passage: the layer's guardian has not fallen. */
+    LANE_SEALED(DungeonConfigs::laneSealed);
 
     private final Supplier<String> text;
 

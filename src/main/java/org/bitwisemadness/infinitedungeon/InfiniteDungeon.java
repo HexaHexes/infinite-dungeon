@@ -11,6 +11,7 @@ import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.lanes.FallbackHallFeature;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
+import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
@@ -75,6 +76,7 @@ public final class InfiniteDungeon {
         // hall feature guards lane cells whose dungeon did not generate.
         LaneGrid.register();
         FallbackHallFeature.register(modBus);
+        TransitionFramesFeature.register(modBus);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

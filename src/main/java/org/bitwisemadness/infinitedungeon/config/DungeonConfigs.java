@@ -60,6 +60,8 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.DoubleValue DENSITY_QUADRATIC_PER_LAYER;
     private static final ModConfigSpec.DoubleValue DENSITY_PER_POINT;
     private static final ModConfigSpec.IntValue DENSITY_MAX_PER_CHUNK;
+    private static final ModConfigSpec.DoubleValue STRUCTURE_ELEVATION_AMOUNT;
+    private static final ModConfigSpec.DoubleValue STRUCTURE_ELEVATION_RADIUS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -227,6 +229,21 @@ public final class DungeonConfigs {
                 .comment("Absolute safety clamp: a chunk's spawn target never exceeds")
                 .comment("this, whatever the curve says.")
                 .defineInRange("maxPerChunk", 24, 0, 1024);
+        builder.pop();
+        builder.push("structureElevation");
+        STRUCTURE_ELEVATION_AMOUNT = builder
+                .comment("Each magicule elevation source adds this much concentration")
+                .comment("inside its radius (plan section 7): dungeon mouths, portals,")
+                .comment("tower entrances. The record names amount and radius without")
+                .comment("pinning values - these are implementation defaults; restart")
+                .comment("to apply changes (sources persist, config is read at load).")
+                .defineInRange("amount", 2.0D, 0D, 100D);
+        STRUCTURE_ELEVATION_RADIUS = builder
+                .comment("The radius in blocks each source reaches; boundary included.")
+                .comment("Sources are position-only spheres: a source applies at its")
+                .comment("coordinates in every dimension (precision follow-up tracked")
+                .comment("in the API repo).")
+                .defineInRange("radius", 16.0D, 0D, 256D);
         builder.pop();
         builder.push("integrations");
         builder.push("corpse");
@@ -408,5 +425,15 @@ public final class DungeonConfigs {
     /** The absolute per-chunk spawn-target clamp (plan section 7; default 24). */
     public static int densityMaxPerChunk() {
         return DENSITY_MAX_PER_CHUNK.get();
+    }
+
+    /** Each elevation source's additive amount (plan section 7; default 2.0). */
+    public static double structureElevationAmount() {
+        return STRUCTURE_ELEVATION_AMOUNT.get();
+    }
+
+    /** Each elevation source's radius in blocks (plan section 7; default 16.0). */
+    public static double structureElevationRadius() {
+        return STRUCTURE_ELEVATION_RADIUS.get();
     }
 }

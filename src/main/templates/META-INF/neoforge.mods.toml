@@ -55,6 +55,11 @@ ordering = "AFTER"
 side = "BOTH"
 reason = "The dungeon dimension generates Dungeon Crawl's dungeon structures."
 
+# The one sanctioned mixin exception (issue #174 ruling; agents/REPO.md): lets
+# Dungeon Crawl's structure generate inside void dimensions' build height.
+[[mixins]]
+config = "infinite_dungeon.mixins.json"
+
 # Add your mod's dependencies below. Use type = "optional" for anything the mod
 # works without, and gate the code that touches it so it no-ops when the
 # dependency is absent.

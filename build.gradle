@@ -156,6 +156,10 @@ dependencies {
     // touched (the startup placement mirror-read is pure registry API), so
     // there is no compile-side entry and nothing ships.
     devRuntime "curse.maven:dungeon-crawl-324973:7887320"
+    // compile-side now that the sanctioned void-placement mixin (issue #174,
+    // agents/REPO.md) targets Dungeon Crawl's Dungeon class and the gametest
+    // asserts its behavior; still never packaged.
+    compileOnly "curse.maven:dungeon-crawl-324973:7887320"
 
     // JUnit wiring for the pure-logic suites the later waves add.
     testImplementation platform('org.junit:junit-bom:5.10.2')
@@ -175,7 +179,7 @@ test {
 // "All N required tests passed :)" when every required test succeeds. Keep
 // expectedTests in sync with the @GameTest methods in src/gametest.
 tasks.matching { it.name == 'runGameTestServer' }.configureEach {
-    def expectedTests = 16
+    def expectedTests = 17
     doLast {
         def log = file('run/logs/latest.log')
         if (!log.exists()) {

@@ -24,8 +24,8 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
   (#68 chunk-gen placement, #33 waypoint policy).
 - Optional: everything else, through the suite's integration modules.
 
-**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (16 tests).
-`expectedTests = 16` in `build.gradle` must match the `@GameTest` count.
+**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (17 tests).
+`expectedTests = 17` in `build.gradle` must match the `@GameTest` count.
 
 **Remote:** `github.com/HexaHexes/infinite-dungeon` (public, default branch
 `main`).
@@ -41,6 +41,15 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
   `docs/DEVELOPMENT_PLAN.md`; amendments land with their implementing waves.
 - The GameTestServer can wedge in its progress loop; cancel and rerun before
   diagnosing code (tracked in this repo's issue tracker).
+
+## Sanctioned exceptions
+
+- **Mixin (one named exception):** the no-mixins org rule is waived for
+  `mixins/DungeonVoidPlacement`, by maintainer ruling on issue #174 (2026-10-30):
+  two `@Redirect`s into Dungeon Crawl's `Dungeon` structure so void dimensions
+  generate its dungeons within build height. Scope is exactly that one target
+  class and those two call sites; `defaultRequire: 1` fails CI if Dungeon Crawl
+  renames them. Any further mixin needs its own issue-first ruling.
 
 ## Naming - this repo
 

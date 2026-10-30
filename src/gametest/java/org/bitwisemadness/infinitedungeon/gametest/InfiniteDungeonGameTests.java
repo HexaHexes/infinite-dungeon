@@ -567,4 +567,69 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(!litter.isRemoved(), "an unrelated entity must never be swept");
         helper.succeed();
     }
-}
+
+    /**
+     * The void-placement mixin (issue #174's ruling): Dungeon Crawl's
+     * structure generates in the dimension's shipped void settings, with its
+     * anchor inside the build height - the condition of the ruling. The floor
+     * control proves the clamp is a no-op where terrain already exists, i.e.
+     * every terrain world keeps its current placement.
+     */
+    @GameTest(template = "empty")
+    public static void void_dimension_allows_dungeon_generation(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var registries = level.registryAccess();
+        var resource = level.getServer().getResourceManager()
+                .getResource(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                        "infinite_dungeon", "dimension/dungeon.json"))
+                .orElseThrow();
+        com.google.gson.JsonElement json;
+        try {
+            json = net.minecraft.util.GsonHelper.parse(new String(
+                    resource.open().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+        var ops = registries.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE);
+        var settingsJson = json.getAsJsonObject().get("generator").getAsJsonObject().get("settings");
+        var voidSettings = net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings.CODEC
+                .parse(ops, settingsJson).getOrThrow();
+        var biomes = registries.registryOrThrow(net.minecraft.core.registries.Registries.BIOME);
+        var biome = biomes.getHolder(net.minecraft.resources.ResourceKey.create(
+                net.minecraft.core.registries.Registries.BIOME, DungeonDimensions.ID)).orElseThrow();
+        var randomState = net.minecraft.world.level.levelgen.RandomState.create(
+                registries.registryOrThrow(net.minecraft.core.registries.Registries.NOISE_SETTINGS)
+                        .getOrThrow(net.minecraft.world.level.levelgen.NoiseGeneratorSettings.OVERWORLD),
+                registries.lookupOrThrow(net.minecraft.core.registries.Registries.NOISE),
+                level.getSeed());
+        var templateManager = level.getServer().getStructureManager();
+        var dungeon = new xiroc.dungeoncrawl.dungeon.Dungeon(
+                new net.minecraft.world.level.levelgen.structure.Structure.StructureSettings(
+                        net.minecraft.core.HolderSet.direct(biome)));
+
+        var voidGenerator = new net.minecraft.world.level.levelgen.FlatLevelSource(voidSettings);
+        var voidContext = new net.minecraft.world.level.levelgen.structure.Structure.GenerationContext(
+                registries, voidGenerator, new net.minecraft.world.level.biome.FixedBiomeSource(biome),
+                randomState, templateManager, level.getSeed(), new net.minecraft.world.level.ChunkPos(0, 0),
+                level, holder -> true);
+        var voidPoint = dungeon.findGenerationPoint(voidContext);
+        helper.assertTrue(voidPoint.isPresent(),
+                "the mixin must let the dungeon generate in the void dimension");
+        var anchor = voidPoint.get().position();
+        helper.assertTrue(anchor.getY() >= level.getMinBuildHeight()
+                        && anchor.getY() < level.getMaxBuildHeight(),
+                "the void anchor must sit inside the build height: " + anchor);
+
+        var floorSettings = voidSettings.withBiomeAndLayers(
+                java.util.List.of(new net.minecraft.world.level.levelgen.flat.FlatLayerInfo(
+                        64, net.minecraft.world.level.block.Blocks.STONE)),
+                voidSettings.structureOverrides(), biome);
+        var floorContext = new net.minecraft.world.level.levelgen.structure.Structure.GenerationContext(
+                registries, new net.minecraft.world.level.levelgen.FlatLevelSource(floorSettings),
+                new net.minecraft.world.level.biome.FixedBiomeSource(biome),
+                randomState, templateManager, level.getSeed(), new net.minecraft.world.level.ChunkPos(0, 0),
+                level, holder -> true);
+        helper.assertTrue(dungeon.findGenerationPoint(floorContext).isPresent(),
+                "terrain worlds must keep generating exactly as before");
+        helper.succeed();
+    }}

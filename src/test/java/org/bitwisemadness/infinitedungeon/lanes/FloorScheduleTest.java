@@ -104,4 +104,19 @@ class FloorScheduleTest {
         assertEquals(7, FloorSchedule.floorIndexInLayer(-100000, -64, 2048, 8));
         assertEquals(0, FloorSchedule.floorIndexInLayer(100000, -64, 2048, 8));
     }
+
+    @Test
+    void bandBasesForTransitions() {
+        // The deepest floor stands on the world floor plane...
+        assertEquals(-64, FloorSchedule.deepestFloorBaseY(-64));
+        // ...and the entry floor on the top band: 8 floors over 2048 means
+        // 256-block bands, so floor 0 starts 7 bands above the bottom.
+        assertEquals(-64 + 7 * 256, FloorSchedule.entryFloorBaseY(-64, 2048, 8));
+        assertEquals(-64 + 1 * 1024, FloorSchedule.entryFloorBaseY(-64, 2048, 2));
+        // A single-floor layer shares the world floor.
+        assertEquals(-64, FloorSchedule.entryFloorBaseY(-64, 2048, 1));
+        // The height guard still applies through the helper.
+        assertThrows(IllegalArgumentException.class,
+                () -> FloorSchedule.entryFloorBaseY(-64, 2048, 0));
+    }
 }

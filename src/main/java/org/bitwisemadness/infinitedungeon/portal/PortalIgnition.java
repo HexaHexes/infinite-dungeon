@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -15,6 +16,11 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
+import org.bitwisemadness.infinitedungeon.lanes.LaneGeometry;
+import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
+import org.bitwisemadness.infinitedungeon.lanes.LaneTransitions;
+import org.bitwisemadness.infinitedungeon.lanes.LayerUnlocks;
 
 /**
  * Ignites dungeon portals: scanning a lit frame and filling it with portal
@@ -80,6 +86,15 @@ public final class PortalIgnition {
             return;
         }
         BlockPos start = event.getPos().relative(face);
+        if (ignitionSealed(event.getLevel(), start)) {
+            // A sealed layer transition refuses its first light - same
+            // cancel-and-tell shape as the construction gate above.
+            event.setCanceled(true);
+            event.setCancellationResult(
+                    InteractionResult.sidedSuccess(event.getLevel().isClientSide));
+            notifySealed(event.getEntity());
+            return;
+        }
         if (tryIgnite(event.getLevel(), start)) {
             event.setCanceled(true);
         }
@@ -101,14 +116,54 @@ public final class PortalIgnition {
                 notifyRefusal(event.getEntity());
                 return;
             }
+            if (ignitionSealed(level, event.getPos())) {
+                notifySealed(event.getEntity());
+                return;
+            }
             tryIgnite(level, event.getPos());
         }
+    }
+
+    /**
+     * Whether a lane-transition frame's first light is refused: the position
+     * is a transition slot of this dimension and its layer is sealed
+     * (assigned guardian, not yet unlocked). Server-side by construction - the
+     * seal lives in world saved data, which never syncs to the client, so the
+     * server's cancel is authoritative and the fire simply never lands.
+     */
+    public static boolean ignitionSealed(Level level, BlockPos interior) {
+        if (!(level instanceof ServerLevel server)
+                || !DungeonDimensions.LEVEL.equals(server.dimension())) {
+            return false;
+        }
+        return sealedAt(server, interior);
+    }
+
+    /**
+     * The seal-at-position check without the dimension gate - the same split
+     * as handle/laneHop: the gate belongs to the production entry points, so
+     * this core stays drivable in the harness (which can never host the
+     * dungeon dimension).
+     */
+    public static boolean sealedAt(ServerLevel server, BlockPos interior) {
+        if (LaneTransitions.pairTarget(server, interior).isEmpty()) {
+            return false;
+        }
+        return LayerUnlocks.isSealed(server,
+                LaneGeometry.laneIndex(interior.getX(), LaneGrid.laneStride()));
     }
 
     /** The shared refusal message: the dimension gate and the construction toggle both use it. */
     private static void notifyRefusal(Entity entity) {
         if (entity instanceof ServerPlayer player) {
             DungeonAnnouncements.send(player, Announcement.PORTAL_NOT_ALLOWED);
+        }
+    }
+
+    /** The sealed-transition refusal message. */
+    private static void notifySealed(Entity entity) {
+        if (entity instanceof ServerPlayer player) {
+            DungeonAnnouncements.send(player, Announcement.LANE_SEALED);
         }
     }
 

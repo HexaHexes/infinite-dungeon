@@ -76,4 +76,21 @@ public final class FloorSchedule {
         int height = floorHeight(availableHeight, floors);
         return Math.min(floors - 1, Math.max(0, floors - 1 - Math.floorDiv(y - minY, height)));
     }
+
+    /**
+     * The Y the deepest floor's band stands on - the world's own floor plane
+     * (transition departures stand here; issue #31).
+     */
+    public static int deepestFloorBaseY(int minY) {
+        return minY;
+    }
+
+    /**
+     * The Y the entry floor (floor 0, the top band) stands on - where a layer
+     * is entered (transition arrivals; issue #31 on issue #183's axis). A
+     * single-floor layer shares the world floor.
+     */
+    public static int entryFloorBaseY(int minY, int availableHeight, int floors) {
+        return minY + (floors - 1) * floorHeight(availableHeight, floors);
+    }
 }

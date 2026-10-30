@@ -2,6 +2,7 @@ package org.bitwisemadness.infinitedungeon.portal;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.CommonLevelAccessor;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -29,7 +30,20 @@ public final class PortalFrameBuilder {
      * @param axis the portal's axis; X spans world X, Z spans world Z
      * @return whether the portal was built (false when the space is blocked)
      */
-    public static boolean build(Level level, BlockPos interior, Direction.Axis axis) {
+    public static boolean build(CommonLevelAccessor level, BlockPos interior, Direction.Axis axis) {
+        return build(level, interior, axis, true);
+    }
+
+    /**
+     * Builds the frame around {@code interior}, optionally lighting it. Layer
+     * transitions build unlit (issue #31): the sealed/unsealed ignition gate
+     * owns the first light, while arrivals and anchor re-formation keep the
+     * lit behavior of the three-argument form.
+     *
+     * @param lit whether the interior is filled with portal blocks
+     * @return whether the frame was built (false when the space is blocked)
+     */
+    public static boolean build(CommonLevelAccessor level, BlockPos interior, Direction.Axis axis, boolean lit) {
         boolean alongX = axis != Direction.Axis.Z;
 
         // Phase 1: validate the whole shape. The frame ring may already be
@@ -61,14 +75,17 @@ public final class PortalFrameBuilder {
                 if (isInterior(dx, dy)) {
                     continue;
                 }
-                level.setBlockAndUpdate(offset(interior, dx, dy, alongX), frameState.defaultBlockState());
+                level.setBlock(offset(interior, dx, dy, alongX), frameState.defaultBlockState(), 3);
             }
+        }
+        if (!lit) {
+            return true;
         }
         BlockState portal = PortalBlocks.DUNGEON_PORTAL.get().defaultBlockState()
                 .setValue(DungeonPortalBlock.AXIS, axis);
         for (int dx = 0; dx <= 1; dx++) {
             for (int dy = 0; dy <= 2; dy++) {
-                level.setBlockAndUpdate(offset(interior, dx, dy, alongX), portal);
+                level.setBlock(offset(interior, dx, dy, alongX), portal, 3);
             }
         }
         return true;
@@ -82,12 +99,12 @@ public final class PortalFrameBuilder {
         return alongX ? interior.offset(dx, dy, 0) : interior.offset(0, dy, dx);
     }
 
-    private static boolean isFrameOrReplaceable(Level level, BlockPos pos) {
+    private static boolean isFrameOrReplaceable(CommonLevelAccessor level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
         return state.is(DungeonConfigs.frameBlock()) || isReplaceable(level, pos);
     }
 
-    private static boolean isReplaceable(Level level, BlockPos pos) {
+    private static boolean isReplaceable(CommonLevelAccessor level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
         return state.isAir() || state.canBeReplaced()
                 || state.getBlock() instanceof DungeonPortalBlock;

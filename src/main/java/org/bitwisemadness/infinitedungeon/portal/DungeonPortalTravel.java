@@ -10,6 +10,10 @@ import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
+import org.bitwisemadness.infinitedungeon.lanes.LaneGeometry;
+import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
+import org.bitwisemadness.infinitedungeon.lanes.LaneTransitions;
+import org.bitwisemadness.infinitedungeon.lanes.LayerUnlocks;
 
 /**
  * Walking into a dungeon portal: bind or read the anchor, then teleport.
@@ -36,6 +40,15 @@ public final class DungeonPortalTravel {
         if (player.isOnPortalCooldown() || !player.isAlive() || player.isPassenger()) {
             return;
         }
+        // Lane transitions (issue #31): a hop between layers inside the
+        // dungeon resolves from the position alone - before the anchor logic
+        // runs, so a lane portal can never bind or consume the overworld
+        // return anchor. The dimension gate lives here; the hop itself is
+        // public for the harness, which can never host this dimension.
+        if (DungeonDimensions.LEVEL.equals(serverLevel.dimension())
+                && laneHop(serverLevel, portalPos, player)) {
+            return;
+        }
         boolean inDungeon = DungeonDimensions.LEVEL.equals(serverLevel.dimension());
         TravelPolicy.Action action = TravelPolicy.decide(
                 inDungeon, EntryAnchors.has(player), DungeonConfigs.portalReturnMode());
@@ -46,6 +59,28 @@ public final class DungeonPortalTravel {
             case WORLD_SPAWN_BY_CONFIG -> worldSpawn(player, false);
             case WORLD_SPAWN_NO_ANCHOR, WORLD_SPAWN_DESTROYED -> worldSpawn(player, true);
         }
+    }
+
+    /**
+     * One lane hop: pair the position, refuse while the layer is sealed, or
+     * teleport. Public so the harness can drive it - the GameTest level can
+     * never be the dungeon dimension, which {@link #handle} gates on first.
+     *
+     * @return whether the position was a transition (handled here either way)
+     */
+    public static boolean laneHop(ServerLevel level, BlockPos portalPos, ServerPlayer player) {
+        var target = LaneTransitions.pairTarget(level, portalPos);
+        if (target.isEmpty()) {
+            return false;
+        }
+        int layer = LaneGeometry.laneIndex(portalPos.getX(), LaneGrid.laneStride());
+        if (LayerUnlocks.isSealed(level, layer)) {
+            DungeonAnnouncements.send(player, Announcement.LANE_SEALED);
+            player.setPortalCooldown();
+            return true;
+        }
+        teleport(player, level, target.get());
+        return true;
     }
 
     private static void enterDungeon(ServerPlayer player, ServerLevel origin, BlockPos portalPos) {

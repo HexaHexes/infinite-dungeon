@@ -10,7 +10,9 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
@@ -82,6 +84,54 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(type.hasSkyLight(), "the dungeon must be open: skylight on");
         helper.assertTrue(type.minY() == -64, "min_y is locked at -64 by the plan");
         helper.assertTrue(type.height() == 2048, "height is locked at 2048 by the plan");
+        helper.succeed();
+    }
+
+    /**
+     * The Dungeon Crawl biome gate: our biome loads from the mod datapack, the
+     * additive tag override (replace false) puts it inside Dungeon Crawl's
+     * has_structure/dungeon gate, and the dungeon dimension parses against the
+     * biome registry (LevelStem codec - an unresolvable biome reference fails
+     * the parse). The gate makes Dungeon Crawl's dungeons eligible in our
+     * dimension; placement itself arrives with the lane structure set (issue
+     * #27). The tag loads even without Dungeon Crawl installed - tags are
+     * pure datapack data, so the override is testable in this harness. The
+     * stem never appears in the harness's own dimension registry (it bakes
+     * its level stems from the flat world preset), so the dimension is
+     * verified by codec parse here rather than by registry lookup.
+     */
+    @GameTest(template = "empty")
+    public static void dungeon_biome_and_gate_load(GameTestHelper helper) {
+        var registries = helper.getLevel().getServer().registryAccess();
+
+        var biomes = registries.registryOrThrow(net.minecraft.core.registries.Registries.BIOME);
+        helper.assertTrue(biomes.get(DungeonDimensions.ID) != null,
+                "the dungeon biome must load from the mod datapack");
+
+        var gate = biomes.getTag(TagKey.create(
+                net.minecraft.core.registries.Registries.BIOME,
+                ResourceLocation.fromNamespaceAndPath("dungeoncrawl", "has_structure/dungeon")));
+        helper.assertTrue(gate.isPresent(),
+                "the Dungeon Crawl biome gate tag must load from our datapack override");
+        var holder = biomes.getHolder(ResourceKey.create(
+                net.minecraft.core.registries.Registries.BIOME, DungeonDimensions.ID));
+        helper.assertTrue(holder.isPresent() && gate.get().contains(holder.get()),
+                "the dungeon biome must sit inside the has_structure/dungeon gate");
+
+        var dimension = helper.getLevel().getServer().getResourceManager()
+                .getResource(ResourceLocation.fromNamespaceAndPath("infinite_dungeon", "dimension/dungeon.json"));
+        helper.assertTrue(dimension.isPresent(), "the dimension json must ship in the mod datapack");
+        try {
+            var json = net.minecraft.util.GsonHelper.parse(
+                    new String(dimension.get().open().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            var stem = net.minecraft.world.level.dimension.LevelStem.CODEC
+                    .parse(registries.createSerializationContext(
+                            com.mojang.serialization.JsonOps.INSTANCE), json);
+            helper.assertTrue(stem.result().isPresent(),
+                    "the dungeon dimension must parse with its biome reference: " + stem.error());
+        } catch (Exception e) {
+            helper.assertTrue(false, "the dungeon dimension json must parse: " + e);
+        }
         helper.succeed();
     }
 

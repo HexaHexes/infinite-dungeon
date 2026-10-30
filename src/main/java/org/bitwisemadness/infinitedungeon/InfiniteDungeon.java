@@ -9,6 +9,7 @@ import org.bitwisemadness.infinitedungeon.client.PortalTint;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
+import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
@@ -68,6 +69,9 @@ public final class InfiniteDungeon {
         // Dungeon portals: ignite from flint and steel or fire.
         NeoForge.EVENT_BUS.addListener(PortalIgnition::onRightClickBlock);
         NeoForge.EVENT_BUS.addListener(PortalIgnition::onEntityPlace);
+        // Lane geometry: the stride follows the lane set's effective registry
+        // values, read once the datapack registries are frozen.
+        LaneGrid.register();
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

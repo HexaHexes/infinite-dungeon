@@ -43,6 +43,8 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.BooleanValue PORTAL_ALLOW_CONSTRUCTION;
     private static final ModConfigSpec.ConfigValue<List<? extends String>> ADVENTURE_BREAKABLE;
     private static final ModConfigSpec.BooleanValue CORPSE_DESPAWN_WHEN_EMPTY;
+    private static final ModConfigSpec.IntValue FLOORS_PER_LAYER_MIN;
+    private static final ModConfigSpec.IntValue FLOORS_PER_LAYER_MAX;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -125,6 +127,18 @@ public final class DungeonConfigs {
                                 && org.bitwisemadness.infinitedungeonapi.data.ResourceRef
                                         .isValidLocation(text.trim()));
         builder.pop();
+        // Root-level keys, named exactly as the plan (section 3): the band per
+        // layer is at most 2048 blocks tall, so a floor is never forced under
+        // 32 blocks by the cap.
+        FLOORS_PER_LAYER_MIN = builder
+                .comment("The fewest floors a dungeon layer may field. The exact count")
+                .comment("per layer is derived from the world seed and layer index")
+                .comment("within [floorsPerLayerMin, floorsPerLayerMax].")
+                .defineInRange("floorsPerLayerMin", 5, 1, 64);
+        FLOORS_PER_LAYER_MAX = builder
+                .comment("The most floors a dungeon layer may field (see floorsPerLayerMin).")
+                .comment("The first layer is the fixed-construction lobby and ignores both.")
+                .defineInRange("floorsPerLayerMax", 10, 1, 64);
         builder.push("integrations");
         builder.push("corpse");
         CORPSE_DESPAWN_WHEN_EMPTY = builder
@@ -220,5 +234,15 @@ public final class DungeonConfigs {
     /** Whether a fully reclaimed corpse is swept from the dungeon (section 5). */
     public static boolean corpseDespawnWhenEmpty() {
         return CORPSE_DESPAWN_WHEN_EMPTY.get();
+    }
+
+    /** The fewest floors a layer may field (plan section 3; default 5). */
+    public static int floorsPerLayerMin() {
+        return FLOORS_PER_LAYER_MIN.get();
+    }
+
+    /** The most floors a layer may field (plan section 3; default 10). */
+    public static int floorsPerLayerMax() {
+        return FLOORS_PER_LAYER_MAX.get();
     }
 }

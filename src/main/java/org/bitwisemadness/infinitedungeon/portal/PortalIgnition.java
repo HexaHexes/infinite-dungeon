@@ -75,7 +75,11 @@ public final class PortalIgnition {
         if (!event.getLevel().getBlockState(event.getPos()).is(DungeonConfigs.frameBlock())) {
             return;
         }
-        BlockPos start = event.getPos().relative(event.getFace());
+        Direction face = event.getFace();
+        if (face == null) {
+            return;
+        }
+        BlockPos start = event.getPos().relative(face);
         if (tryIgnite(event.getLevel(), start)) {
             event.setCanceled(true);
         }

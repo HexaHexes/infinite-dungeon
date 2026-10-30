@@ -37,8 +37,9 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
 - `api_version` pins the published API release: bump deliberately, never
   implicitly, and only once a release has published the artifact. The toml's
   required range derives from the same value.
-- The plan's Phase 0 checklist and the C-series amendments live in
-  `docs/DEVELOPMENT_PLAN.md`; amendments land with their implementing waves.
+- The design record (Phase 0 checklist, C-series amendments, decision record)
+  lives in issue #180, the plan migrated from `docs/DEVELOPMENT_PLAN.md`;
+  amendments edit that issue's body with the implementing wave.
 - The GameTestServer can wedge in its progress loop; cancel and rerun before
   diagnosing code (tracked in this repo's issue tracker).
 

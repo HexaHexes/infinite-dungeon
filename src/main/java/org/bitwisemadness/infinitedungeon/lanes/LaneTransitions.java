@@ -43,9 +43,12 @@ public final class LaneTransitions {
 
     /**
      * The portal position a lane-portal walk leads to, or empty when the
-     * position is not a transition slot, the placement is unreadable, or the
-     * target would be the lobby lane (issue #131 owns the lobby's exits, so
-     * back-travel from layer 1 waits for it).
+     * position is not a transition slot or the placement is unreadable.
+     * Departures pair forward - lane 0's lobby doorways lead into layer 1,
+     * the #131 caveat lifted - and arrivals pair back: layer 1's arrival
+     * returns to the lobby doorway, deeper layers to their predecessor's
+     * departure. Lane 0 itself has no arrival slot, because there is no
+     * lane -1 to depart from.
      *
      * <p>Position math only: callers gate on the dungeon dimension first
      * (travel and ignition both do) - the gate lives there so the derivation
@@ -65,7 +68,7 @@ public final class LaneTransitions {
             return Optional.empty();
         }
         int lane = LaneGeometry.laneIndex(cell.getMiddleBlockX(), LaneGrid.laneStride());
-        if (lane < 1) {
+        if (lane < 0) {
             return Optional.empty();
         }
         int minBuild = level.getMinBuildHeight();
@@ -77,13 +80,14 @@ public final class LaneTransitions {
                     .map(partner -> arrivalInterior(minBuild, available,
                             floorsOf(seed, lane + 1), partner));
         }
-        var arrival = arrivalInterior(minBuild, available, floorsOf(seed, lane), cell);
-        if (insideInterior(portalPos, arrival)) {
-            if (lane - 1 < 1) {
-                return Optional.empty();
+        // Lane 0's computed arrival interior is never built (no lane -1), so
+        // only lanes 1+ serve arrival-side walks.
+        if (lane >= 1) {
+            var arrival = arrivalInterior(minBuild, available, floorsOf(seed, lane), cell);
+            if (insideInterior(portalPos, arrival)) {
+                return partnerCell(placement, seed, lane - 1, cell)
+                        .map(partner -> departureInterior(minBuild, partner));
             }
-            return partnerCell(placement, seed, lane - 1, cell)
-                    .map(partner -> departureInterior(minBuild, partner));
         }
         return Optional.empty();
     }

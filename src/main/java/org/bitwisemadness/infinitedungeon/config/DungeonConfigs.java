@@ -49,6 +49,9 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.DoubleValue DIFFICULTY_BASE;
     private static final ModConfigSpec.DoubleValue DIFFICULTY_LINEAR_PER_FLOOR;
     private static final ModConfigSpec.DoubleValue DIFFICULTY_QUADRATIC_PER_LAYER;
+    private static final ModConfigSpec.DoubleValue MAGICULE_BASE;
+    private static final ModConfigSpec.DoubleValue MAGICULE_LINEAR_PER_FLOOR;
+    private static final ModConfigSpec.DoubleValue MAGICULE_QUADRATIC_PER_LAYER;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -161,6 +164,22 @@ public final class DungeonConfigs {
                 .comment("The per-layer squared increment: difficulty grows quadratically")
                 .comment("between layers. 0 yields pure linear progression.")
                 .defineInRange("quadraticPerLayer", 0.05D, 0D, 100D);
+        builder.pop();
+        builder.push("magicule");
+        MAGICULE_BASE = builder
+                .comment("M(L,f) = base + linearPerFloor*f + quadraticPerLayer*L^2")
+                .comment("(plan section 7) - the same shape as difficulty with its own")
+                .comment("coefficients. Ambient concentration; gameplay-neutral toward")
+                .comment("players in the base mod.")
+                .defineInRange("base", 0D, 0D, 100D);
+        MAGICULE_LINEAR_PER_FLOOR = builder
+                .comment("The per-floor increment: concentration grows linearly within")
+                .comment("a layer as floors deepen (floor 0 is the entry band).")
+                .defineInRange("linearPerFloor", 0.1D, 0D, 100D);
+        MAGICULE_QUADRATIC_PER_LAYER = builder
+                .comment("The per-layer squared increment: concentration grows")
+                .comment("quadratically between layers. 0 yields pure linear growth.")
+                .defineInRange("quadraticPerLayer", 0.04D, 0D, 100D);
         builder.pop();
         builder.push("integrations");
         builder.push("corpse");
@@ -287,5 +306,20 @@ public final class DungeonConfigs {
     /** The per-layer squared difficulty increment (plan section 7; default 0.05). */
     public static double difficultyQuadraticPerLayer() {
         return DIFFICULTY_QUADRATIC_PER_LAYER.get();
+    }
+
+    /** The magicule curve's origin value (plan section 7; default 0). */
+    public static double magiculeBase() {
+        return MAGICULE_BASE.get();
+    }
+
+    /** The per-floor magicule increment (plan section 7; default 0.1). */
+    public static double magiculeLinearPerFloor() {
+        return MAGICULE_LINEAR_PER_FLOOR.get();
+    }
+
+    /** The per-layer squared magicule increment (plan section 7; default 0.04). */
+    public static double magiculeQuadraticPerLayer() {
+        return MAGICULE_QUADRATIC_PER_LAYER.get();
     }
 }

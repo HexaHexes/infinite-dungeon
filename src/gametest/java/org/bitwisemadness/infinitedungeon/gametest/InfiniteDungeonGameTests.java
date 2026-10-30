@@ -3,6 +3,8 @@ package org.bitwisemadness.infinitedungeon.gametest;
 import de.maxhenkel.corpse.corelib.death.Death;
 import de.maxhenkel.corpse.entities.CorpseEntity;
 import java.util.Map;
+import net.blay09.mods.waystones.block.WaystoneBlock;
+import net.blay09.mods.waystones.block.entity.WaystoneBlockEntityBase;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
@@ -42,6 +44,7 @@ import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lanes.LaneTransitions;
 import org.bitwisemadness.infinitedungeon.lanes.LayerUnlocks;
 import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
+import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalTravel;
@@ -874,4 +877,65 @@ public final class InfiniteDungeonGameTests {
         }
         helper.succeed();
     }
-}
+    /**
+     * The layer-entrance waystone (issue #68): exactly one per layer - at the
+     * rz-0 canonical cell of a lane past the lobby, named "Layer N" so the
+     * fast-travel list of amendment C2c carries no duplicates - and none on
+     * any other cell of the same lane. The name persists through the block
+     * entity, so it rides the chunk.
+     */
+    @GameTest(template = "empty")
+    public static void waystone_entrance_places_one_per_layer(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var placement = LaneGrid.placement();
+        helper.assertTrue(placement != null, "the lane placement must be read");
+        long seed = level.getSeed();
+        int minBuild = level.getMinBuildHeight();
+        var generator = level.getChunkSource().getGenerator();
+        var feature = WaystoneEntranceFeature.WAYSTONE_ENTRANCE.get();
+
+        // Positive: the rz-0 candidate of lane 1 (both hold by construction
+        // of getPotentialStructureChunk on these inputs - asserted as record).
+        var cell = placement.getPotentialStructureChunk(seed, placement.spacing(), 0);
+        int lane = LaneGeometry.laneIndex(cell.getMiddleBlockX(), LaneGrid.laneStride());
+        helper.assertTrue(lane >= 1, "the probe cell must sit past the lobby lane");
+        helper.assertTrue(Math.floorDiv(cell.z, placement.spacing()) == 0,
+                "the probe cell must be the rz-0 entrance region");
+        var origin = new BlockPos(cell.x << 4, minBuild + 1, cell.z << 4);
+        helper.assertTrue(feature.place(context(level, generator, seed, origin)),
+                "the canonical entrance cell must get its waystone");
+
+        int floors = FloorSchedule.floorsInLayer(seed, lane,
+                DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+        var spot = LaneTransitions.arrivalInterior(minBuild, level.getHeight(), floors, cell)
+                .offset(0, 0, 3);
+        helper.assertTrue(level.getBlockState(spot).getBlock() instanceof WaystoneBlock,
+                "the waystone must stand three blocks south of the arrival interior");
+        if (!(level.getBlockEntity(spot) instanceof WaystoneBlockEntityBase entity)) {
+            helper.assertTrue(false, "the waystone block entity must exist");
+            return;
+        }
+        var waystone = entity.getWaystone();
+        helper.assertTrue(waystone != null, "the block entity must expose a waystone");
+        String name = waystone.getName().getString();
+        helper.assertTrue(name.equals("Layer " + lane),
+                "the waystone must read Layer N: " + name);
+
+        // Negative: the same lane, next Z region - no waystone anywhere near
+        // where its arrival would stand.
+        var other = placement.getPotentialStructureChunk(seed,
+                placement.spacing(), placement.spacing());
+        helper.assertTrue(Math.floorDiv(other.z, placement.spacing()) >= 1,
+                "the negative probe must sit past rz-0");
+        var otherOrigin = new BlockPos(other.x << 4, minBuild + 1, other.z << 4);
+        helper.assertTrue(!feature.place(context(level, generator, seed, otherOrigin)),
+                "a non-entrance cell must get no waystone");
+        int otherLane = LaneGeometry.laneIndex(other.getMiddleBlockX(), LaneGrid.laneStride());
+        int otherFloors = FloorSchedule.floorsInLayer(seed, otherLane,
+                DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+        var otherSpot = LaneTransitions.arrivalInterior(minBuild, level.getHeight(), otherFloors, other)
+                .offset(0, 0, 3);
+        helper.assertTrue(!(level.getBlockState(otherSpot).getBlock() instanceof WaystoneBlock),
+                "only the layer's canonical entrance may hold the waystone");
+        helper.succeed();
+    }}

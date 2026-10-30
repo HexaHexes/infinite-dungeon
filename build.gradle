@@ -120,6 +120,13 @@ repositories {
         name = 'CurseMaven'
         url = uri('https://cursemaven.com')
     }
+
+    // Balm (Waystones' required library) ships on Modrinth only - dev
+    // classpath, never packaged.
+    maven {
+        name = 'ModrinthMaven'
+        url = uri('https://api.modrinth.com/maven')
+    }
 }
 
 // A dev-runs-only dependency bucket. The runs resolve
@@ -156,6 +163,19 @@ dependencies {
     // touched (the startup placement mirror-read is pure registry API), so
     // there is no compile-side entry and nothing ships.
     devRuntime "curse.maven:dungeon-crawl-324973:7887320"
+
+    // Waystones (section 13's pinned coordinate, 21.1.46) with its required
+    // library: compile-side because the layer-entrance feature references the
+    // WaystonesAPI/MutableWaystone/WaystoneStyles classes; devRuntime so the
+    // gametest server boots with them the way a real server must (balm
+    // satisfies waystones' own [21.0.39,) floor). The toml declares waystones
+    // required; the bucket keeps the published POM free of the jars.
+    compileOnly "curse.maven:waystones-245755:8969751"
+    // Balm reaches the compile classpath too: waystones' block-entity
+    // hierarchy extends Balm's base classes.
+    compileOnly "maven.modrinth:balm:21.0.66+neoforge-1.21.1"
+    devRuntime "curse.maven:waystones-245755:8969751"
+    devRuntime "maven.modrinth:balm:21.0.66+neoforge-1.21.1"
     // compile-side now that the sanctioned void-placement mixin (issue #174,
     // agents/REPO.md) targets Dungeon Crawl's Dungeon class and the gametest
     // asserts its behavior; still never packaged.
@@ -179,7 +199,7 @@ test {
 // "All N required tests passed :)" when every required test succeeds. Keep
 // expectedTests in sync with the @GameTest methods in src/gametest.
 tasks.matching { it.name == 'runGameTestServer' }.configureEach {
-    def expectedTests = 20
+    def expectedTests = 21
     doLast {
         def log = file('run/logs/latest.log')
         if (!log.exists()) {

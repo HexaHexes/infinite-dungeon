@@ -20,12 +20,15 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
   `dungeoncrawl:dungeon` and gates it through the biome tag; devRuntime carries
   the pinned coordinate `curse.maven:dungeon-crawl-324973:7887320`. Core and
   untoggleable per the plan's decision record.
-- Required once wired (still Wave 2): Waystones - lands with its own issues
-  (#68 chunk-gen placement, #33 waypoint policy).
+- Required: Waystones (`waystones [21.1.46,)` in neoforge.mods.toml) - wired by
+  the layer-entrance feature (issue #68): `curse.maven:waystones-245755:8969751`
+  compileOnly + devRuntime, with Balm (`maven.modrinth:balm:21.0.66+neoforge-1.21.1`,
+  ModrinthMaven) as waystones' own required library. Chunk-generation-safe
+  placement was bytecode-verified (#66).
 - Optional: everything else, through the suite's integration modules.
 
-**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (20 tests).
-`expectedTests = 20` in `build.gradle` must match the `@GameTest` count.
+**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (21 tests).
+`expectedTests = 21` in `build.gradle` must match the `@GameTest` count.
 
 **Remote:** `github.com/HexaHexes/infinite-dungeon` (public, default branch
 `main`).

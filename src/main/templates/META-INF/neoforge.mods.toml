@@ -55,6 +55,17 @@ ordering = "AFTER"
 side = "BOTH"
 reason = "The dungeon dimension generates Dungeon Crawl's dungeon structures."
 
+# Waystones: the layer entrances are Waystones (plan section 6, issue #68) -
+# placed and named at chunk generation, they are the fast-travel anchors of
+# amendment C2c. Balm rides Waystones' own required-dependency list; nothing
+# to declare here for it.
+[[dependencies.${mod_id}]]
+modId = "waystones"
+type = "required"
+versionRange = "[21.1.46,)"
+ordering = "AFTER"
+side = "BOTH"
+reason = "Layer entrances are Waystones: placed, named Layer N, and used for fast travel."
 # The one sanctioned mixin exception (issue #174 ruling; agents/REPO.md): lets
 # Dungeon Crawl's structure generate inside void dimensions' build height.
 [[mixins]]

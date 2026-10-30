@@ -14,12 +14,14 @@ import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
+import org.bitwisemadness.infinitedungeon.magicule.DungeonMagiculeProvider;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.LobbyEntranceFeature;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
 import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
 import org.bitwisemadness.infinitedungeon.time.DungeonTime;
+import org.bitwisemadness.infinitedungeonapi.magicule.AmbientMagicule;
 import org.slf4j.Logger;
 /**
  * Infinite Dungeon entry point.
@@ -81,6 +83,10 @@ public final class InfiniteDungeon {
         TransitionFramesFeature.register(modBus);
         WaystoneEntranceFeature.register(modBus);
         LobbyEntranceFeature.register(modBus);
+        // The ambient magicule service (API-owned) reads the dungeon's M(L,f)
+        // through this provider - consumers reach it via the API contract,
+        // never by calling into this mod (plan section 7, issue #201).
+        AmbientMagicule.registerProvider(DungeonMagiculeProvider.PROVIDER);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

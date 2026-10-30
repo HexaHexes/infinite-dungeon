@@ -46,6 +46,7 @@ import org.bitwisemadness.infinitedungeon.lanes.LayerUnlocks;
 import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
+import org.bitwisemadness.infinitedungeon.magicule.DungeonMagiculeProvider;
 import org.bitwisemadness.infinitedungeon.portal.DungeonEntrance;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalTravel;
@@ -56,6 +57,7 @@ import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalFrameBuilder;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
 import org.bitwisemadness.infinitedungeon.portal.TravelPolicy;
+import org.bitwisemadness.infinitedungeonapi.magicule.AmbientMagicule;
 import org.bitwisemadness.infinitedungeonapi.profile.PortalReturnMode;
 
 /**
@@ -1081,6 +1083,23 @@ public final class InfiniteDungeonGameTests {
         DungeonPortalTravel.laneHop(level, departure, player);
         helper.assertTrue(player.blockPosition().equals(forward.get()),
                 "the doorway walk must land in layer 1: " + player.blockPosition());
+        helper.succeed();
+    }
+    /**
+     * The ambient magicule wiring (issue #201): the provider registers at mod
+     * construction, and outside the dungeon dimension it declines - so the
+     * harness level (which can never BE the dungeon dimension) reads the
+     * service's documented cold value. The dungeon-side answer is pinned by
+     * DungeonMagiculeProviderTest's composition suite; the dimension gate
+     * itself cannot run here, the known harness limitation.
+     */
+    @GameTest(template = "empty")
+    public static void ambient_magicule_service_reads_cold(GameTestHelper helper) {
+        helper.assertTrue(AmbientMagicule.providers().contains(DungeonMagiculeProvider.PROVIDER),
+                "the dungeon provider must be registered at mod construction");
+        double q = AmbientMagicule.query(helper.getLevel(), new BlockPos(0, 64, 0));
+        helper.assertTrue(q == AmbientMagicule.COLD,
+                "outside the dungeon the service must answer COLD, got " + q);
         helper.succeed();
     }
 }

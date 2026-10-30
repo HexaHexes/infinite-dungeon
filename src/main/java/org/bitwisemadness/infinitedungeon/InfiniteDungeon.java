@@ -15,6 +15,7 @@ import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.magicule.DungeonMagiculeProvider;
+import org.bitwisemadness.infinitedungeon.magicule.MagiculeElevation;
 import org.bitwisemadness.infinitedungeon.magicule.MagiculeParticles;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.LobbyEntranceFeature;
@@ -91,6 +92,12 @@ public final class InfiniteDungeon {
         // Ambient magicule particles render the same number (plan section 7,
         // issue #200): visual only, dungeon-dimension gated like the clock.
         NeoForge.EVENT_BUS.addListener(MagiculeParticles::onLevelTick);
+        // Elevation sources are world data (plan section 7, issue #218): the
+        // level hooks re-feed the recorded set at start and unregister at
+        // stop; the chunk hook derives new DC-dungeon mouths as chunks load.
+        NeoForge.EVENT_BUS.addListener(MagiculeElevation::onLevelLoad);
+        NeoForge.EVENT_BUS.addListener(MagiculeElevation::onLevelUnload);
+        NeoForge.EVENT_BUS.addListener(MagiculeElevation::onChunkLoad);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

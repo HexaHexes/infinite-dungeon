@@ -47,6 +47,8 @@ import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.magicule.DungeonMagiculeProvider;
+import org.bitwisemadness.infinitedungeon.magicule.ElevationSources;
+import org.bitwisemadness.infinitedungeon.magicule.MagiculeElevation;
 import org.bitwisemadness.infinitedungeon.portal.DungeonEntrance;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalTravel;
@@ -1100,6 +1102,46 @@ public final class InfiniteDungeonGameTests {
         double q = AmbientMagicule.query(helper.getLevel(), new BlockPos(0, 64, 0));
         helper.assertTrue(q == AmbientMagicule.COLD,
                 "outside the dungeon the service must answer COLD, got " + q);
+        helper.succeed();
+    }
+    /**
+     * The elevation system (issue #218): a recorded source lifts the API
+     * service exactly by its configured amount over the COLD base (the
+     * dungeon provider declines this level, so base is 0), re-registration is
+     * deduped (one source, one lift - the belt against double-counting), the
+     * recorded position survives an NBT round-trip (restart convergence), and
+     * removal restores COLD. The probe sits far from every other test's
+     * positions and always unregisters, so the shared static registry stays
+     * clean for the batch.
+     */
+    @GameTest(template = "empty")
+    public static void elevation_sources_lift_queries_once_and_persist(GameTestHelper helper) {
+        var level = helper.getLevel();
+        BlockPos far = new BlockPos(12345, 64, -12345);
+        try {
+            helper.assertTrue(AmbientMagicule.query(level, far) == AmbientMagicule.COLD,
+                    "precondition: the untouched probe reads COLD");
+            double amount = DungeonConfigs.structureElevationAmount();
+            helper.assertTrue(MagiculeElevation.registerSource(level, far),
+                    "the first registration records the source");
+            helper.assertTrue(!MagiculeElevation.registerSource(level, far),
+                    "re-registration must dedupe through the recorded positions");
+            double lifted = AmbientMagicule.query(level, far);
+            helper.assertTrue(lifted == amount,
+                    "the source must lift COLD to exactly its amount: got " + lifted
+                            + " want " + amount);
+
+            // Restart convergence: the record round-trips through NBT.
+            CompoundTag tag = new CompoundTag();
+            ElevationSources.of(level).save(tag, level.registryAccess());
+            var reloaded = ElevationSources.load(tag, level.registryAccess());
+            helper.assertTrue(reloaded.contains(far),
+                    "the recorded position must survive an NBT round-trip");
+        } finally {
+            MagiculeElevation.removeSource(level, far);
+        }
+        helper.assertTrue(AmbientMagicule.query(level, far) == AmbientMagicule.COLD,
+                "cleanup must restore COLD for the batch");
         helper.succeed();
     }
 }

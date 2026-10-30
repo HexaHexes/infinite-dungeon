@@ -9,6 +9,7 @@ import org.bitwisemadness.infinitedungeon.client.PortalTint;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
+import org.bitwisemadness.infinitedungeon.lanes.FallbackHallFeature;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
@@ -70,8 +71,10 @@ public final class InfiniteDungeon {
         NeoForge.EVENT_BUS.addListener(PortalIgnition::onRightClickBlock);
         NeoForge.EVENT_BUS.addListener(PortalIgnition::onEntityPlace);
         // Lane geometry: the stride follows the lane set's effective registry
-        // values, read once the datapack registries are frozen.
+        // values, read once the datapack registries are frozen. The fallback
+        // hall feature guards lane cells whose dungeon did not generate.
         LaneGrid.register();
+        FallbackHallFeature.register(modBus);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

@@ -38,6 +38,14 @@ public final class LaneGrid {
 
     private static volatile int laneStride = SHIPPED_LANE_STRIDE;
 
+    /**
+     * The full effective placement (spacing, separation, salt), kept so the
+     * fallback-hall filter computes the exact cell candidates Dungeon Crawl's
+     * structure would. Null when the set is missing or non-random-spread -
+     * consumers skip rather than guess.
+     */
+    private static volatile RandomSpreadStructurePlacement placement;
+
     private LaneGrid() {
     }
 
@@ -49,6 +57,11 @@ public final class LaneGrid {
     /** The effective lane stride in blocks for the running server. */
     public static int laneStride() {
         return laneStride;
+    }
+
+    /** The effective lane placement, or null if it could not be read. */
+    public static RandomSpreadStructurePlacement placement() {
+        return placement;
     }
 
     /** The startup read: the frozen registry is the source of truth. */
@@ -65,10 +78,12 @@ public final class LaneGrid {
      */
     public static void update(StructureSet laneSet) {
         if (laneSet != null && laneSet.placement() instanceof RandomSpreadStructurePlacement spread) {
+            placement = spread;
             laneStride = spread.spacing() * 16;
             InfiniteDungeon.LOGGER.info("Lane stride set from the effective lane placement: {} blocks", laneStride);
             return;
         }
+        placement = null;
         laneStride = SHIPPED_LANE_STRIDE;
         InfiniteDungeon.LOGGER.warn(
                 "The lane set is missing or no longer random_spread; lanes fall back to the shipped stride of {} blocks",

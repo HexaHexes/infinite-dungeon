@@ -45,7 +45,11 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
 
 ## CI & release model - this repo
 
-- `ci.yml` runs the template's three checks (junit, gametest, version-bump).
+- `ci.yml` runs the template's checks: junit, gametest, version-bump, plus
+  the `static` job (SpotBugs + Spotless, **enforced** since the template #52
+  flip: findings fail `spotbugsMain` on the `check` graph, violations fail
+  `spotlessCheck`) and the report-upload step. `codeql.yml` (analyze) and the
+  dependency-review pair join them as required checks.
 - `release.yml` cuts the GitHub release for `v<mod_version>` on a push to `main`
   (pre-releases only when the repo variable `ALPHA_RELEASES` is true), and
   `publish.yml` publishes the Maven artifact to the org's GitHub Packages

@@ -291,11 +291,14 @@ public final class InfiniteDungeonGameTests {
                 "the lobby layer must derive to (0, 0, 0): " + lobby);
 
         int laneOneX = parameters.laneStride() + 1;
-        var deep = DungeonLayout.derive(parameters, laneOneX, parameters.minY());
+        // Floor 0 is the entry band at the TOP of the layer's band (the
+        // descend-into-danger axis, issue #183).
+        var entry = DungeonLayout.derive(parameters, laneOneX,
+                parameters.minY() + parameters.availableHeight() - 1);
         int layerOneFloors = FloorSchedule.floorsInLayer(
                 parameters.worldSeed(), 1, parameters.floorsMin(), parameters.floorsMax());
-        helper.assertTrue(deep.layerIndex() == 1 && deep.floorInLayer() == 0 && deep.depth() == 1,
-                "lane 1's bottom floor must derive to (1, 0, 1): " + deep
+        helper.assertTrue(entry.layerIndex() == 1 && entry.floorInLayer() == 0 && entry.depth() == 1,
+                "lane 1's entry floor must derive to (1, 0, 1): " + entry
                         + " with layer one fielding " + layerOneFloors + " floors");
 
         helper.assertTrue(!DungeonLayout.inDungeon(parameters, -1),

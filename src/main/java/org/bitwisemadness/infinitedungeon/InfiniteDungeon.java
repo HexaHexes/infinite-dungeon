@@ -15,6 +15,7 @@ import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.magicule.DungeonMagiculeProvider;
+import org.bitwisemadness.infinitedungeon.magicule.MagiculeParticles;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.LobbyEntranceFeature;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
@@ -87,6 +88,9 @@ public final class InfiniteDungeon {
         // through this provider - consumers reach it via the API contract,
         // never by calling into this mod (plan section 7, issue #201).
         AmbientMagicule.registerProvider(DungeonMagiculeProvider.PROVIDER);
+        // Ambient magicule particles render the same number (plan section 7,
+        // issue #200): visual only, dungeon-dimension gated like the clock.
+        NeoForge.EVENT_BUS.addListener(MagiculeParticles::onLevelTick);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

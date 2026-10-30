@@ -62,6 +62,10 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.IntValue DENSITY_MAX_PER_CHUNK;
     private static final ModConfigSpec.DoubleValue STRUCTURE_ELEVATION_AMOUNT;
     private static final ModConfigSpec.DoubleValue STRUCTURE_ELEVATION_RADIUS;
+    private static final ModConfigSpec.DoubleValue DIFFICULTY_STAT_MULTIPLIER_PER_POINT;
+    private static final ModConfigSpec.IntValue PARTY_RADIUS;
+    private static final ModConfigSpec.DoubleValue PARTY_PER_MEMBER;
+    private static final ModConfigSpec.BooleanValue MAGICULE_TENSURA_ATTRIBUTE_SCALING;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -174,6 +178,11 @@ public final class DungeonConfigs {
                 .comment("The per-layer squared increment: difficulty grows quadratically")
                 .comment("between layers. 0 yields pure linear progression.")
                 .defineInRange("quadraticPerLayer", 0.05D, 0D, 100D);
+        DIFFICULTY_STAT_MULTIPLIER_PER_POINT = builder
+                .comment("Spawn stat multiplier: effective = (1 + curve * this) *")
+                .comment("partyMultiplier (plan section 7). The curve is the attribute's")
+                .comment("own key - DIFFICULTY rows read D, MAGICULE rows read M.")
+                .defineInRange("statMultiplierPerPoint", 1.0D, 0D, 100D);
         builder.pop();
         builder.push("magicule");
         MAGICULE_BASE = builder
@@ -195,6 +204,11 @@ public final class DungeonConfigs {
                 .comment("vanilla dust textures only, emission density keyed to M.")
                 .comment("Visual only - no gameplay effect.")
                 .define("particles", true);
+        MAGICULE_TENSURA_ATTRIBUTE_SCALING = builder
+                .comment("Whether Tensura's magicule-specific attributes scale with M")
+                .comment("at spawn (plan section 7, default on). Off: those attributes")
+                .comment("scale with D instead - never dropped (the API's toggle).")
+                .define("tensuraAttributeScaling", true);
         MAGICULE_PARTICLE_DENSITY = builder
                 .comment("Particles per emission round per point of concentration (M).")
                 .comment("0 suspends emission even while particles is on.")
@@ -244,6 +258,18 @@ public final class DungeonConfigs {
                 .comment("coordinates in every dimension (precision follow-up tracked")
                 .comment("in the API repo).")
                 .defineInRange("radius", 16.0D, 0D, 256D);
+        builder.pop();
+        builder.push("party");
+        PARTY_RADIUS = builder
+                .comment("Presence radius (blocks) around a spawn: only online party")
+                .comment("members inside it count toward the party multiplier (plan")
+                .comment("section 8). The record pins the knob, not the default.")
+                .defineInRange("radius", 32, 0, 256);
+        PARTY_PER_MEMBER = builder
+                .comment("Each ADDITIONAL present party member multiplies spawn strength")
+                .comment("by this: multiplier = 1 + (present - 1) * perMember. 0 pins")
+                .comment("spawns to solo strength regardless of party size.")
+                .defineInRange("perMemberMultiplier", 0.5D, 0D, 100D);
         builder.pop();
         builder.push("integrations");
         builder.push("corpse");
@@ -435,5 +461,25 @@ public final class DungeonConfigs {
     /** Each elevation source's radius in blocks (plan section 7; default 16.0). */
     public static double structureElevationRadius() {
         return STRUCTURE_ELEVATION_RADIUS.get();
+    }
+
+    /** Spawn stat multiplier per curve point (plan section 7; default 1.0). */
+    public static double difficultyStatMultiplierPerPoint() {
+        return DIFFICULTY_STAT_MULTIPLIER_PER_POINT.get();
+    }
+
+    /** The party presence radius around a spawn (plan section 8; default 32). */
+    public static int partyRadius() {
+        return PARTY_RADIUS.get();
+    }
+
+    /** The per-additional-member spawn multiplier increment (plan section 8; default 0.5). */
+    public static double partyPerMemberMultiplier() {
+        return PARTY_PER_MEMBER.get();
+    }
+
+    /** Whether Tensura's magicule-specific attributes scale with M (plan section 7; default on). */
+    public static boolean magiculeTensuraAttributeScaling() {
+        return MAGICULE_TENSURA_ATTRIBUTE_SCALING.get();
     }
 }

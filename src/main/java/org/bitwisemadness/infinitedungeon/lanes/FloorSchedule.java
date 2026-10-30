@@ -63,13 +63,17 @@ public final class FloorSchedule {
     }
 
     /**
-     * The floor a Y coordinate sits in, bottom-anchored: floor 0 is the
-     * lowest band of the layer, the index grows upward, and anything outside
-     * the band clamps in (the raw geometric mapping - descent direction is
-     * the depth API's semantics, issue #29).
+     * The floor a Y coordinate sits in, top-anchored: floor 0 is the layer's
+     * entry band at the top and the index grows downward, so descending
+     * raises the floor - the descend-into-danger contract the design record
+     * fixes (section 7's difficulty grows with floorInLayer; the DanMachi
+     * floor numbering the concept cites counts downward). Outside the band
+     * clamps in: below is deeper, above is shallower (issue #183 corrected
+     * this from the original bottom-anchored mapping before any consumer
+     * relied on it).
      */
     public static int floorIndexInLayer(int y, int minY, int availableHeight, int floors) {
         int height = floorHeight(availableHeight, floors);
-        return Math.min(floors - 1, Math.max(0, Math.floorDiv(y - minY, height)));
+        return Math.min(floors - 1, Math.max(0, floors - 1 - Math.floorDiv(y - minY, height)));
     }
 }

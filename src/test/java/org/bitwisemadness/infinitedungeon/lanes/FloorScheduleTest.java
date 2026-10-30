@@ -94,13 +94,14 @@ class FloorScheduleTest {
 
     @Test
     void floorIndexClampsToTheBand() {
-        // 2048 over 8 floors: 256-block bands from the dimension floor up.
-        assertEquals(0, FloorSchedule.floorIndexInLayer(-64, -64, 2048, 8));
-        assertEquals(0, FloorSchedule.floorIndexInLayer(191, -64, 2048, 8));
-        assertEquals(1, FloorSchedule.floorIndexInLayer(192, -64, 2048, 8));
-        assertEquals(7, FloorSchedule.floorIndexInLayer(1983, -64, 2048, 8));
-        // Outside the band clamps, never escapes.
-        assertEquals(0, FloorSchedule.floorIndexInLayer(-100000, -64, 2048, 8));
-        assertEquals(7, FloorSchedule.floorIndexInLayer(100000, -64, 2048, 8));
+        // 2048 over 8 floors: 256-block bands, floor 0 at the TOP of the
+        // band and the index growing downward (issue #183).
+        assertEquals(7, FloorSchedule.floorIndexInLayer(-64, -64, 2048, 8));
+        assertEquals(7, FloorSchedule.floorIndexInLayer(191, -64, 2048, 8));
+        assertEquals(6, FloorSchedule.floorIndexInLayer(192, -64, 2048, 8));
+        assertEquals(0, FloorSchedule.floorIndexInLayer(1983, -64, 2048, 8));
+        // Outside the band clamps in: below is deeper, above is shallower.
+        assertEquals(7, FloorSchedule.floorIndexInLayer(-100000, -64, 2048, 8));
+        assertEquals(0, FloorSchedule.floorIndexInLayer(100000, -64, 2048, 8));
     }
 }

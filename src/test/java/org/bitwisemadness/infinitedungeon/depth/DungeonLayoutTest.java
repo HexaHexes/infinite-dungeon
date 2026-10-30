@@ -28,15 +28,19 @@ class DungeonLayoutTest {
         for (int layer = 1; layer <= 20; layer++) {
             int floors = FloorSchedule.floorsInLayer(PARAMS.worldSeed(), layer,
                     PARAMS.floorsMin(), PARAMS.floorsMax());
-            DungeonPosition last = DungeonLayout.derive(PARAMS,
+            // The deepest floor of a layer is its bottom band; the next
+            // layer is entered at its top band (issue #183's direction).
+            DungeonPosition deepest = DungeonLayout.derive(PARAMS,
                     LaneGeometry.laneOriginX(layer, PARAMS.laneStride()),
-                    PARAMS.minY() + PARAMS.availableHeight() - 1);
-            DungeonPosition first = DungeonLayout.derive(PARAMS,
-                    LaneGeometry.laneOriginX(layer + 1, PARAMS.laneStride()),
                     PARAMS.minY());
-            assertEquals(floors - 1, last.floorInLayer(), "layer " + layer + " top floor");
-            assertEquals(0, first.floorInLayer(), "layer " + (layer + 1) + " bottom floor");
-            assertEquals(last.depth() + 1, first.depth(),
+            DungeonPosition entry = DungeonLayout.derive(PARAMS,
+                    LaneGeometry.laneOriginX(layer + 1, PARAMS.laneStride()),
+                    PARAMS.minY() + PARAMS.availableHeight() - 1);
+            assertEquals(floors - 1, deepest.floorInLayer(),
+                    "layer " + layer + " deepest floor must be its bottom band");
+            assertEquals(0, entry.floorInLayer(),
+                    "layer " + (layer + 1) + " entry floor must be its top band");
+            assertEquals(deepest.depth() + 1, entry.depth(),
                     "depth must continue without gaps at the layer " + layer + " boundary");
         }
     }
@@ -73,9 +77,11 @@ class DungeonLayoutTest {
         int stride = PARAMS.availableHeight() / floors;
         int seen = 0;
         for (int floor = 0; floor < floors; floor++) {
+            // Top-anchored: floor 0 sits at the top of the band, so the Y
+            // that holds floor f counts down from the band's top.
             DungeonPosition position = DungeonLayout.derive(PARAMS,
                     LaneGeometry.laneOriginX(layer, PARAMS.laneStride()),
-                    PARAMS.minY() + floor * stride);
+                    PARAMS.minY() + (floors - 1 - floor) * stride);
             assertEquals(floor, position.floorInLayer());
             seen++;
         }

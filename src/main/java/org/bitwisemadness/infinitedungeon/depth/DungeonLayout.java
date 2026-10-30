@@ -17,10 +17,14 @@ import org.bitwisemadness.infinitedungeon.lanes.LaneGeometry;
  * <ul>
  * <li>Layer 0 is the lobby: fixed construction, depth 0, floor 0 for any Y -
  * its shape is issue #131's, so the derivation never guesses floors there.</li>
- * <li>Depth counts floors descended: layer 1's floors start at depth 1 (the
- * lobby contributes exactly one floor of headroom), each deeper floor adds
- * one, and the last floor of layer L sits immediately above the first floor
- * of layer L+1 - depth has no gaps across layer boundaries.</li>
+ * <li>Depth counts floors descended: within a layer floor 0 is the entry
+ * band at the <b>top</b> and floorInLayer grows downward as the player
+ * descends (so section 7's difficulty, which grows with floorInLayer, deepens
+ * with the dive); layer 1's floors start at depth 1 (the lobby contributes
+ * exactly one floor of headroom), and depth has no gaps across layer
+ * boundaries - layer L's deepest floor is followed by layer L+1's entry
+ * floor (issue #183 corrected the axis direction before any consumer
+ * relied on it).</li>
  * <li>Negative lanes hold no layers: {@link #inDungeon} answers whether a
  * position is inside the dungeon at all, and {@link #derive} refuses positions
  * west of the first lane loudly rather than inventing a depth for the void.</li>

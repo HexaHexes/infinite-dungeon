@@ -23,8 +23,9 @@ import org.bitwisemadness.infinitedungeon.portal.PortalFrameBuilder;
  * <p>Frames stay fully inside the candidate chunk (the builder's ring reaches
  * x0..x15 from the interior offsets), so generation never crosses a chunk
  * border, and both interiors sit at least one ring-block above the world
- * bottom. Lane 0 stays reserved for the lobby (#131), which owns the lobby's
- * own exits - layer 1's arrival exists but its back-target waits for them.</p>
+ * bottom. Lane 0 - the lobby lane - builds its departure frame only (#131):
+ * those are the doorways into the dungeon, since there is no lane -1 for an
+ * arrival to serve; the lobby's own entrance is the fixed skeleton's portal.</p>
  */
 public final class TransitionFramesFeature extends Feature<NoneFeatureConfiguration> {
 
@@ -67,16 +68,22 @@ public final class TransitionFramesFeature extends Feature<NoneFeatureConfigurat
             return false;
         }
         int lane = LaneGeometry.laneIndex(candidate.getMiddleBlockX(), stride);
-        if (lane < 1) {
+        if (lane < 0) {
             return false;
+        }
+
+        boolean departure = PortalFrameBuilder.build(level,
+                LaneTransitions.departureInterior(minBuild, candidate),
+                Direction.Axis.X, false);
+        if (lane == 0) {
+            // The lobby lane's doorways (#131): departure only - lane 0 has
+            // no arrival, because there is no lane -1 to depart from.
+            return departure;
         }
         int available = level.getHeight();
         int floors = FloorSchedule.floorsInLayer(level.getSeed(), lane,
                 DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
 
-        boolean departure = PortalFrameBuilder.build(level,
-                LaneTransitions.departureInterior(minBuild, candidate),
-                Direction.Axis.X, false);
         boolean arrival = PortalFrameBuilder.build(level,
                 LaneTransitions.arrivalInterior(minBuild, available, floors, candidate),
                 Direction.Axis.X, false);

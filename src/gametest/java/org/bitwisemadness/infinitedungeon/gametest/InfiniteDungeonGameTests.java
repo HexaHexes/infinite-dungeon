@@ -46,10 +46,12 @@ import org.bitwisemadness.infinitedungeon.lanes.LayerUnlocks;
 import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
+import org.bitwisemadness.infinitedungeon.portal.DungeonEntrance;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalTravel;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchor;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
+import org.bitwisemadness.infinitedungeon.portal.LobbyEntranceFeature;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalFrameBuilder;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
@@ -950,4 +952,135 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(!(level.getBlockState(otherSpot).getBlock() instanceof WaystoneBlock),
                 "only the layer's canonical entrance may hold the waystone");
         helper.succeed();
-    }}
+    }    /**
+     * The lobby skeleton (issue #131): at the fixed origin chunk the feature
+     * builds the recorded entrance shape - the platform at y 63 and the lit
+     * portal - and the travel lookups find it without ever building: break
+     * the portal and ensure/lobby report the absence instead of restoring
+     * it. Re-driving the feature restores the lobby, because generation is
+     * its owner and the lookups are contractually mute.
+     */
+    @GameTest(template = "empty")
+    public static void lobby_skeleton_generates_at_fixed_origin(GameTestHelper helper) {
+        var level = helper.getLevel();
+        long seed = level.getSeed();
+        var generator = level.getChunkSource().getGenerator();
+        var origin = new BlockPos(0, 64, 0);
+        var feature = LobbyEntranceFeature.LOBBY_ENTRANCE.get();
+
+        helper.assertTrue(feature.place(context(level, generator, seed, origin)),
+                "the fixed origin chunk must get its lobby");
+        helper.assertTrue(level.getBlockState(new BlockPos(0, 63, 0)).is(Blocks.STONE_BRICKS),
+                "the platform must stand at y 63");
+        helper.assertTrue(level.getBlockState(new BlockPos(4, 63, 2)).is(Blocks.STONE_BRICKS),
+                "the platform must span x 0..4, z 0..2");
+        helper.assertTrue(level.getBlockState(new BlockPos(1, 65, 0))
+                        .getBlock() instanceof DungeonPortalBlock,
+                "the arrival cell must hold the lit portal");
+        helper.assertTrue(DungeonEntrance.ensure(level) != null,
+                "ensure must find the generated entrance");
+        helper.assertTrue(DungeonEntrance.lobby(level) != null,
+                "lobby must find the generated entrance");
+
+        // The no-build contract: break the portal and both lookups report it
+        // without restoring a single block.
+        level.setBlock(new BlockPos(1, 65, 0), Blocks.AIR.defaultBlockState(), 3);
+        helper.assertTrue(DungeonEntrance.ensure(level) == null,
+                "ensure must not rebuild the entrance");
+        helper.assertTrue(DungeonEntrance.lobby(level) == null,
+                "lobby must not rebuild the entrance");
+        helper.assertTrue(level.getBlockState(new BlockPos(1, 65, 0)).isAir(),
+                "the broken portal must stay broken after the lookups");
+
+        // Generation owns restoration: clear the interior (the ring is the
+        // builder's own replaceable frame) and re-drive the feature.
+        for (int dx = 0; dx <= 1; dx++) {
+            for (int dy = 0; dy <= 2; dy++) {
+                level.setBlock(new BlockPos(1 + dx, 65 + dy, 0), Blocks.AIR.defaultBlockState(), 3);
+            }
+        }
+        helper.assertTrue(feature.place(context(level, generator, seed, origin)),
+                "re-driving the feature must restore the lobby");
+        helper.assertTrue(level.getBlockState(new BlockPos(1, 65, 0))
+                        .getBlock() instanceof DungeonPortalBlock,
+                "the restored entrance must hold the portal again");
+        helper.assertTrue(DungeonEntrance.ensure(level) != null,
+                "ensure must find the restored entrance");
+        helper.succeed();
+    }
+
+    /**
+     * The lobby's doorways (issue #131): lane 0's candidate chunk builds the
+     * departure frame only - there is no lane -1 to serve an arrival - and
+     * the pair derives both ways with no new math: the doorway leads into
+     * layer 1's arrival, and a layer-1 arrival walks back onto that doorway.
+     * The #31 back-travel caveat lifts here.
+     */
+    @GameTest(template = "empty")
+    public static void lobby_lane_doorways_pair_both_ways(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var placement = LaneGrid.placement();
+        helper.assertTrue(placement != null, "the lane placement must be read");
+        long seed = level.getSeed();
+        int minBuild = level.getMinBuildHeight();
+        int stride = LaneGrid.laneStride();
+
+        var cell = placement.getPotentialStructureChunk(seed, 0, 0);
+        int lane = LaneGeometry.laneIndex(cell.getMiddleBlockX(), stride);
+        helper.assertTrue(lane == 0, "the probe cell must sit in the lobby lane: " + lane);
+
+        // The doorway stands on the world floor plane, where the flat harness
+        // world has ground - clear the footprint first (absolute positions).
+        var departure = LaneTransitions.departureInterior(minBuild, cell);
+        clearFootprint(level, departure);
+        var origin = new BlockPos(cell.x << 4, minBuild + 1, cell.z << 4);
+        var feature = TransitionFramesFeature.TRANSITION_FRAMES.get();
+        helper.assertTrue(feature.place(context(level, level.getChunkSource().getGenerator(), seed, origin)),
+                "the lobby lane cell must get its doorway");
+        helper.assertTrue(level.getBlockState(departure).isAir(),
+                "the doorway interior must stay unlit");
+        helper.assertTrue(level.getBlockState(departure.offset(-1, 0, 0)).is(Blocks.STONE_BRICKS),
+                "the doorway ring must be built of the frame block");
+
+        // Lane 0 builds no arrival: the floor schedule refuses layer 0
+        // outright, so the lane-0 arrival slot is uncomputable - the
+        // invariant in its strongest form, and the coupling this test pins:
+        // were the refusal ever relaxed, this fails and forces the frames
+        // feature's lane-0 branch back under review. (JUnit covers the
+        // refusal itself.)
+        boolean layer0Refused = false;
+        try {
+            FloorSchedule.floorsInLayer(seed, 0,
+                    DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+        } catch (IllegalArgumentException ex) {
+            layer0Refused = true;
+        }
+        helper.assertTrue(layer0Refused,
+                "the floor schedule must refuse layer 0 - no lane-0 arrival can exist");
+
+        // Forward: the doorway leads into layer 1's arrival.
+        var forward = LaneTransitions.pairTarget(level, departure);
+        helper.assertTrue(forward.isPresent(), "the doorway must pair into layer 1");
+        helper.assertTrue(LaneGeometry.laneIndex(forward.get().getX(), stride) == 1,
+                "the doorway's target must sit in layer 1");
+
+        // Back: layer 1's arrival walks back onto this doorway.
+        var lane1Cell = placement.getPotentialStructureChunk(seed, placement.spacing(), cell.z);
+        int lane1Floors = FloorSchedule.floorsInLayer(seed, 1,
+                DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+        var lane1Arrival = LaneTransitions.arrivalInterior(minBuild, level.getHeight(), lane1Floors, lane1Cell);
+        var back = LaneTransitions.pairTarget(level, lane1Arrival);
+        helper.assertTrue(back.isPresent(), "a layer-1 arrival must pair back");
+        helper.assertTrue(back.get().equals(departure),
+                "the layer-1 arrival must land on the lobby doorway: " + back.get());
+
+        // End to end: an open walk through the doorway teleports into layer
+        // 1 - lane 0 has no guardian, so its doorways are never sealed.
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setPos(departure.getX() + 0.5, departure.getY() + 0.5, departure.getZ() + 0.5);
+        DungeonPortalTravel.laneHop(level, departure, player);
+        helper.assertTrue(player.blockPosition().equals(forward.get()),
+                "the doorway walk must land in layer 1: " + player.blockPosition());
+        helper.succeed();
+    }
+}

@@ -1,66 +1,59 @@
 package org.bitwisemadness.infinitedungeon.portal;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 
 /**
  * The dungeon-side entrance: where an arriving player materialises.
  *
- * <p><strong>Wave-1 placeholder, recorded in the plan.</strong> The plan
- * forbids visitor-triggered world edits (Chunky pregeneration parity: all
- * content is seed-derived at chunk-generation time), so this fixed,
- * position-deterministic entrance - built once, identically in every world, at
- * fixed coordinates - is a recorded deviation; Wave 2's lane geometry and
- * structure sets generate entrances properly and replace it.</p>
+ * <p><strong>Generated at chunk time since issue #131</strong> - the Wave-1
+ * visitor-triggered build is retired: {@code LobbyEntranceFeature} generates
+ * this exact shape at the fixed origin chunk, so pregenerated and organic
+ * worlds are identical from the first tick (the recorded Chunky deviation is
+ * closed and the design record amended). What remains here is the lookup
+ * contract the travel and death-return paths already depend on: the position
+ * is fixed, the blocks are the feature's job, and a missing lobby yields
+ * {@code null} - callers keep their documented fallbacks (stay where you
+ * stand, ordinary respawn) rather than this class rebuilding anything.</p>
  *
- * <p>Layout: a 5x5 platform of the configured frame block below, then the
- * shared minimal portal from {@link PortalFrameBuilder#build}. Idempotent:
- * once the portal exists it is left alone. Returns {@code null} when the
- * space is blocked, and the travel code leaves the player where they stand.</p>
+ * <p>Layout (unchanged coordinates): a platform of the configured frame
+ * block below (x 0..4, z 0..2 at y 63, inside the fixed chunk so generation
+ * never writes across a chunk border), then the shared minimal portal from
+ * {@link PortalFrameBuilder#build}.</p>
  */
 public final class DungeonEntrance {
 
-    /** The Wave-1 entrance: platform below, frame spanning x 0..3, y 64..68. */
+    /** The entrance: platform below, frame spanning x 0..3, y 64..68. */
     public static final BlockPos ENTRANCE = new BlockPos(0, 64, 0);
 
     /** The block a player materialises in: the portal's lower-left interior cell. */
-    private static final BlockPos ARRIVAL = new BlockPos(1, 65, 0);
+    static final BlockPos ARRIVAL = new BlockPos(1, 65, 0);
 
     /**
      * Where the lobby return lands: on the platform in front of the portal,
      * never inside a portal cell - a landing there would read as an exit on
      * the cooldown's expiry.
      */
-    private static final BlockPos LOBBY_SPOT = new BlockPos(1, 64, 1);
+    static final BlockPos LOBBY_SPOT = new BlockPos(1, 64, 1);
 
     private DungeonEntrance() {
     }
 
-    /** Ensures the entrance exists and returns the position to materialise at, or null when blocked. */
+    /**
+     * The arrival position when the generated entrance is present, else
+     * {@code null} - never builds; the lobby is the feature's product and its
+     * absence is a bug to report, not a trigger to reconstruct.
+     */
     public static BlockPos ensure(ServerLevel level) {
-        if (level.getBlockState(ARRIVAL).getBlock() instanceof DungeonPortalBlock) {
-            return ARRIVAL;
-        }
-        // Platform: 5x5 under and around the frame.
-        for (int x = -1; x <= 4; x++) {
-            for (int z = -1; z <= 1; z++) {
-                BlockPos under = new BlockPos(x, 63, z);
-                if (level.getBlockState(under).isAir()) {
-                    level.setBlockAndUpdate(under, DungeonConfigs.frameBlock().defaultBlockState());
-                }
-            }
-        }
-        return PortalFrameBuilder.build(level, ARRIVAL, Direction.Axis.X) ? ARRIVAL : null;
+        return level.getBlockState(ARRIVAL).getBlock() instanceof DungeonPortalBlock ? ARRIVAL : null;
     }
 
     /**
-     * The lobby return's landing spot: the entrance must exist first, so this
-     * builds it on demand and returns where a returning player lands beside
-     * the portal - or null when the space is blocked.
+     * The lobby return's landing spot when the generated lobby is present,
+     * else {@code null} - the respawn path then stays at the ordinary respawn
+     * point instead of dropping the player into the void.
      */
     public static BlockPos lobby(ServerLevel level) {
-        return ensure(level) == null ? null : LOBBY_SPOT;
+        return level.getBlockState(ARRIVAL).getBlock() instanceof DungeonPortalBlock ? LOBBY_SPOT : null;
     }
 }

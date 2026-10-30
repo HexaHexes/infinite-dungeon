@@ -15,6 +15,7 @@ import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
+import org.bitwisemadness.infinitedungeon.portal.LobbyEntranceFeature;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
 import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
@@ -79,6 +80,7 @@ public final class InfiniteDungeon {
         FallbackHallFeature.register(modBus);
         TransitionFramesFeature.register(modBus);
         WaystoneEntranceFeature.register(modBus);
+        LobbyEntranceFeature.register(modBus);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

@@ -111,9 +111,11 @@ repositories {
         }
     }
 
-    // Third-party integration coordinates (section 13), pinned exactly: the
-    // Corpse mod, compile-side only - the mod is optional at runtime and the
-    // gate is ModList-based, so nothing here ships or forces a load.
+    // Third-party integration coordinates (section 13), pinned exactly:
+    // Corpse (compile-side, optional and ModList-gated) and Dungeon Crawl
+    // (dev runtime - the lane structure set references dungeoncrawl:dungeon,
+    // so the gametest server must carry the mod for the reference to resolve,
+    // exactly as a real server must). Nothing here ships or forces a load.
     maven {
         name = 'CurseMaven'
         url = uri('https://cursemaven.com')
@@ -147,6 +149,14 @@ dependencies {
     compileOnly "curse.maven:corpse-316582:9188333"
     devRuntime "curse.maven:corpse-316582:9188333"
 
+    // Dungeon Crawl (section 13's pinned coordinate, 2.3.17): required by
+    // neoforge.mods.toml and present on every dev run and the gametest server
+    // so the lane set's dungeoncrawl:dungeon reference resolves there the way
+    // it must on a real server. devRuntime only - no Dungeon Crawl classes are
+    // touched (the startup placement mirror-read is pure registry API), so
+    // there is no compile-side entry and nothing ships.
+    devRuntime "curse.maven:dungeon-crawl-324973:7887320"
+
     // JUnit wiring for the pure-logic suites the later waves add.
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -165,7 +175,7 @@ test {
 // "All N required tests passed :)" when every required test succeeds. Keep
 // expectedTests in sync with the @GameTest methods in src/gametest.
 tasks.matching { it.name == 'runGameTestServer' }.configureEach {
-    def expectedTests = 12
+    def expectedTests = 14
     doLast {
         def log = file('run/logs/latest.log')
         if (!log.exists()) {

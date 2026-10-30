@@ -15,12 +15,17 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
 
 **Dependencies**
 - Required: Minecraft, NeoForge, `infinite-dungeon-api` (GitHub Packages Maven).
-- Required at runtime once wired (Wave 2): Dungeon Crawl, Waystones - both core
-  and untoggleable per the plan's decision record.
+- Required: Dungeon Crawl (`dungeoncrawl [2.3.17,)` in neoforge.mods.toml) -
+  wired by the lane structure set (issue #27): the dimension generates
+  `dungeoncrawl:dungeon` and gates it through the biome tag; devRuntime carries
+  the pinned coordinate `curse.maven:dungeon-crawl-324973:7887320`. Core and
+  untoggleable per the plan's decision record.
+- Required once wired (still Wave 2): Waystones - lands with its own issues
+  (#68 chunk-gen placement, #33 waypoint policy).
 - Optional: everything else, through the suite's integration modules.
 
-**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (12 tests).
-`expectedTests = 12` in `build.gradle` must match the `@GameTest` count.
+**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` (14 tests).
+`expectedTests = 14` in `build.gradle` must match the `@GameTest` count.
 
 **Remote:** `github.com/HexaHexes/infinite-dungeon` (public, default branch
 `main`).

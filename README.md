@@ -38,6 +38,7 @@ Tensura, Apotheosis, and friends build on top.
 | Required | Minecraft 1.21.1 | - |
 | Required | NeoForge 21.1.259 | - |
 | Required | Infinite Dungeon API | Dimension profiles, ambient magicule and entity power services, lifecycle events |
+| Required | Dungeon Crawl | The dungeon dimension generates its dungeons from Dungeon Crawl structures |
 
 ## Configuration
 

@@ -52,6 +52,16 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
   class and those two call sites; `defaultRequire: 1` fails CI if Dungeon Crawl
   renames them. Any further mixin needs its own issue-first ruling.
 
+## Breaking-label posture (ruling, issue #171)
+
+- Nothing is published yet, so breaking changes carry **no concern**: the
+  `breaking` label is not applied during this phase. The alpha channel absorbs
+  contract changes and release notes carry the disclosure. The label's
+  major/minor-forcing mechanic stays as the template writes it - it simply has
+  no occasion to fire until the first real publication (CurseForge/Modrinth or
+  a clean stable cut), which is when the question revives. Required-dependency
+  additions and pre-release contract corrections ship unlabelled, citing #171.
+
 ## Naming - this repo
 
 - Repo and folder: `infinite-dungeon`; `mod_id`: `infinite_dungeon`; Java base

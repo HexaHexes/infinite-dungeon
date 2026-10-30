@@ -27,7 +27,10 @@ import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
+import org.bitwisemadness.infinitedungeon.depth.DungeonLayout;
+import org.bitwisemadness.infinitedungeon.depth.LayoutParameters;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
+import org.bitwisemadness.infinitedungeon.lanes.FloorSchedule;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
@@ -228,6 +231,51 @@ public final class InfiniteDungeonGameTests {
         // positions map back to their lane by floor division.
         helper.assertTrue(LaneGrid.laneStride() == 32 * 16,
                 "the shipped stride follows Dungeon Crawl's 32-chunk spacing");
+        helper.succeed();
+    }
+
+    /**
+     * The depth derivation wired to a real server: LayoutParameters.forServer
+     * gathers the world seed, the effective lane stride, the dimension's own
+     * vertical extents (the locked -64/2048 pair), and the configured floor
+     * range - and the pure derivation composes on top. The lane-1 expectations
+     * are computed through the same FloorSchedule the JUnit suites pin, so
+     * this proves the wiring, not the math.
+     */
+    @GameTest(template = "empty")
+    public static void depth_derives_from_live_parameters(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var parameters = LayoutParameters.forServer(level);
+        helper.assertTrue(parameters.laneStride() == 512,
+                "the effective stride must reach the derivation: " + parameters.laneStride());
+        // The factory must transmit its level's own vertical extents. The
+        // harness hosts its own flat-preset level (not our dimension, which
+        // never becomes a level here - see the dimension-type test), so the
+        // locked -64/2048 pair is asserted on the datapack registry there;
+        // on a real server the level IS the dungeon and the pair flows through
+        // this exact path.
+        helper.assertTrue(parameters.minY() == level.getMinBuildHeight()
+                        && parameters.availableHeight() == level.getHeight(),
+                "the level's vertical extents must reach the derivation: " + parameters.minY()
+                        + "/" + parameters.availableHeight());
+        helper.assertTrue(parameters.floorsMin() >= 1 && parameters.floorsMax() >= parameters.floorsMin(),
+                "the configured floor range must reach the derivation: [" + parameters.floorsMin()
+                        + ", " + parameters.floorsMax() + "]");
+
+        var lobby = DungeonLayout.derive(parameters, 0, parameters.minY());
+        helper.assertTrue(lobby.layerIndex() == 0 && lobby.floorInLayer() == 0 && lobby.depth() == 0,
+                "the lobby layer must derive to (0, 0, 0): " + lobby);
+
+        int laneOneX = parameters.laneStride() + 1;
+        var deep = DungeonLayout.derive(parameters, laneOneX, parameters.minY());
+        int layerOneFloors = FloorSchedule.floorsInLayer(
+                parameters.worldSeed(), 1, parameters.floorsMin(), parameters.floorsMax());
+        helper.assertTrue(deep.layerIndex() == 1 && deep.floorInLayer() == 0 && deep.depth() == 1,
+                "lane 1's bottom floor must derive to (1, 0, 1): " + deep
+                        + " with layer one fielding " + layerOneFloors + " floors");
+
+        helper.assertTrue(!DungeonLayout.inDungeon(parameters, -1),
+                "west of the first lane must be outside the dungeon");
         helper.succeed();
     }
 

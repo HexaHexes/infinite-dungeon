@@ -43,6 +43,18 @@ versionRange = "[${api_version},)"
 ordering = "BEFORE"
 side = "BOTH"
 
+# Dungeon Crawl: the dimension generates its dungeon structures - the lane set
+# references dungeoncrawl:dungeon and the biome gate feeds it (section 3 of the
+# plan: core and untoggleable). The range pins the version the mod was verified
+# against; resolution is by mod id, so later 2.x builds satisfy it.
+[[dependencies.${mod_id}]]
+modId = "dungeoncrawl"
+type = "required"
+versionRange = "[2.3.17,)"
+ordering = "AFTER"
+side = "BOTH"
+reason = "The dungeon dimension generates Dungeon Crawl's dungeon structures."
+
 # Add your mod's dependencies below. Use type = "optional" for anything the mod
 # works without, and gate the code that touches it so it no-ops when the
 # dependency is absent.

@@ -136,6 +136,78 @@ public final class InfiniteDungeonGameTests {
     }
 
     /**
+     * The lane structure set: our own set on Dungeon Crawl's placement grid
+     * (spacing 32, separation 12, salt 10387313 - the Phase 0 spike values),
+     * referencing dungeoncrawl:dungeon directly. The structure holder must
+     * resolve - the gametest runtime carries Dungeon Crawl through devRuntime -
+     * proving the reference is safe to ship (a dangling one fails datapack load
+     * on every real server). Placement values are read from the registry as
+     * effective post-load values, the same startup read issue #28 builds lane
+     * geometry on.
+     */
+    @GameTest(template = "empty")
+    public static void lane_structure_set_loads(GameTestHelper helper) {
+        var registries = helper.getLevel().getServer().registryAccess();
+        var sets = registries.registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE_SET);
+        var laneSet = sets.get(ResourceLocation.fromNamespaceAndPath("infinite_dungeon", "lanes"));
+        helper.assertTrue(laneSet != null, "the lane structure set must load from the mod datapack");
+
+        helper.assertTrue(laneSet.placement()
+                        instanceof net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement spread
+                        && spread.spacing() == 32 && spread.separation() == 12,
+                "the lane grid must match Dungeon Crawl: spacing 32, separation 12");
+        // salt() is protected, so the salt is asserted through the codec's own
+        // encode path - the same field the datapack wrote. Holder encoding
+        // needs registry context, so the encode runs against registry ops just
+        // like the dimension parse above.
+        var encoded = net.minecraft.world.level.levelgen.structure.StructureSet.DIRECT_CODEC
+                .encodeStart(registries.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE),
+                        laneSet)
+                .getOrThrow();
+        helper.assertTrue(encoded.getAsJsonObject().getAsJsonObject("placement")
+                        .get("salt").getAsLong() == 10387313L,
+                "the lane salt must be the spike value 10387313: "
+                        + encoded.getAsJsonObject().getAsJsonObject("placement"));
+
+        helper.assertTrue(laneSet.structures().size() == 1, "the lane set holds exactly one entry");
+        var reference = laneSet.structures().get(0).structure().unwrapKey();
+        helper.assertTrue(reference.isPresent()
+                        && reference.get().location().equals(
+                                ResourceLocation.fromNamespaceAndPath("dungeoncrawl", "dungeon")),
+                "the lane set must reference dungeoncrawl:dungeon with a resolved holder: " + reference);
+        helper.succeed();
+    }
+
+    /**
+     * The remaining runtime check the Dungeon Crawl spike (issue #2) folded
+     * into the implementation issues: the overworld suppression datapack
+     * empties Dungeon Crawl's structure-set structures list, so that shape
+     * must stay loadable. Datapack registry load is exactly this codec decode,
+     * so parsing the emptied file's JSON here proves the suppression pack can
+     * never fail dimension load - it can only stop generating wild dungeons.
+     * Decode needs no registry context: an empty list holds no references to
+     * resolve.
+     */
+    @GameTest(template = "empty")
+    public static void suppression_empty_set_stays_loadable(GameTestHelper helper) {
+        var emptied = net.minecraft.util.GsonHelper.parse("""
+                {
+                  "placement": {
+                    "type": "minecraft:random_spread",
+                    "salt": 10387313,
+                    "separation": 12,
+                    "spacing": 32
+                  },
+                  "structures": []
+                }""");
+        var set = net.minecraft.world.level.levelgen.structure.StructureSet.DIRECT_CODEC
+                .parse(com.mojang.serialization.JsonOps.INSTANCE, emptied);
+        helper.assertTrue(set.result().isPresent(),
+                "an emptied structure set must stay loadable: " + set.error());
+        helper.succeed();
+    }
+
+    /**
      * The announcement system sends to a player and broadcasts to a level. The
      * mock server player stands in for a real one, and the rendered text proves
      * the config-driven wording comes through as-is.

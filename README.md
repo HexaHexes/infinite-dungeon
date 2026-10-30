@@ -51,6 +51,8 @@ The time section holds whether the dungeon clock runs (`time.flows`, default
 on, a plain day/night cycle) and the tick it is held at while frozen
 (`time.fixedTick`, default 6000).
 
+The floor count per layer is a range: `floorsPerLayerMin` (5) and `floorsPerLayerMax` (10) bound it, and the world seed decides the exact count for each layer inside that range. The first layer - the lobby - ignores both.
+
 The portal section holds where portals may be built: `portal.buildableDimensions.mode`
 (`whitelist` by default, `blacklist` for an exception list) plus
 `portal.buildableDimensions.list`, which defaults to the overworld and the

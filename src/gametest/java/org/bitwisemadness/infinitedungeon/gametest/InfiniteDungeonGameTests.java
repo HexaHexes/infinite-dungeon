@@ -28,6 +28,7 @@ import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
+import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchor;
@@ -204,6 +205,29 @@ public final class InfiniteDungeonGameTests {
                 .parse(com.mojang.serialization.JsonOps.INSTANCE, emptied);
         helper.assertTrue(set.result().isPresent(),
                 "an emptied structure set must stay loadable: " + set.error());
+        helper.succeed();
+    }
+
+    /**
+     * The lane stride mirrors the lane set's effective registry values at
+     * startup (plan section 3): the harness carries no structure-mod rewrite,
+     * so the effective spacing is the shipped one and the stride reads 512 -
+     * the same grid the lane set test asserts. On a pack where a rewrite
+     * scales the spacing, this read is what keeps the lanes aligned.
+     */
+    @GameTest(template = "empty")
+    public static void lane_grid_mirrors_effective_placement(GameTestHelper helper) {
+        var registries = helper.getLevel().getServer().registryAccess();
+        var laneSet = registries.registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE_SET)
+                .get(LaneGrid.LANE_SET_ID);
+        LaneGrid.update(laneSet);
+        helper.assertTrue(LaneGrid.laneStride() == LaneGrid.SHIPPED_LANE_STRIDE,
+                "without a rewrite the effective stride must be the shipped grid of 512: "
+                        + LaneGrid.laneStride());
+        // The pure geometry composes on top: layer L anchors at L * stride and
+        // positions map back to their lane by floor division.
+        helper.assertTrue(LaneGrid.laneStride() == 32 * 16,
+                "the shipped stride follows Dungeon Crawl's 32-chunk spacing");
         helper.succeed();
     }
 

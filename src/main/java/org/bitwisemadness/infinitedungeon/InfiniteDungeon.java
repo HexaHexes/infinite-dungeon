@@ -12,6 +12,7 @@ import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.lanes.FallbackHallFeature;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
+import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
@@ -77,6 +78,7 @@ public final class InfiniteDungeon {
         LaneGrid.register();
         FallbackHallFeature.register(modBus);
         TransitionFramesFeature.register(modBus);
+        WaystoneEntranceFeature.register(modBus);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

@@ -73,9 +73,11 @@ out through the portal they came in by.
   structure, so no mirror structure or generator reuse is needed. The
   optional suppression datapack, which empties Dungeon Crawl's original
   set, therefore cannot kill our dimension.
-- Wild bonus Dungeon Crawl dungeons may appear between lanes when the
-  suppression pack is off (Dungeon Crawl's own set also applies to our
-  biome); they are scaled and filtered like everything else.
+- Dungeon Crawl's own structure set does not apply to our dimensions: our lane
+  set is the sole placement authority there (ruling, 2026-10-30), so we control
+  exactly what generates and when - reusing `dungeoncrawl:dungeon` directly
+  through our set and expanding it with our own content (fallback halls,
+  infrastructure). The suppression pack's remaining role is the overworld.
 
 ## 4. Portal
 
@@ -887,6 +889,11 @@ Resolved during planning:
   registry, never from local jars or vendored copies.
 - Announcement texts are config-driven so operators can reword them; shipped
   defaults stay ASCII-only with no emojis.
+- Dungeon Crawl's natural generation is disabled on our dungeon dimensions:
+  our structure sets are the sole placement authority there, reusing
+  `dungeoncrawl:dungeon` and expanding it with our own content, so we control
+  what generates and when (supersedes the wild-bonus clause; the same rule
+  binds every addon dimension when those are implemented).
 
 ## 19. Module suite
 

@@ -52,6 +52,9 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.DoubleValue MAGICULE_BASE;
     private static final ModConfigSpec.DoubleValue MAGICULE_LINEAR_PER_FLOOR;
     private static final ModConfigSpec.DoubleValue MAGICULE_QUADRATIC_PER_LAYER;
+    private static final ModConfigSpec.BooleanValue MAGICULE_PARTICLES;
+    private static final ModConfigSpec.DoubleValue MAGICULE_PARTICLE_DENSITY;
+    private static final ModConfigSpec.ConfigValue<String> MAGICULE_PARTICLE_TINT;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -180,6 +183,21 @@ public final class DungeonConfigs {
                 .comment("The per-layer squared increment: concentration grows")
                 .comment("quadratically between layers. 0 yields pure linear growth.")
                 .defineInRange("quadraticPerLayer", 0.04D, 0D, 100D);
+        MAGICULE_PARTICLES = builder
+                .comment("Ambient magicule particles around players in the dungeon:")
+                .comment("vanilla dust textures only, emission density keyed to M.")
+                .comment("Visual only - no gameplay effect.")
+                .define("particles", true);
+        MAGICULE_PARTICLE_DENSITY = builder
+                .comment("Particles per emission round per point of concentration (M).")
+                .comment("0 suspends emission even while particles is on.")
+                .defineInRange("particleDensity", 1.0D, 0D, 100D);
+        MAGICULE_PARTICLE_TINT = builder
+                .comment("Optional tint as RRGGBB hex; empty keeps the particle's own")
+                .comment("white look. Tints the vanilla texture - never reskins it.")
+                .define("particleTint", "",
+                        value -> !(value instanceof String text)
+                                || text.isEmpty() || text.matches("[0-9a-fA-F]{6}"));
         builder.pop();
         builder.push("integrations");
         builder.push("corpse");
@@ -321,5 +339,20 @@ public final class DungeonConfigs {
     /** The per-layer squared magicule increment (plan section 7; default 0.04). */
     public static double magiculeQuadraticPerLayer() {
         return MAGICULE_QUADRATIC_PER_LAYER.get();
+    }
+
+    /** Whether ambient magicule particles render (plan section 7; default on). */
+    public static boolean magiculeParticles() {
+        return MAGICULE_PARTICLES.get();
+    }
+
+    /** Particles per emission round per point of concentration (default 1.0). */
+    public static double magiculeParticleDensity() {
+        return MAGICULE_PARTICLE_DENSITY.get();
+    }
+
+    /** The optional particle tint as RRGGBB hex, empty for the default look. */
+    public static String magiculeParticleTint() {
+        return MAGICULE_PARTICLE_TINT.get();
     }
 }

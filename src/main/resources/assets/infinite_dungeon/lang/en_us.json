@@ -1,5 +1,6 @@
 {
   "item.infinite_dungeon.key": "Dungeon Key",
+  "block.infinite_dungeon.gate": "Dungeon Gate",
   "dungeon.entry": "You step into the infinite dungeon.",
   "dungeon.layer": "Layer %s"
 }

@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import org.bitwisemadness.infinitedungeon.boss.BossBars;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.lanes.FightRecords;
 import org.bitwisemadness.infinitedungeon.lanes.RespawnGate;
@@ -182,6 +183,9 @@ public final class Minibosses {
         }
         mob.addTag(MINIBOSS_TAG);
         mob.addTag(floorTag(layer, floor));
+        // Boss bar (issue #253): the same seam the guardian spawn calls -
+        // after tagging, so a join-time check could never have seen it.
+        BossBars.track(level, mob);
 
         return Outcome.SPAWNED;
     }

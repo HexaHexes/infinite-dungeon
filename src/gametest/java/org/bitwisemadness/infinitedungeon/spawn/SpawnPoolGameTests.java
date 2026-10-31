@@ -288,6 +288,35 @@ public final class SpawnPoolGameTests {
         }
         helper.succeed();
     }
+    /**
+     * The shipped default profile resolves WITHOUT test registration (issue
+     * #241): this is the regression the issue exists to prevent - no profile
+     * meant every profile-gated Wave-4 feature read absent and stayed silent
+     * in a fresh pack. The pool NAMES are asserted from the static JSON; pool
+     * RUNTIME state is deliberately not (other tests' finallys reset the
+     * datapack, and this profile is production data, not test fixture).
+     */
+    @GameTest(template = "empty")
+    public static void default_profile_ships_and_resolves(GameTestHelper helper) {
+        String dungeon = "infinite_dungeon:dungeon";
+        var profile = DimensionProfiles.get(dungeon);
+        helper.assertTrue(profile.isPresent(),
+                "the shipped default profile must resolve with no test-side register");
+        helper.assertTrue(DimensionProfiles.isDungeonDimension(dungeon),
+                "the shipped profile must make the dungeon dimension known");
+        var pools = profile.get().pools();
+        helper.assertTrue(pools.isPresent()
+                        && pools.get().fodder().equals(Optional.of("infinite_dungeon:fodder"))
+                        && pools.get().elite().equals(Optional.of("infinite_dungeon:elite"))
+                        && pools.get().boss().equals(Optional.of("infinite_dungeon:boss")),
+                "the profile must name the three roster pools: " + pools);
+        var announcements = profile.get().announcements();
+        helper.assertTrue(announcements.isPresent()
+                        && announcements.get().entry().equals("dungeon.entry")
+                        && announcements.get().layer().equals("dungeon.layer"),
+                "the profile must name the shipped announcement keys: " + announcements);
+        helper.succeed();
+    }
     /** The live tagged miniboss of a floor, or null (visible sections only). */
     private static Mob findMiniboss(ServerLevel level, int layer, int floor) {
         String tag = "infinite_dungeon_miniboss_layer_" + layer + "_" + floor;

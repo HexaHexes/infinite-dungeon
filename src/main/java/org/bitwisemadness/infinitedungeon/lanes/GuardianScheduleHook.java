@@ -1,5 +1,6 @@
 package org.bitwisemadness.infinitedungeon.lanes;
 
+import java.util.Optional;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
@@ -31,19 +32,30 @@ public final class GuardianScheduleHook {
         if (!(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
-        String dimensionId = level.dimension().location().toString();
-        if (!DimensionProfiles.isDungeonDimension(dimensionId)) {
+        if (!DimensionProfiles.isDungeonDimension(level.dimension().location().toString())) {
             return;
         }
+        LayerUnlocks.setGuardianAssigned(layer -> guardianIdFor(level, layer).isPresent());
+    }
+
+    /**
+     * The layer's guardian id for a live level: THE single resolution path -
+     * the seam predicate (above) and #42's kill reaction both ask here, so
+     * they can never disagree about who the guardian is. Profile-over-config
+     * band percent, difficulty coefficients and world seed resolve together.
+     * Config reads happen at call time (portal checks, kill reactions, tests),
+     * never at mod construction.
+     */
+    public static Optional<String> guardianIdFor(ServerLevel level, int layer) {
+        String dimensionId = level.dimension().location().toString();
         double bandPercent = DimensionProfiles.get(dimensionId)
                 .flatMap(profile -> profile.guardian())
                 .map(GuardianRules::powerBandPercent)
                 .orElseGet(DungeonConfigs::bossPowerBandPercent);
-        long worldSeed = level.getSeed();
-        double base = DungeonConfigs.difficultyBase();
-        double linear = DungeonConfigs.difficultyLinearPerFloor();
-        double quadratic = DungeonConfigs.difficultyQuadraticPerLayer();
-        LayerUnlocks.setGuardianAssigned(layer -> GuardianSchedule.select(
-                layer, worldSeed, base, linear, quadratic, bandPercent).isPresent());
+        return GuardianSchedule.select(layer, level.getSeed(),
+                DungeonConfigs.difficultyBase(),
+                DungeonConfigs.difficultyLinearPerFloor(),
+                DungeonConfigs.difficultyQuadraticPerLayer(),
+                bandPercent);
     }
 }

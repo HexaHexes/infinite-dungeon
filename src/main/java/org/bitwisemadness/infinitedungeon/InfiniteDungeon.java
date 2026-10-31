@@ -9,6 +9,7 @@ import org.bitwisemadness.infinitedungeon.client.PortalTint;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
+import org.bitwisemadness.infinitedungeon.depth.DepthTracker;
 import org.bitwisemadness.infinitedungeon.lanes.FallbackHallFeature;
 import org.bitwisemadness.infinitedungeon.lanes.GuardianChambers;
 import org.bitwisemadness.infinitedungeon.lanes.GuardianGating;
@@ -141,6 +142,11 @@ public final class InfiniteDungeon {
         // listener ships testable-by-posting, the #42 pattern); tagged deaths
         // stamp the floor and drop the key.
         NeoForge.EVENT_BUS.addListener(Minibosses::onFloorEntered);
+        // Depth tracker (issue #238): posts FloorEntered/LayerEntered and
+        // sends the profile announcements - the production poster the raid
+        // trigger and lifecycle consumers awaited.
+        NeoForge.EVENT_BUS.addListener(DepthTracker::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(DepthTracker::onPlayerLoggedOut);
         NeoForge.EVENT_BUS.addListener(Minibosses::onLivingDeath);
         LOGGER.info("Infinite Dungeon initialized");
     }

@@ -82,7 +82,7 @@ public final class WaystoneEntranceFeature extends Feature<NoneFeatureConfigurat
         int stride = LaneGrid.laneStride();
         int lane = LaneGeometry.laneIndex(candidate.getMiddleBlockX(), stride);
         if (lane < 1) {
-            return false; // the lobby lane is issue #131's
+            return false; // lane 0 is the lobby's home (#246: now Overworld)
         }
         if (Math.floorDiv(candidate.z, placement.spacing()) != 0) {
             return false; // one waystone per layer: the rz-0 entrance cell

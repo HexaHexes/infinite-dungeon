@@ -19,13 +19,14 @@ import org.bitwisemadness.infinitedungeon.lanes.LayerUnlocks;
  * Walking into a dungeon portal: bind or read the anchor, then teleport.
  *
  * <p>The trips of section 4. Entering from any dimension stores the portal you
- * used as your anchor and drops you at the dungeon entrance. Walking out
- * applies the exit policy: your own portal when it is intact; a re-formed
- * portal at the old coordinates when the frame was destroyed
- * (`portal.reformMissingPortal`, default on); the overworld world spawn
- * otherwise - with the announcement when the anchor was missing or destroyed,
- * and configured mode for `portal.returnMode`. A portal cooldown after every
- * teleport stops ping-pong between facing portals.</p>
+ * used as your anchor and drops you at layer 1's arrival - the dungeon's first
+ * layer since issue #246, which made the lobby the Overworld entrance site
+ * (Reading B). Walking out applies the exit policy: your own portal when it is
+ * intact; a re-formed portal at the old coordinates when the frame was
+ * destroyed (`portal.reformMissingPortal`, default on); the overworld world
+ * spawn otherwise - with the announcement when the anchor was missing or
+ * destroyed, and configured mode for `portal.returnMode`. A portal cooldown
+ * after every teleport stops ping-pong between facing portals.</p>
  */
 public final class DungeonPortalTravel {
 
@@ -89,12 +90,16 @@ public final class DungeonPortalTravel {
         if (dungeon == null) {
             return;
         }
-        // The Wave-1 entrance is built on arrival (recorded plan deviation);
-        // a blocked space leaves the player where they stand rather than
-        // dropping them into the void.
-        BlockPos arrival = DungeonEntrance.ensure(dungeon);
-        if (arrival != null) {
-            teleport(player, dungeon, arrival);
+        // Issue #246: the lobby is the Overworld entrance site, so the
+        // dimension's content starts at layer 1. The descent lands at layer
+        // 1's canonical arrival interior - the same slot a lane hop targets,
+        // inside the portal plane with the cooldown guarding the re-trigger.
+        // The lookup forces the chunk, so an absent frame leaves the player
+        // where they stand rather than dropping them into the void.
+        var arrival = LaneTransitions.descentTarget(dungeon);
+        if (arrival.isPresent()
+                && dungeon.getBlockState(arrival.get()).getBlock() instanceof DungeonPortalBlock) {
+            teleport(player, dungeon, arrival.get());
         }
     }
 
@@ -121,7 +126,13 @@ public final class DungeonPortalTravel {
         teleport(player, home, anchorPos);
     }
 
-    private static void worldSpawn(ServerPlayer player, boolean announce) {
+    /**
+     * The world-spawn fallback: the overworld's shared spawn, optionally
+     * announced. Public because the death-return (issue #246) shares this
+     * exact shape - a missing or gone anchor lands you at world spawn either
+     * way, walking out or respawning.
+     */
+    public static void worldSpawn(ServerPlayer player, boolean announce) {
         ServerLevel overworld = player.level().getServer().overworld();
         BlockPos spawn = overworld.getSharedSpawnPos();
         player.teleportTo(overworld,

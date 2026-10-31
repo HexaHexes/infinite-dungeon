@@ -80,23 +80,35 @@ public final class DepthTrackerGameTests {
             helper.assertTrue(collector.layerCount == 0 && collector.floorCount == 0,
                     "outside must post no events");
 
-            // First observation in lane 0: ENTRY (posts the layer event).
+            // Lane 0 is the lobby's home, and since #246 the lobby is the
+            // Overworld entrance site - a player standing in lane 0 is
+            // OUTSIDE the dungeon, so it stays silent just like the void.
             player.setPos(100.0, -60.0, 0.0);
+            var outcomeLane0 = DepthTracker.step(level, player);
+            helper.assertTrue(outcomeLane0 == DepthTransition.Kind.OUTSIDE,
+                    "lane 0 must read as OUTSIDE since #246; got " + outcomeLane0);
+            helper.assertTrue(collector.layerCount == 0 && collector.floorCount == 0,
+                    "lane 0 must post no events - the lobby is Overworld-resident");
+
+            // First observation inside the dungeon (layer 1): ENTRY posts the
+            // layer event.
+            int stride = LaneGrid.laneStride();
+            player.setPos(stride + 100.0, -60.0, 0.0);
             var outcome2 = DepthTracker.step(level, player);
             helper.assertTrue(outcome2 == DepthTransition.Kind.ENTRY, "transition must read as asserted; got " + outcome2);
-            helper.assertTrue(collector.layerCount == 1 && collector.lastLayer >= 0,
-                    "ENTRY must post exactly the layer event; got " + collector.layerCount);
+            helper.assertTrue(collector.layerCount == 1 && collector.lastLayer == 1,
+                    "ENTRY must post exactly the layer-1 event; got " + collector.layerCount
+                            + " layers, last " + collector.lastLayer);
 
             // Wobble within the same lane and Y: SAME, no new events.
-            player.setPos(110.0, -60.0, 0.0);
+            player.setPos(stride + 110.0, -60.0, 0.0);
             var outcome3 = DepthTracker.step(level, player);
             helper.assertTrue(outcome3 == DepthTransition.Kind.SAME, "transition must read as asserted; got " + outcome3);
             helper.assertTrue(collector.layerCount == 1 && collector.floorCount == 0,
                     "SAME must post nothing new");
 
-            // Lane crossing (lane 1 anchors at stride): LAYER posts again.
-            int stride = LaneGrid.laneStride();
-            player.setPos(stride + 100.0, -60.0, 0.0);
+            // Lane crossing (into layer 2): LAYER posts again.
+            player.setPos(2 * stride + 100.0, -60.0, 0.0);
             var outcome4 = DepthTracker.step(level, player);
             helper.assertTrue(outcome4 == DepthTransition.Kind.LAYER, "transition must read as asserted; got " + outcome4);
             helper.assertTrue(collector.layerCount == 2,
@@ -105,7 +117,7 @@ public final class DepthTrackerGameTests {
             // A different floor in the SAME lane: ask the derivation for a Y
             // whose floor differs, so the test never hardcodes floor math.
             var parameters = LayoutParameters.forServer(level);
-            int laneX = stride + 100;
+            int laneX = 2 * stride + 100;
             int baseY = -60;
             int otherY = baseY;
             int baseFloor = DungeonLayout.derive(parameters, laneX, baseY).floorInLayer();

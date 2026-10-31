@@ -9,18 +9,28 @@ import org.bitwisemadness.infinitedungeon.lanes.FloorSchedule;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGeometry;
 import org.junit.jupiter.api.Test;
 
-/** The depth derivation: lobby at zero, no gaps, no invented layers. */
+/** The depth derivation: the lobby is Overworld-resident, no gaps, no invented layers. */
 class DungeonLayoutTest {
 
     private static final LayoutParameters PARAMS =
             new LayoutParameters(1234L, 512, -64, 2048, 5, 10);
 
     @Test
-    void lobbyIsAlwaysDepthZeroFloorZero() {
+    void laneZeroIsRefusedAsTheOverworldLobby() {
+        // Issue #246: the lobby is the Overworld entrance site, so the
+        // dungeon dimension's layer stack starts at layer 1 - lane 0's whole
+        // region is refused rather than invented as a lobby depth.
         for (int y = -64; y <= 1984; y += 97) {
-            assertEquals(new DungeonPosition(0, 0, 0), DungeonLayout.derive(PARAMS, 0, y));
-            assertEquals(new DungeonPosition(0, 0, 0), DungeonLayout.derive(PARAMS, 511, y));
+            int probe = y;
+            assertThrows(IllegalArgumentException.class,
+                    () -> DungeonLayout.derive(PARAMS, 0, probe),
+                    "lane 0 must be refused at y=" + probe);
+            assertThrows(IllegalArgumentException.class,
+                    () -> DungeonLayout.derive(PARAMS, 511, probe),
+                    "lane 0's whole span must be refused at y=" + probe);
         }
+        assertFalse(DungeonLayout.inDungeon(PARAMS, 0));
+        assertFalse(DungeonLayout.inDungeon(PARAMS, 511));
     }
 
     @Test
@@ -59,8 +69,10 @@ class DungeonLayoutTest {
 
     @Test
     void depthIsMonotoneWithTheLayer() {
+        // Starts at layer 1: lane 0 is the Overworld lobby's home (#246) and
+        // derives nowhere in the dungeon dimension.
         int previous = -1;
-        for (int layer = 0; layer <= 30; layer++) {
+        for (int layer = 1; layer <= 30; layer++) {
             DungeonPosition position = DungeonLayout.derive(PARAMS,
                     LaneGeometry.laneOriginX(layer, PARAMS.laneStride()), PARAMS.minY());
             assertTrue(position.depth() > previous,
@@ -89,10 +101,12 @@ class DungeonLayoutTest {
     }
 
     @Test
-    void westOfTheFirstLaneIsRefused() {
+    void laneZeroAndWestAreRefused() {
         assertFalse(DungeonLayout.inDungeon(PARAMS, -1));
-        assertTrue(DungeonLayout.inDungeon(PARAMS, 0));
+        assertFalse(DungeonLayout.inDungeon(PARAMS, 0));
+        assertTrue(DungeonLayout.inDungeon(PARAMS, 512));
         assertThrows(IllegalArgumentException.class, () -> DungeonLayout.derive(PARAMS, -1, 0));
+        assertThrows(IllegalArgumentException.class, () -> DungeonLayout.derive(PARAMS, 0, 0));
     }
 
     @Test

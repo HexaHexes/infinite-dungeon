@@ -86,4 +86,4 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
 
 ## GameTest harness persistence
 
-- The harness world's chunks and saved data persist across `runGameTestServer` runs (`run/world`), so tests driving features at SEED-DERIVED positions must clear their spot first: a leftover from a previous run (e.g. a standing waystone) makes the feature correctly refuse and the test fail. Fixed-position tests (the lobby at chunk 0,0) are naturally idempotent.
+- The harness world's chunks and saved data persist across `runGameTestServer` runs (`run/world`), so tests driving features at SEED-DERIVED positions must clear their spot first: a leftover from a previous run (e.g. a standing waystone) makes the feature correctly refuse and the test fail. Since issue #246 removed the fixed-origin lobby test, every feature-driving test is seed-derived - clear the footprint first (see `clearFootprint`).

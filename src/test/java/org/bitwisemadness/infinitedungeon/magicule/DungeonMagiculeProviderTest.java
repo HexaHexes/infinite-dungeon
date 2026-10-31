@@ -32,14 +32,14 @@ public class DungeonMagiculeProviderTest {
     }
 
     @Test
-    void lobbyReportsTheOriginValueAtAnyHeight() {
-        // Layer 0 is fixed construction: floor 0 for any Y (the DungeonLayout
-        // contract), so the whole lobby answers exactly the curve's base.
-        OptionalDouble low = DungeonMagiculeProvider.concentrationAt(PARAMS, 0, PARAMS.minY(), 2.5, 9, 9);
-        OptionalDouble high = DungeonMagiculeProvider.concentrationAt(PARAMS, 400, 1900, 2.5, 9, 9);
-        assertTrue(low.isPresent() && high.isPresent());
-        assertEquals(2.5, low.getAsDouble(), EPS);
-        assertEquals(2.5, high.getAsDouble(), EPS);
+    void laneZeroHasNoAnswerWhileTheLobbyIsOverworldResident() {
+        // Issue #246: the lobby is the Overworld entrance site, so lane 0 is
+        // no longer part of the dungeon dimension - the provider declines it
+        // exactly as it declines the void. The lobby's own magicule answer
+        // arrives with the deterministic entrance location (#163/api#58).
+        assertTrue(DungeonMagiculeProvider.concentrationAt(PARAMS, 0, PARAMS.minY(), 2.5, 9, 9).isEmpty(),
+                "lane 0 must have no answer while the lobby is Overworld-resident");
+        assertTrue(DungeonMagiculeProvider.concentrationAt(PARAMS, 400, 1900, 2.5, 9, 9).isEmpty());
     }
 
     @Test

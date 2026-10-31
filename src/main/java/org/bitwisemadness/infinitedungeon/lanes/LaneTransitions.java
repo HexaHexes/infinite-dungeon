@@ -44,11 +44,17 @@ public final class LaneTransitions {
     /**
      * The portal position a lane-portal walk leads to, or empty when the
      * position is not a transition slot or the placement is unreadable.
-     * Departures pair forward - lane 0's lobby doorways lead into layer 1,
-     * the #131 caveat lifted - and arrivals pair back: layer 1's arrival
-     * returns to the lobby doorway, deeper layers to their predecessor's
-     * departure. Lane 0 itself has no arrival slot, because there is no
-     * lane -1 to depart from.
+     * Departures pair forward - layer 1's departure leads into layer 2, and
+     * so on down - and arrivals pair back: layer L's arrival returns to layer
+     * L-1's departure.
+     *
+     * <p>Layer 1's arrival is deliberately <b>not</b> a pair (issue #246):
+     * the lobby is the Overworld entrance site, so there is no lane 0 to
+     * pair back to. The empty target routes that walk onto the anchor policy
+     * - the dimension's exit gate, back out the way the player came in -
+     * which also keeps it out of {@link LayerUnlocks}' seal, exactly as the
+     * pre-#246 lobby portal (never a transition slot) was. Lane 0 has no
+     * arrival slot at all.</p>
      *
      * <p>Position math only: callers gate on the dungeon dimension first
      * (travel and ignition both do) - the gate lives there so the derivation
@@ -80,9 +86,9 @@ public final class LaneTransitions {
                     .map(partner -> arrivalInterior(minBuild, available,
                             floorsOf(seed, lane + 1), partner));
         }
-        // Lane 0's computed arrival interior is never built (no lane -1), so
-        // only lanes 1+ serve arrival-side walks.
-        if (lane >= 1) {
+        // Layer 1's arrival is the exit gate (#246), not a lane pair - only
+        // layers 2+ serve arrival-side walks back to their predecessor.
+        if (lane >= 2) {
             var arrival = arrivalInterior(minBuild, available, floorsOf(seed, lane), cell);
             if (insideInterior(portalPos, arrival)) {
                 return partnerCell(placement, seed, lane - 1, cell)
@@ -90,6 +96,30 @@ public final class LaneTransitions {
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Where an Overworld portal walk materialises the visitor: layer 1's
+     * canonical (rz-0) arrival interior - the same slot a lane hop targets,
+     * since issue #246 makes the lobby the Overworld entrance site and the
+     * dimension's content starts at layer 1. Empty when the placement is
+     * unreadable; callers then leave the player standing rather than dropping
+     * them into the void.
+     *
+     * <p>Like every lane-hop landing, the target sits inside the arrival
+     * portal plane (portal cooldown guards the re-trigger); the frame is
+     * built lit for layer 1 so the way home never needs a first light.</p>
+     */
+    public static Optional<BlockPos> descentTarget(ServerLevel level) {
+        var placement = LaneGrid.placement();
+        if (placement == null) {
+            return Optional.empty();
+        }
+        // Layer 1, first Z-region: the rz-0 canonical cell the waystone uses.
+        ChunkPos cell = placement.getPotentialStructureChunk(
+                level.getSeed(), placement.spacing(), 0);
+        return Optional.of(arrivalInterior(level.getMinBuildHeight(),
+                level.getHeight(), floorsOf(level.getSeed(), 1), cell));
     }
 
     /** The departure slot's interior base: one ring block above the floor plane. */

@@ -53,12 +53,10 @@ import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.magicule.DungeonMagiculeProvider;
 import org.bitwisemadness.infinitedungeon.magicule.ElevationSources;
 import org.bitwisemadness.infinitedungeon.magicule.MagiculeElevation;
-import org.bitwisemadness.infinitedungeon.portal.DungeonEntrance;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalTravel;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchor;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
-import org.bitwisemadness.infinitedungeon.portal.LobbyEntranceFeature;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalFrameBuilder;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
@@ -304,9 +302,19 @@ public final class InfiniteDungeonGameTests {
                 "the configured floor range must reach the derivation: [" + parameters.floorsMin()
                         + ", " + parameters.floorsMax() + "]");
 
-        var lobby = DungeonLayout.derive(parameters, 0, parameters.minY());
-        helper.assertTrue(lobby.layerIndex() == 0 && lobby.floorInLayer() == 0 && lobby.depth() == 0,
-                "the lobby layer must derive to (0, 0, 0): " + lobby);
+        // Issue #246: the lobby is the Overworld entrance site, so lane 0's
+        // region is no longer inside the dungeon - it derives as OUTSIDE, and
+        // the derivation refuses it rather than inventing a lobby depth.
+        helper.assertTrue(!DungeonLayout.inDungeon(parameters, 0),
+                "lane 0 must be outside the dungeon since #246 (the lobby is Overworld)");
+        boolean lane0Refused = false;
+        try {
+            DungeonLayout.derive(parameters, 0, parameters.minY());
+        } catch (IllegalArgumentException ex) {
+            lane0Refused = true;
+        }
+        helper.assertTrue(lane0Refused,
+                "the derivation must refuse lane 0 rather than invent a lobby depth");
 
         int laneOneX = parameters.laneStride() + 1;
         // Floor 0 is the entry band at the TOP of the layer's band (the
@@ -716,8 +724,9 @@ public final class InfiniteDungeonGameTests {
         var generator = level.getChunkSource().getGenerator();
         var feature = FallbackHallFeature.FALLBACK_HALL.get();
 
-        // Region (0,0) candidates all fall in lane 0 - the lobby layer is
-        // reserved for issue #131, so the hall must refuse.
+        // Region (0,0) candidates all fall in lane 0 - the lobby's home,
+        // empty since issue #246 made the lobby Overworld-resident - so the
+        // hall must refuse.
         var lobbyCell = placement.getPotentialStructureChunk(seed, 0, 0);
         helper.assertTrue(LaneGeometry.laneIndex(lobbyCell.getMiddleBlockX(),
                         LaneGrid.laneStride()) == 0,
@@ -773,7 +782,9 @@ public final class InfiniteDungeonGameTests {
      * The transition frames (issue #31): at the candidate cell both slots of
      * the pair build - departure on the east edge of the deepest floor,
      * arrival on the west edge of the entry band - and both interiors stay
-     * unlit so the sealed ignition gate owns the first light.
+     * unlit so the sealed ignition gate owns the first light. Probes layer 2:
+     * since issue #246, layer 1's arrival is the dimension's exit gate and is
+     * the one arrival built lit (pinned by the descent test).
      */
     @GameTest(template = "empty")
     public static void transition_frames_build_unlit_pairs(GameTestHelper helper) {
@@ -783,14 +794,15 @@ public final class InfiniteDungeonGameTests {
         long seed = level.getSeed();
         int minBuild = level.getMinBuildHeight();
 
-        var cell = placement.getPotentialStructureChunk(seed, placement.spacing(), 0);
-        helper.assertTrue(LaneGeometry.laneIndex(cell.getMiddleBlockX(), LaneGrid.laneStride()) >= 1,
-                "the probe cell must sit past the lobby lane");
+        // Layer 2: past the exit-gate exception, so the pair stays unlit.
+        var cell = placement.getPotentialStructureChunk(seed, 2 * placement.spacing(), 0);
+        helper.assertTrue(LaneGeometry.laneIndex(cell.getMiddleBlockX(), LaneGrid.laneStride()) >= 2,
+                "the probe cell must sit past the exit-gate layer");
 
         // The harness world is a flat preset with ground at the bottom, so
         // both slot volumes are cleared first - the same accommodation the
         // portal-frame tests make. In the dungeon's void they are air.
-        int floors = FloorSchedule.floorsInLayer(seed, 1,
+        int floors = FloorSchedule.floorsInLayer(seed, 2,
                 DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
         var departure = LaneTransitions.departureInterior(minBuild, cell);
         var arrival = LaneTransitions.arrivalInterior(minBuild, level.getHeight(), floors, cell);
@@ -961,71 +973,16 @@ public final class InfiniteDungeonGameTests {
                 "only the layer's canonical entrance may hold the waystone");
         helper.succeed();
     }    /**
-     * The lobby skeleton (issue #131): at the fixed origin chunk the feature
-     * builds the recorded entrance shape - the platform at y 63 and the lit
-     * portal - and the travel lookups find it without ever building: break
-     * the portal and ensure/lobby report the absence instead of restoring
-     * it. Re-driving the feature restores the lobby, because generation is
-     * its owner and the lookups are contractually mute.
+     * The descent (issue #246, Reading B): walking an Overworld portal lands
+     * the visitor at layer 1's canonical (rz-0) arrival interior - the same
+     * slot a lane hop targets - because the lobby is now the Overworld
+     * entrance site and the dungeon dimension's content starts at layer 1.
+     * That arrival is the dimension's exit gate, so generation builds it lit
+     * (the way home must never need a first light) and it pairs to nothing:
+     * a walk there falls onto the anchor policy, never a lane hop.
      */
     @GameTest(template = "empty")
-    public static void lobby_skeleton_generates_at_fixed_origin(GameTestHelper helper) {
-        var level = helper.getLevel();
-        long seed = level.getSeed();
-        var generator = level.getChunkSource().getGenerator();
-        var origin = new BlockPos(0, 64, 0);
-        var feature = LobbyEntranceFeature.LOBBY_ENTRANCE.get();
-
-        helper.assertTrue(feature.place(context(level, generator, seed, origin)),
-                "the fixed origin chunk must get its lobby");
-        helper.assertTrue(level.getBlockState(new BlockPos(0, 63, 0)).is(Blocks.STONE_BRICKS),
-                "the platform must stand at y 63");
-        helper.assertTrue(level.getBlockState(new BlockPos(4, 63, 2)).is(Blocks.STONE_BRICKS),
-                "the platform must span x 0..4, z 0..2");
-        helper.assertTrue(level.getBlockState(new BlockPos(1, 65, 0))
-                        .getBlock() instanceof DungeonPortalBlock,
-                "the arrival cell must hold the lit portal");
-        helper.assertTrue(DungeonEntrance.ensure(level) != null,
-                "ensure must find the generated entrance");
-        helper.assertTrue(DungeonEntrance.lobby(level) != null,
-                "lobby must find the generated entrance");
-
-        // The no-build contract: break the portal and both lookups report it
-        // without restoring a single block.
-        level.setBlock(new BlockPos(1, 65, 0), Blocks.AIR.defaultBlockState(), 3);
-        helper.assertTrue(DungeonEntrance.ensure(level) == null,
-                "ensure must not rebuild the entrance");
-        helper.assertTrue(DungeonEntrance.lobby(level) == null,
-                "lobby must not rebuild the entrance");
-        helper.assertTrue(level.getBlockState(new BlockPos(1, 65, 0)).isAir(),
-                "the broken portal must stay broken after the lookups");
-
-        // Generation owns restoration: clear the interior (the ring is the
-        // builder's own replaceable frame) and re-drive the feature.
-        for (int dx = 0; dx <= 1; dx++) {
-            for (int dy = 0; dy <= 2; dy++) {
-                level.setBlock(new BlockPos(1 + dx, 65 + dy, 0), Blocks.AIR.defaultBlockState(), 3);
-            }
-        }
-        helper.assertTrue(feature.place(context(level, generator, seed, origin)),
-                "re-driving the feature must restore the lobby");
-        helper.assertTrue(level.getBlockState(new BlockPos(1, 65, 0))
-                        .getBlock() instanceof DungeonPortalBlock,
-                "the restored entrance must hold the portal again");
-        helper.assertTrue(DungeonEntrance.ensure(level) != null,
-                "ensure must find the restored entrance");
-        helper.succeed();
-    }
-
-    /**
-     * The lobby's doorways (issue #131): lane 0's candidate chunk builds the
-     * departure frame only - there is no lane -1 to serve an arrival - and
-     * the pair derives both ways with no new math: the doorway leads into
-     * layer 1's arrival, and a layer-1 arrival walks back onto that doorway.
-     * The #31 back-travel caveat lifts here.
-     */
-    @GameTest(template = "empty")
-    public static void lobby_lane_doorways_pair_both_ways(GameTestHelper helper) {
+    public static void descent_lands_at_layer1_canonical_arrival(GameTestHelper helper) {
         var level = helper.getLevel();
         var placement = LaneGrid.placement();
         helper.assertTrue(placement != null, "the lane placement must be read");
@@ -1033,62 +990,106 @@ public final class InfiniteDungeonGameTests {
         int minBuild = level.getMinBuildHeight();
         int stride = LaneGrid.laneStride();
 
-        var cell = placement.getPotentialStructureChunk(seed, 0, 0);
-        int lane = LaneGeometry.laneIndex(cell.getMiddleBlockX(), stride);
-        helper.assertTrue(lane == 0, "the probe cell must sit in the lobby lane: " + lane);
+        // The descent target resolves to layer 1's rz-0 canonical arrival.
+        var target = LaneTransitions.descentTarget(level);
+        helper.assertTrue(target.isPresent(), "the descent must resolve a target");
+        helper.assertTrue(LaneGeometry.laneIndex(target.get().getX(), stride) == 1,
+                "the descent target must sit in layer 1: " + target.get());
+        helper.assertTrue(Math.floorDiv(target.get().getZ() >> 4, placement.spacing()) == 0,
+                "the descent must use the rz-0 canonical cell: " + target.get());
 
-        // The doorway stands on the world floor plane, where the flat harness
-        // world has ground - clear the footprint first (absolute positions).
-        var departure = LaneTransitions.departureInterior(minBuild, cell);
-        clearFootprint(level, departure);
-        var origin = new BlockPos(cell.x << 4, minBuild + 1, cell.z << 4);
-        var feature = TransitionFramesFeature.TRANSITION_FRAMES.get();
-        helper.assertTrue(feature.place(context(level, level.getChunkSource().getGenerator(), seed, origin)),
-                "the lobby lane cell must get its doorway");
-        helper.assertTrue(level.getBlockState(departure).isAir(),
-                "the doorway interior must stay unlit");
-        helper.assertTrue(level.getBlockState(departure.offset(-1, 0, 0)).is(Blocks.STONE_BRICKS),
-                "the doorway ring must be built of the frame block");
-
-        // Lane 0 builds no arrival: the floor schedule refuses layer 0
-        // outright, so the lane-0 arrival slot is uncomputable - the
-        // invariant in its strongest form, and the coupling this test pins:
-        // were the refusal ever relaxed, this fails and forces the frames
-        // feature's lane-0 branch back under review. (JUnit covers the
-        // refusal itself.)
-        boolean layer0Refused = false;
-        try {
-            FloorSchedule.floorsInLayer(seed, 0,
-                    DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
-        } catch (IllegalArgumentException ex) {
-            layer0Refused = true;
-        }
-        helper.assertTrue(layer0Refused,
-                "the floor schedule must refuse layer 0 - no lane-0 arrival can exist");
-
-        // Forward: the doorway leads into layer 1's arrival.
-        var forward = LaneTransitions.pairTarget(level, departure);
-        helper.assertTrue(forward.isPresent(), "the doorway must pair into layer 1");
-        helper.assertTrue(LaneGeometry.laneIndex(forward.get().getX(), stride) == 1,
-                "the doorway's target must sit in layer 1");
-
-        // Back: layer 1's arrival walks back onto this doorway.
-        var lane1Cell = placement.getPotentialStructureChunk(seed, placement.spacing(), cell.z);
+        // Generation builds that arrival LIT - the exit gate never requires
+        // flint and steel to leave. (The harness is flat ground, so clear the
+        // footprint first, as the frame tests do.)
         int lane1Floors = FloorSchedule.floorsInLayer(seed, 1,
                 DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
-        var lane1Arrival = LaneTransitions.arrivalInterior(minBuild, level.getHeight(), lane1Floors, lane1Cell);
-        var back = LaneTransitions.pairTarget(level, lane1Arrival);
-        helper.assertTrue(back.isPresent(), "a layer-1 arrival must pair back");
-        helper.assertTrue(back.get().equals(departure),
-                "the layer-1 arrival must land on the lobby doorway: " + back.get());
+        var lane1Cell = placement.getPotentialStructureChunk(seed, placement.spacing(), 0);
+        var arrival = LaneTransitions.arrivalInterior(minBuild, level.getHeight(), lane1Floors, lane1Cell);
+        helper.assertTrue(arrival.equals(target.get()),
+                "the descent must target layer 1's canonical arrival: " + target.get()
+                        + " vs " + arrival);
+        clearFootprint(level, arrival);
+        var origin = new BlockPos(lane1Cell.x << 4, minBuild + 1, lane1Cell.z << 4);
+        var feature = TransitionFramesFeature.TRANSITION_FRAMES.get();
+        helper.assertTrue(feature.place(context(level, level.getChunkSource().getGenerator(), seed, origin)),
+                "layer 1's canonical cell must get its frames");
+        helper.assertTrue(level.getBlockState(arrival).getBlock() instanceof DungeonPortalBlock,
+                "layer 1's arrival is the exit gate and must be built lit");
 
-        // End to end: an open walk through the doorway teleports into layer
-        // 1 - lane 0 has no guardian, so its doorways are never sealed.
+        // The exit gate is not a lane pair: walking it falls through to the
+        // anchor policy - back out the way the player came in.
+        helper.assertTrue(LaneTransitions.pairTarget(level, arrival).isEmpty(),
+                "layer 1's arrival must pair to nothing - it is the exit gate");
+        helper.succeed();
+    }
+
+    /**
+     * Lane 0 and the exit gate (issue #246): the lobby is the Overworld
+     * entrance site, so lane 0's candidate chunk builds nothing at all - no
+     * doorway, no arrival - and layer 1's arrival is the dimension's exit
+     * gate rather than a lane pair. Deeper arrivals keep pairing back to
+     * their predecessor's departure, and the exit-gate walk is declined by
+     * {@code laneHop} so the anchor policy takes it (walk out home).
+     */
+    @GameTest(template = "empty")
+    public static void lane0_builds_nothing_and_layer1_arrival_exits(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var placement = LaneGrid.placement();
+        helper.assertTrue(placement != null, "the lane placement must be read");
+        long seed = level.getSeed();
+        int minBuild = level.getMinBuildHeight();
+        int stride = LaneGrid.laneStride();
+
+        // Lane 0's cell: the feature refuses it outright - nothing builds.
+        var lane0Cell = placement.getPotentialStructureChunk(seed, 0, 0);
+        helper.assertTrue(LaneGeometry.laneIndex(lane0Cell.getMiddleBlockX(), stride) == 0,
+                "the probe cell must sit in lane 0: "
+                        + LaneGeometry.laneIndex(lane0Cell.getMiddleBlockX(), stride));
+        var lane0Departure = LaneTransitions.departureInterior(minBuild, lane0Cell);
+        clearFootprint(level, lane0Departure);
+        var lane0Origin = new BlockPos(lane0Cell.x << 4, minBuild + 1, lane0Cell.z << 4);
+        var feature = TransitionFramesFeature.TRANSITION_FRAMES.get();
+        helper.assertTrue(!feature.place(context(level, level.getChunkSource().getGenerator(),
+                        seed, lane0Origin)),
+                "lane 0's cell must be refused - the lobby is Overworld-resident");
+        helper.assertTrue(level.getBlockState(lane0Departure).isAir(),
+                "lane 0 must build no doorway");
+        helper.assertTrue(level.getBlockState(lane0Departure.offset(-1, 0, 0)).isAir(),
+                "lane 0 must build no doorway ring");
+
+        // Layer 1's arrival is the exit gate: no lane pair.
+        int lane1Floors = FloorSchedule.floorsInLayer(seed, 1,
+                DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+        var lane1Cell = placement.getPotentialStructureChunk(seed, placement.spacing(), 0);
+        var lane1Arrival = LaneTransitions.arrivalInterior(minBuild, level.getHeight(),
+                lane1Floors, lane1Cell);
+        helper.assertTrue(LaneTransitions.pairTarget(level, lane1Arrival).isEmpty(),
+                "layer 1's arrival must be the exit gate, not a lane pair");
+
+        // Deeper arrivals keep pairing back: layer 2's arrival returns to
+        // layer 1's departure, so the dive loop below layer 1 is unchanged.
+        int lane2Floors = FloorSchedule.floorsInLayer(seed, 2,
+                DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+        var lane2Cell = placement.getPotentialStructureChunk(seed, 2 * placement.spacing(), 0);
+        var lane2Arrival = LaneTransitions.arrivalInterior(minBuild, level.getHeight(),
+                lane2Floors, lane2Cell);
+        clearFootprint(level, lane2Arrival);
+        var lane1Departure = LaneTransitions.departureInterior(minBuild, lane1Cell);
+        var back = LaneTransitions.pairTarget(level, lane2Arrival);
+        helper.assertTrue(back.isPresent(), "a layer-2 arrival must pair back");
+        helper.assertTrue(back.get().equals(lane1Departure),
+                "layer 2's arrival must land on layer 1's departure: " + back.get());
+
+        // End to end: walking the exit gate is NOT a lane hop - laneHop
+        // declines it, so the anchor policy takes over (walk out home).
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        player.setPos(departure.getX() + 0.5, departure.getY() + 0.5, departure.getZ() + 0.5);
-        DungeonPortalTravel.laneHop(level, departure, player);
-        helper.assertTrue(player.blockPosition().equals(forward.get()),
-                "the doorway walk must land in layer 1: " + player.blockPosition());
+        player.setPos(lane1Arrival.getX() + 0.5, lane1Arrival.getY() + 0.5,
+                lane1Arrival.getZ() + 0.5);
+        helper.assertTrue(!DungeonPortalTravel.laneHop(level, lane1Arrival, player),
+                "the exit gate must not resolve as a lane hop");
+        helper.assertTrue(player.blockPosition().equals(lane1Arrival),
+                "the exit-gate walk must leave the player for the policy: "
+                        + player.blockPosition());
         helper.succeed();
     }
     /**

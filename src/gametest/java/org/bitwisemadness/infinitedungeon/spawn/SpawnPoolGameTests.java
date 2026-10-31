@@ -20,6 +20,8 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
+import org.bitwisemadness.infinitedungeon.lanes.BossRosterBootstrap;
+import org.bitwisemadness.infinitedungeon.lanes.GuardianSchedule;
 import org.bitwisemadness.infinitedungeon.treasure.KeyItems;
 import org.bitwisemadness.infinitedungeonapi.event.FloorEnteredEvent;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
@@ -135,6 +137,70 @@ public final class SpawnPoolGameTests {
         helper.assertTrue(spawned == 0,
                 "outside the dungeon the driver must spawn nothing, spawned " + spawned);
         helper.succeed();
+    }
+
+    /**
+     * The boss roster bootstrap end to end (issue #60): against the REAL
+     * listener, the shipped boss.json bytes, and the public derive seam - the
+     * shipped pool parses with its exact jar-verified entry count and, because
+     * every entry is mod-gated while the harness has no boss mods, derives an
+     * EMPTY roster (the interim open-gate contract on production data); a test
+     * pool with a vanilla zombie derives a single candidate whose EP is the
+     * documented fallback metric (positive on a real mob), proving the
+     * transient-entity read path. Self-contained: the pool table is reloaded
+     * from the shipped bytes inside the test, so a sibling finally that reset
+     * the datapack cannot shape the verdict; `finally` restores roster and
+     * table.
+     */
+    @GameTest(template = "empty")
+    public static void boss_roster_bootstrap_reads_the_shipped_pool(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var listener = new SpawnPoolReloadListener();
+        GuardianSchedule.setRoster(List.of());
+        try {
+            // The shipped boss pool: exact verified entry count, all gated.
+            String path = "/data/infinite_dungeon/infinite_dungeon/pools/boss.json";
+            var stream = SpawnPoolReloadListener.class.getResourceAsStream(path);
+            helper.assertTrue(stream != null, "the shipped boss pool must exist: " + path);
+            ResourceLocation shipped = ResourceLocation.fromNamespaceAndPath(
+                    InfiniteDungeon.MOD_ID, "infinite_dungeon/pools/boss");
+            List<SpawnPoolEntry> parsedShipped = listener.parse(shipped,
+                    JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)));
+            helper.assertTrue(parsedShipped.size() == 59,
+                    "the shipped boss pool must carry its jar-verified entries: got "
+                            + parsedShipped.size() + ", want 59");
+            listener.applyEntries(Map.of(shipped, parsedShipped));
+            helper.assertTrue(SpawnPools.allIds(InfiniteDungeon.MOD_ID + ":boss").isEmpty(),
+                    "every shipped boss entry is mod-gated; without the mods the roster must "
+                            + "stay empty (interim contract): got "
+                            + SpawnPools.allIds(InfiniteDungeon.MOD_ID + ":boss"));
+            helper.assertTrue(BossRosterBootstrap.derive(
+                            level, InfiniteDungeon.MOD_ID + ":boss").isEmpty(),
+                    "an all-gated pool must derive an empty roster");
+
+            // A test pool with a present entity: one candidate, positive EP.
+            ResourceLocation testPool = ResourceLocation.fromNamespaceAndPath(
+                    InfiniteDungeon.MOD_ID, "infinite_dungeon/pools/roster_smoke");
+            List<SpawnPoolEntry> testEntries = listener.parse(testPool, JsonParser.parseString(
+                    "{\"entries\": [{\"entity\": \"minecraft:zombie\", \"weight\": 1}]}"));
+            listener.applyEntries(Map.of(testPool, testEntries));
+            var derived = BossRosterBootstrap.derive(
+                    level, InfiniteDungeon.MOD_ID + ":roster_smoke");
+            helper.assertTrue(derived.size() == 1,
+                    "the test pool must derive exactly one candidate: got " + derived);
+            var candidate = derived.get(0);
+            helper.assertTrue(candidate.entityId().equals("minecraft:zombie"),
+                    "the candidate must be the pool's entity: got " + candidate.entityId());
+            helper.assertTrue(candidate.rawPower() > 0.0,
+                    "the fallback EP metric must be positive on a real mob: got "
+                            + candidate.rawPower());
+            helper.assertTrue(!candidate.depthExempt() && candidate.family().isEmpty(),
+                    "defaults are plain candidates; family ranking is the tensura module's job");
+            helper.succeed();
+        } finally {
+            GuardianSchedule.setRoster(List.of());
+            SpawnPools.setDatapack(Map.of());
+        }
     }
 
     /**

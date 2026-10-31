@@ -10,6 +10,7 @@ import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.lanes.FallbackHallFeature;
+import org.bitwisemadness.infinitedungeon.lanes.GuardianScheduleHook;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
@@ -117,6 +118,10 @@ public final class InfiniteDungeon {
         // Ambient spawns (plan sections 7/9, issue #40): in-dimension attempts
         // sized by the density curve, types from the profile's fodder pool.
         NeoForge.EVENT_BUS.addListener(AmbientSpawner::onLevelTick);
+        // Guardian schedule (plan section 6, issue #231): installs the
+        // LayerUnlocks seam predicate at dungeon level load with the world
+        // seed; empty roster = interim open state (#31's contract).
+        NeoForge.EVENT_BUS.addListener(GuardianScheduleHook::onLevelLoad);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

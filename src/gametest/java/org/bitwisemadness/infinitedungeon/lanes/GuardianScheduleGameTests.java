@@ -198,7 +198,22 @@ public final class GuardianScheduleGameTests {
         defeats.forget(0);
         LivingEntity[] spawnedHolder = new LivingEntity[1];
 
-        helper.runAfterDelay(5, () -> {
+        helper.runAfterDelay(20, () -> {
+            // Re-establish shared statics INSIDE the hop: sibling tests in
+            // this batch mutate the same roster/seam in their finally blocks,
+            // and a sibling body landing between setup and hop wiped them (the
+            // identity-REFUSED regression).
+            GuardianSchedule.setRoster(List.of(
+                    new BossCandidate("minecraft:zombie", 100.0, false, Optional.empty())));
+            LayerUnlocks.setGuardianAssigned(layer -> false);
+            // ...and the profile: the sibling miniboss test registers and
+            // REMOVES the shared key around this window - #42's gate reads it
+            // first, so a vanished profile silently skipped the unlock (the
+            // death-chain regression).
+            DimensionProfiles.register(new DimensionProfile(
+                    level.dimension().location().toString(),
+                    Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                    Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()));
             for (var entity : level.getAllEntities()) {
                 if (entity.getTags().contains(GuardianChambers.GUARDIAN_TAG)) {
                     entity.discard(); // leftovers of earlier runs are not premise

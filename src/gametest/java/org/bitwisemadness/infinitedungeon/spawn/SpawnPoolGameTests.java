@@ -3,13 +3,26 @@ package org.bitwisemadness.infinitedungeon.spawn;
 import com.google.gson.JsonParser;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.block.Blocks;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
-
+import org.bitwisemadness.infinitedungeon.treasure.KeyItems;
+import org.bitwisemadness.infinitedungeonapi.event.FloorEnteredEvent;
+import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
+import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
+import org.bitwisemadness.infinitedungeonapi.profile.ProfilePools;
 /**
  * Spawn pool filtering and reload (issue #39; plan section: "spawn pool
  * filtering" and "pool JSON reload filtering" are gametest items). Same
@@ -120,5 +133,149 @@ public final class SpawnPoolGameTests {
         helper.assertTrue(spawned == 0,
                 "outside the dungeon the driver must spawn nothing, spawned " + spawned);
         helper.succeed();
+    }
+
+    /**
+     * The miniboss raid end to end (issue #41): against the real listener,
+     * pool registry, SavedData, and drop - an assigned floor fields the
+     * elite-pool miniboss beside the entrant with the stat multiplier stacked
+     * last (fresh join: #37 declines in the harness, so the multiplier is
+     * exactly observable), the singleton holds, its death stamps the floor and
+     * drops the key, a re-entry stays quiet, and an unassigned floor never
+     * triggers. Production trigger = the depth tracker (#238); the event is
+     * posted here exactly as #42's was pre-#43.
+     */
+    @GameTest(template = "empty")
+    public static void miniboss_floors_spawn_slain_and_drop_the_key(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String harnessDimension = level.dimension().location().toString();
+
+        var poolListener = new SpawnPoolReloadListener();
+        apply(poolListener, ResourceLocation.fromNamespaceAndPath(
+                        InfiniteDungeon.MOD_ID, "infinite_dungeon/pools/elite_smoke"),
+                """
+                {"entries": [{"entity": "minecraft:zombie", "weight": 1}]}""");
+        DimensionProfiles.register(new DimensionProfile(
+                harnessDimension,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(new ProfilePools(
+                        Optional.empty(), Optional.of(InfiniteDungeon.MOD_ID + ":elite_smoke"), Optional.empty())),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()));
+        MinibossSlain slay = MinibossSlain.of(level);
+        slay.forget(3, 3); // harness world data survives runs: force the premise
+        var player = helper.makeMockServerPlayerInLevel();
+        // PathfinderMob.checkSpawnRules is a WALK-VALUE rule: monsters refuse
+        // bright ground, and the harness platform is open sky (the guardian
+        // test passes because its interior is deep and dark). Give the entrant
+        // a dark pocket - walls, roof, air inside - exactly the harness
+        // manipulation the block-clearing precedent uses; the raid then finds
+        // shade within its first candidate ring, as it would in a real room.
+        int px = (int) Math.floor(player.getX());
+        int py = (int) Math.floor(player.getY());
+        int pz = (int) Math.floor(player.getZ());
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                level.setBlock(new BlockPos(px + dx, py + 3, pz + dz),
+                        Blocks.STONE.defaultBlockState(), 3);
+            }
+        }
+        for (int edge = -3; edge <= 3; edge++) {
+            level.setBlock(new BlockPos(px + edge, py, pz - 3), Blocks.STONE.defaultBlockState(), 3);
+            level.setBlock(new BlockPos(px + edge, py, pz + 3), Blocks.STONE.defaultBlockState(), 3);
+            level.setBlock(new BlockPos(px - 3, py, pz + edge), Blocks.STONE.defaultBlockState(), 3);
+            level.setBlock(new BlockPos(px + 3, py, pz + edge), Blocks.STONE.defaultBlockState(), 3);
+        }
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dy = 0; dy <= 2; dy++) {
+                    level.setBlock(new BlockPos(px + dx, py + dy, pz + dz),
+                            Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+        player.setPos(px + 0.5, py, pz + 0.5);
+        try {
+            // The listener's thin resolution path runs for an unassigned floor
+            // (best-effort glue; the seam below carries the observable logic).
+            NeoForge.EVENT_BUS.post(new FloorEnteredEvent(
+                    level.dimension(), player.getUUID(), 3, 1));
+            helper.assertTrue(Minibosses.onApproach(level, player, 3, 1)
+                            == Minibosses.Outcome.NOT_ASSIGNED,
+                    "an unassigned floor must never field a miniboss; got "
+                            + Minibosses.onApproach(level, player, 3, 1));
+
+            var first = Minibosses.onApproach(level, player, 3, 3);
+            helper.assertTrue(first == Minibosses.Outcome.SPAWNED,
+                    "the assigned floor must field the elite-pool miniboss beside the entrant; got "
+                            + first);
+            var miniboss = findMiniboss(level, 3, 3);
+            helper.assertTrue(miniboss != null,
+                    "the spawn payload must be findable beside the entrant");
+            helper.assertTrue(miniboss.getAttribute(Attributes.MAX_HEALTH).getBaseValue() == 40.0,
+                    "the miniboss multiplier must stack last (20 base * 2.0): got "
+                            + miniboss.getAttribute(Attributes.MAX_HEALTH).getBaseValue());
+
+            helper.assertTrue(Minibosses.onApproach(level, player, 3, 3)
+                            == Minibosses.Outcome.ALIVE,
+                    "the floor must stay a singleton on re-entry; got "
+                            + Minibosses.onApproach(level, player, 3, 3));
+
+            NeoForge.EVENT_BUS.post(new LivingDeathEvent(miniboss, level.damageSources().generic()));
+            miniboss.discard(); // the real death removes the body too
+            helper.assertTrue(slay.isSlain(3, 3),
+                    "the death must stamp the floor as slain");
+            helper.assertTrue(hasKeyDrop(level),
+                    "the death must drop the dungeon key");
+
+            helper.assertTrue(Minibosses.onApproach(level, player, 3, 3)
+                            == Minibosses.Outcome.SLAIN,
+                    "a slain floor must stay quiet on re-entry; got "
+                            + Minibosses.onApproach(level, player, 3, 3));
+            helper.succeed();
+        } finally {
+            var survivor = findMiniboss(level, 3, 3);
+            if (survivor != null) {
+                survivor.discard();
+            }
+            dropKeyCleanup(level);
+            slay.forget(3, 3);
+            SpawnPools.setDatapack(Map.of());
+            DimensionProfiles.remove(harnessDimension);
+        }
+    }
+    /** The live tagged miniboss of a floor, or null (visible sections only). */
+    private static Mob findMiniboss(ServerLevel level, int layer, int floor) {
+        String tag = "infinite_dungeon_miniboss_layer_" + layer + "_" + floor;
+        for (var entity : level.getAllEntities()) {
+            if (entity instanceof Mob mob && mob.getTags().contains(tag)) {
+                return mob;
+            }
+        }
+        return null;
+    }
+
+    private static int countMinibosses(ServerLevel level, int layer, int floor) {
+        return findMiniboss(level, layer, floor) == null ? 0 : 1;
+    }
+
+    private static boolean hasKeyDrop(ServerLevel level) {
+        boolean found = false;
+        for (var entity : level.getAllEntities()) {
+            if (entity instanceof ItemEntity item
+                    && item.getItem().is(KeyItems.KEY.get())) {
+                found = true;
+            }
+        }
+        return found;
+    }
+
+    private static void dropKeyCleanup(ServerLevel level) {
+        for (var entity : level.getAllEntities()) {
+            if (entity instanceof ItemEntity item
+                    && item.getItem().is(KeyItems.KEY.get())) {
+                entity.discard();
+            }
+        }
     }
 }

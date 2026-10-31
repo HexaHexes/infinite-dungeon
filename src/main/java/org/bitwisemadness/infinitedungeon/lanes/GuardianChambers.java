@@ -15,12 +15,12 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.level.ChunkPos;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.spawn.EventSpawnSanity;
 import org.bitwisemadness.infinitedungeonapi.event.BossSlainEvent;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
@@ -78,8 +78,10 @@ public final class GuardianChambers {
         ALIVE,
         /** Within the cooldown - the chamber stays empty (flavor message). */
         COOLDOWN,
-        /** Vanilla's sanity (obstruction/light) or creation refused the spawn. */
+        /** Identity or entity creation refused the spawn. */
         REFUSED,
+        REFUSED_RULES,
+        REFUSED_INSERT,
         /** The guardian spawned here, tagged for its layer. */
         SPAWNED
     }
@@ -149,38 +151,34 @@ public final class GuardianChambers {
                 GuardianDefeats.of(level).elapsedSeconds(layer, now), cooldown)) {
             return Decision.of(Outcome.COOLDOWN);
         }
-        LivingEntity spawned = spawn(level, layer, interior);
-        if (spawned == null) {
-            return Decision.of(Outcome.REFUSED);
-        }
-        return new Decision(Outcome.SPAWNED, spawned);
+        return spawn(level, layer, interior);
     }
 
-    /** The guardian, or null when identity/creation/vanilla sanity refused. */
-    private static LivingEntity spawn(ServerLevel level, int layer, BlockPos interior) {
+    /** The spawn decision: SPAWNED with the guardian, or the refusing step named. */
+    private static Decision spawn(ServerLevel level, int layer, BlockPos interior) {
         Optional<String> guardian = GuardianScheduleHook.guardianIdFor(level, layer);
         if (guardian.isEmpty()) {
-            return null;
+            return Decision.of(Outcome.REFUSED);
         }
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(
                 ResourceLocation.parse(guardian.get()));
         var created = type.create(level);
         if (!(created instanceof Mob mob)) {
-            return null;
+            return Decision.of(Outcome.REFUSED);
         }
         mob.setPos(interior.getX() + 0.5, interior.getY(), interior.getZ() + 0.5);
-        if (!EventHooks.checkSpawnPosition(mob, level, MobSpawnType.EVENT)) {
-            return null; // vanilla sanity said no; never added, nothing to undo
+        if (!EventSpawnSanity.passed(mob, level, MobSpawnType.EVENT)) {
+            return Decision.of(Outcome.REFUSED_RULES);
         }
         mob.finalizeSpawn(level, level.getCurrentDifficultyAt(interior),
                 MobSpawnType.EVENT, null);
         if (!level.addFreshEntity(mob)) {
-            return null;
+            return Decision.of(Outcome.REFUSED_INSERT);
         }
         mob.addTag(GUARDIAN_TAG);
         mob.addTag(LAYER_TAG_PREFIX + layer);
         DungeonAnnouncements.broadcast(level, Announcement.BOSS_AWAKENING);
-        return mob;
+        return new Decision(Outcome.SPAWNED, mob);
     }
 
     /** Whether the layer's tagged guardian currently walks the level. */

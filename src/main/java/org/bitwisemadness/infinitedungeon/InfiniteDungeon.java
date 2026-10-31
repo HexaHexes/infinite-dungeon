@@ -10,6 +10,7 @@ import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.lanes.FallbackHallFeature;
+import org.bitwisemadness.infinitedungeon.lanes.GuardianGating;
 import org.bitwisemadness.infinitedungeon.lanes.GuardianScheduleHook;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
@@ -122,6 +123,9 @@ public final class InfiniteDungeon {
         // LayerUnlocks seam predicate at dungeon level load with the world
         // seed; empty roster = interim open state (#31's contract).
         NeoForge.EVENT_BUS.addListener(GuardianScheduleHook::onLevelLoad);
+        // Gating reaction (issue #42, with the C7a team-share rule via #79):
+        // a guardian's fall opens its layer in world saved data, once.
+        NeoForge.EVENT_BUS.addListener(GuardianGating::onBossSlain);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

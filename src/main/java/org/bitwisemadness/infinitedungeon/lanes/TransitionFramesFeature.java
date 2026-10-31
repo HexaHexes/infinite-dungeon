@@ -23,9 +23,13 @@ import org.bitwisemadness.infinitedungeon.portal.PortalFrameBuilder;
  * <p>Frames stay fully inside the candidate chunk (the builder's ring reaches
  * x0..x15 from the interior offsets), so generation never crosses a chunk
  * border, and both interiors sit at least one ring-block above the world
- * bottom. Lane 0 - the lobby lane - builds its departure frame only (#131):
- * those are the doorways into the dungeon, since there is no lane -1 for an
- * arrival to serve; the lobby's own entrance is the fixed skeleton's portal.</p>
+ * bottom. Lane 0 builds nothing at all since issue #246 - the lobby is the
+ * Overworld entrance site, so the dimension's content starts at layer 1.</p>
+ *
+ * <p>Unlit on purpose: the sealed/unsealed ignition gate owns the first
+ * light. The one exception is <b>layer 1's arrival</b>, built lit because it
+ * is the dimension's exit gate (#246) - the way home must never need a first
+ * light, matching the pre-#246 lobby portal.</p>
  */
 public final class TransitionFramesFeature extends Feature<NoneFeatureConfiguration> {
 
@@ -68,25 +72,26 @@ public final class TransitionFramesFeature extends Feature<NoneFeatureConfigurat
             return false;
         }
         int lane = LaneGeometry.laneIndex(candidate.getMiddleBlockX(), stride);
-        if (lane < 0) {
+        if (lane < 1) {
+            // Lane 0 is the lobby's home, and since issue #246 the lobby is
+            // the Overworld entrance site - so the dimension's content, and
+            // therefore these frames, start at layer 1.
             return false;
         }
 
         boolean departure = PortalFrameBuilder.build(level,
                 LaneTransitions.departureInterior(minBuild, candidate),
                 Direction.Axis.X, false);
-        if (lane == 0) {
-            // The lobby lane's doorways (#131): departure only - lane 0 has
-            // no arrival, because there is no lane -1 to depart from.
-            return departure;
-        }
         int available = level.getHeight();
         int floors = FloorSchedule.floorsInLayer(level.getSeed(), lane,
                 DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
 
+        // Layer 1's arrival is the dimension's exit gate (#246), so it is
+        // built lit: the way home never needs a first light. Deeper arrivals
+        // stay unlit - the ignition gate owns their first light.
         boolean arrival = PortalFrameBuilder.build(level,
                 LaneTransitions.arrivalInterior(minBuild, available, floors, candidate),
-                Direction.Axis.X, false);
+                Direction.Axis.X, lane == 1);
         return departure || arrival;
     }
 }

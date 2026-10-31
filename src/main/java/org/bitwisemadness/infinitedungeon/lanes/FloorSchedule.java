@@ -9,9 +9,10 @@ package org.bitwisemadness.infinitedungeon.lanes;
  * function of (world seed, layer index) - no world access, no registry, so
  * the whole rule is JUnit-testable and pregeneration-stable (section 16).</p>
  *
- * <p>Layer 0 is the lobby: of fixed construction and exempt from this rule
- * (issue #131 owns its shape), so the schedule covers layers 1 and above and
- * refuses layer 0 loudly rather than guessing.</p>
+ * <p>Layer 0 is the lobby, and since issue #246 the lobby is the Overworld
+ * entrance site - the dungeon dimension's content starts at layer 1, so the
+ * schedule covers layers 1 and above and refuses layer 0 loudly rather than
+ * guessing.</p>
  */
 public final class FloorSchedule {
 
@@ -26,8 +27,9 @@ public final class FloorSchedule {
     public static int floorsInLayer(long worldSeed, int layerIndex, int min, int max) {
         if (layerIndex < 1) {
             throw new IllegalArgumentException(
-                    "layer 0 is the fixed-construction lobby (issue #131); the seed-derived rule"
-                            + " covers layers 1 and above, got layer " + layerIndex);
+                    "layer 0 is the lobby, now the Overworld entrance site (issue #246);"
+                            + " the seed-derived rule covers layers 1 and above, got layer "
+                            + layerIndex);
         }
         int low = Math.min(min, max);
         int high = Math.max(min, max);

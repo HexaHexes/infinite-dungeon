@@ -21,8 +21,9 @@ faith. Over the coming alphas it grows:
 - Safe rooms, monster houses, traps, and loot that scales with depth.
 - Inside the dungeon you play in adventure mode: block breaking is refused
   except for blocks a config whitelist allows, and your gamemode is restored
-  the moment you leave. Dying in the dungeon sends you to its lobby, the
-  first layer, rather than your ordinary respawn point.
+  the moment you leave. Dying in the dungeon sends you back to its lobby -
+  the entrance site you descended through, the dungeon's first layer -
+  rather than your ordinary respawn point.
 - Beds never explode and you can nap in one; a nap never skips time and never
   touches your spawn point, which can never be set inside the dungeon
   dimension. Death always follows the dungeon's own exit policy.
@@ -52,7 +53,7 @@ The time section holds whether the dungeon clock runs (`time.flows`, default
 on, a plain day/night cycle) and the tick it is held at while frozen
 (`time.fixedTick`, default 6000).
 
-The floor count per layer is a range: `floorsPerLayerMin` (5) and `floorsPerLayerMax` (10) bound it, and the world seed decides the exact count for each layer inside that range. The first layer - the lobby - ignores both.
+The floor count per layer is a range: `floorsPerLayerMin` (5) and `floorsPerLayerMax` (10) bound it, and the world seed decides the exact count for each layer inside that range. The first layer - the lobby, the entrance site - ignores both.
 
 The portal section holds where portals may be built: `portal.buildableDimensions.mode`
 (`whitelist` by default, `blacklist` for an exception list) plus

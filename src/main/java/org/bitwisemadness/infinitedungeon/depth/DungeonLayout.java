@@ -15,48 +15,56 @@ import org.bitwisemadness.infinitedungeon.lanes.LaneGeometry;
  *
  * <p>Semantics, fixed here as the downstream contract:</p>
  * <ul>
- * <li>Layer 0 is the lobby: fixed construction, depth 0, floor 0 for any Y -
- * its shape is issue #131's, so the derivation never guesses floors there.</li>
+ * <li>The <b>lobby</b> is layer 0, and since issue #246 (Reading B) it lives
+ * in the <b>Overworld entrance site</b>, not in the dungeon dimension -
+ * so lane 0's region is no longer part of the dungeon and derives as
+ * OUTSIDE. {@link #inDungeon} answers whether a position is inside the
+ * dungeon at all (layer 1 or deeper), and {@link #derive} refuses lane 0
+ * and everything west of it loudly rather than inventing a depth for the
+ * void.</li>
  * <li>Depth counts floors descended: within a layer floor 0 is the entry
  * band at the <b>top</b> and floorInLayer grows downward as the player
  * descends (so section 7's difficulty, which grows with floorInLayer, deepens
  * with the dive); layer 1's floors start at depth 1 (the lobby contributes
- * exactly one floor of headroom), and depth has no gaps across layer
- * boundaries - layer L's deepest floor is followed by layer L+1's entry
+ * exactly one floor of headroom at depth 0), and depth has no gaps across
+ * layer boundaries - layer L's deepest floor is followed by layer L+1's entry
  * floor (issue #183 corrected the axis direction before any consumer
  * relied on it).</li>
- * <li>Negative lanes hold no layers: {@link #inDungeon} answers whether a
- * position is inside the dungeon at all, and {@link #derive} refuses positions
- * west of the first lane loudly rather than inventing a depth for the void.</li>
  * </ul>
  */
 public final class DungeonLayout {
 
     /**
      * The lobby's contribution to every deeper depth: it is one floor of fixed
-     * construction at depth 0 (revisited with issue #131 should the lobby grow
-     * floors).
+     * construction at depth 0 - the lobby is the Overworld entrance site since
+     * issue #246, so the numbering keeps that one floor of headroom and layer
+     * 1 still starts at depth 1.
      */
     public static final int LOBBY_FLOORS = 1;
 
     private DungeonLayout() {
     }
 
-    /** Whether a position lies inside the dungeon's layer stack (lane 0 or deeper). */
+    /**
+     * Whether a position lies inside the dungeon's layer stack. Since issue
+     * #246 the lobby is the Overworld entrance site (Reading B), so the
+     * dungeon dimension's content starts at layer 1 - lane 0's region is no
+     * longer inside the dungeon at all, and a player standing there derives
+     * as OUTSIDE.
+     */
     public static boolean inDungeon(LayoutParameters parameters, int x) {
-        return LaneGeometry.laneIndex(x, parameters.laneStride()) >= 0;
+        return LaneGeometry.laneIndex(x, parameters.laneStride()) >= 1;
     }
 
-    /** The derived position. Refuses X west of lane 0 (see class javadoc). */
+    /** The derived position. Refuses lane 0 and west (see class javadoc). */
     public static DungeonPosition derive(LayoutParameters parameters, int x, int y) {
         int layerIndex = LaneGeometry.laneIndex(x, parameters.laneStride());
-        if (layerIndex < 0) {
+        if (layerIndex < 1) {
             throw new IllegalArgumentException(
-                    "no layer exists west of the first lane (x=" + x + ", stride="
-                            + parameters.laneStride() + "); check inDungeon first");
-        }
-        if (layerIndex == 0) {
-            return new DungeonPosition(0, 0, 0);
+                    "no layer exists in lane 0 or west of it (x=" + x + ", stride="
+                            + parameters.laneStride()
+                            + "); the lobby is the Overworld entrance site (issue #246),"
+                            + " check inDungeon first");
         }
         int floors = FloorSchedule.floorsInLayer(parameters.worldSeed(), layerIndex,
                 parameters.floorsMin(), parameters.floorsMax());

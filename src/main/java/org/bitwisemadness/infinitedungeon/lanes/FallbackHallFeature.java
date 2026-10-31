@@ -25,7 +25,8 @@ import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
  * the cell's own state locally, with no cross-chunk visibility problems and
  * no visitor-triggered edits (section 16: generation-time, Chunky-identical).
  * Every chunk passes through; only the cell's candidate chunk proceeds, lane 0
- * stays reserved for the fixed-construction lobby (#131), and a present,
+ * stays empty (since issue #246 the lobby is the Overworld entrance site, so
+ * the dimension's content starts at lane 1), and a present,
  * valid dungeon start means the lane has its dungeon already - nothing to
  * guard.</p>
  *
@@ -94,7 +95,8 @@ public final class FallbackHallFeature extends Feature<NoneFeatureConfiguration>
             return false;
         }
 
-        // Lane 0 is the lobby layer (issue #131); halls never generate there.
+        // Lane 0 is the lobby's home, and since issue #246 the lobby is the
+        // Overworld entrance site - halls never generate there.
         if (LaneGeometry.laneIndex(candidate.getMiddleBlockX(), stride) < 1) {
             return false;
         }

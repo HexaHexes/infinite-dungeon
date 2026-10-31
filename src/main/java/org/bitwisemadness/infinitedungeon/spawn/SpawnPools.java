@@ -2,9 +2,11 @@ package org.bitwisemadness.infinitedungeon.spawn;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -78,6 +80,29 @@ public final class SpawnPools {
     /** The weighted pick for one spawn attempt (plan section 9). */
     public static Optional<PoolCandidate> pick(String poolId, int layer, RandomSource random) {
         return PoolMath.pick(candidates(poolId, layer), random.nextDouble());
+    }
+
+    /**
+     * Every concrete entity id in a pool, IGNORING layer bands: the boss
+     * roster derivation (issue #60) needs the whole pool because the guardian
+     * schedule does its own per-layer band fitting on raw power - the pool
+     * data stays dumb (plan section 10). Mod-gated and tag-expanded exactly
+     * like {@link #candidates}; duplicates collapse (two entries naming one
+     * entity are one roster member). Unknown pool = empty answer.
+     */
+    public static List<String> allIds(String poolId) {
+        List<SpawnPoolEntry> entries = datapack.get(poolId);
+        if (entries == null || entries.isEmpty()) {
+            return List.of();
+        }
+        List<SpawnPoolEntry> allowed = RequiredModFilter.filter(
+                entries, SpawnPoolEntry::requiredMod, modId -> ModList.get().isLoaded(modId));
+        Set<String> ids = new LinkedHashSet<>();
+        for (SpawnPoolEntry entry : allowed) {
+            ids.addAll(TagExpansion.expand(entry.ref(), SpawnPools::entityExists,
+                    SpawnPools::tagMembers));
+        }
+        return List.copyOf(ids);
     }
 
     private static boolean entityExists(String id) {

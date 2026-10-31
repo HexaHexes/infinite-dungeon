@@ -233,7 +233,8 @@ public final class SpawnPoolGameTests {
                 Optional.empty(),
                 Optional.of(new ProfilePools(
                         Optional.empty(), Optional.of(InfiniteDungeon.MOD_ID + ":elite_smoke"), Optional.empty())),
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()));
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty()));
         MinibossSlain slay = MinibossSlain.of(level);
         slay.forget(3, 3); // harness world data survives runs: force the premise
         var player = helper.makeMockServerPlayerInLevel();

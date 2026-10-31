@@ -6,6 +6,7 @@ import java.util.UUID;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -21,6 +22,8 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
 import org.bitwisemadness.infinitedungeonapi.event.BossSlainEvent;
 import org.bitwisemadness.infinitedungeonapi.event.LayerCompletedEvent;
+import org.bitwisemadness.infinitedungeonapi.profile.BossRespawnMode;
+import org.bitwisemadness.infinitedungeonapi.profile.BossRespawnPolicy;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 
@@ -104,7 +107,8 @@ public final class GuardianScheduleGameTests {
         DimensionProfiles.register(new DimensionProfile(
                 harnessDimension,
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()));
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty()));
         // One candidate: the zombie IS every layer's guardian - deterministic
         // without relying on band or seed luck.
         GuardianSchedule.setRoster(List.of(
@@ -243,12 +247,15 @@ public final class GuardianScheduleGameTests {
         DimensionProfiles.register(new DimensionProfile(
                 harnessDimension,
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()));
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty()));
         GuardianSchedule.setRoster(List.of(
                 new BossCandidate("minecraft:zombie", 100.0, false, Optional.empty())));
         LayerUnlocks.setGuardianAssigned(layer -> false);
         var defeats = GuardianDefeats.of(level);
         defeats.forget(0);
+        var fights = FightRecords.of(level);
+        fights.forget(0, FightRecords.GUARDIAN);
         LivingEntity[] spawnedHolder = new LivingEntity[1];
 
         helper.runAfterDelay(20, () -> {
@@ -266,7 +273,8 @@ public final class GuardianScheduleGameTests {
             DimensionProfiles.register(new DimensionProfile(
                     level.dimension().location().toString(),
                     Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                    Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty()));
+                    Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                    Optional.empty()));
             for (var entity : level.getAllEntities()) {
                 if (entity.getTags().contains(GuardianChambers.GUARDIAN_TAG)) {
                     entity.discard(); // leftovers of earlier runs are not premise
@@ -319,6 +327,46 @@ public final class GuardianScheduleGameTests {
                     "past the cooldown the guardian must return on entry; got "
                             + returnSpawn.outcome());
 
+            // The opt-in leg (issue #259, core side of api#85): every legacy
+            // assertion above must hold WITHOUT a declared policy, and with
+            // one the per-player fairness rule overrides the fresh cooldown.
+            // Declared here, inside this single seam-owning test - a second
+            // test sharing this seam races the batch (recorded rule).
+            if (returnSpawn.spawned() != null) {
+                returnSpawn.spawned().discard();
+            }
+            DimensionProfiles.remove(harnessDimension);
+            DimensionProfiles.register(new DimensionProfile(
+                    harnessDimension,
+                    Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                    Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                    Optional.of(new BossRespawnPolicy(BossRespawnMode.PER_PLAYER, 12000))));
+            UUID unfought = new UUID(1L, 1L);
+            UUID alreadyFought = new UUID(2L, 2L);
+            defeats.record(0, level.getGameTime()); // defeated this tick: no cooldown can have elapsed
+
+            var firstFight = GuardianChambers.consider(level, interior, unfought, level.getGameTime());
+            helper.assertTrue(firstFight.outcome() == GuardianChambers.Outcome.SPAWNED,
+                    "an un-fought player must get their fight at once under per_player; got "
+                            + firstFight.outcome());
+            helper.assertTrue(firstFight.spawned() != null,
+                    "the opt-in spawn payload must carry the guardian");
+            firstFight.spawned().discard();
+
+            fights.recordFight(0, FightRecords.GUARDIAN, List.of(alreadyFought));
+            var waited = GuardianChambers.consider(level, interior, alreadyFought, level.getGameTime());
+            helper.assertTrue(waited.outcome() == GuardianChambers.Outcome.COOLDOWN,
+                    "a fought player inside the cooldown must wait; got " + waited.outcome());
+
+            var tag = new CompoundTag();
+            var registries = level.getServer().registryAccess();
+            fights.save(tag, registries);
+            var reloaded = FightRecords.load(tag, registries);
+            helper.assertTrue(reloaded.hasFought(0, FightRecords.GUARDIAN, alreadyFought),
+                    "a recorded fight must survive the save/load round-trip: " + tag);
+            helper.assertTrue(!reloaded.hasFought(0, FightRecords.GUARDIAN, unfought),
+                    "an un-fought player must stay un-fought across the round-trip");
+
             // End-of-test restore (happy path; start-premise covers failures).
             if (spawnedHolder[0] != null) {
                 spawnedHolder[0].discard();
@@ -326,6 +374,7 @@ public final class GuardianScheduleGameTests {
             GuardianSchedule.setRoster(List.of());
             LayerUnlocks.setGuardianAssigned(layer -> false);
             defeats.forget(0);
+            fights.forget(0, FightRecords.GUARDIAN);
             DimensionProfiles.remove(harnessDimension);
             level.setChunkForced(cell.x, cell.z, false);
             helper.succeed();

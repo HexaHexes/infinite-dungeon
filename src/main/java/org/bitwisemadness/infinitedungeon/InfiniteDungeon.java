@@ -26,6 +26,8 @@ import org.bitwisemadness.infinitedungeon.magicule.MagiculeParticles;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
+import org.bitwisemadness.infinitedungeon.rooms.GateBlocks;
+import org.bitwisemadness.infinitedungeon.rooms.GateReloadListener;
 import org.bitwisemadness.infinitedungeon.spawn.AmbientSpawner;
 import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
 import org.bitwisemadness.infinitedungeon.spawn.Minibosses;
@@ -57,6 +59,10 @@ public final class InfiniteDungeon {
         PortalTint.register(container);
         PortalBlocks.register(modBus);
         KeyItems.register(modBus);
+        // The room gate (issue #252): the block plus this repo's first block
+        // entity - the open/closed truth lives beside the world (D33), several
+        // gates track themselves with no global bookkeeping.
+        GateBlocks.register(modBus);
         // The per-player entry anchor is a data attachment: registered here,
         // persisted with the player.
         EntryAnchors.register(modBus);
@@ -131,6 +137,11 @@ public final class InfiniteDungeon {
         // suite data type - core owns the registry, the API owns the
         // machinery (I32).
         NeoForge.EVENT_BUS.addListener(SpawnPoolReloadListener::onAddReloadListeners);
+        // Room gate instances (issue #252): datapack JSON under
+        // data/<ns>/infinite_dungeon/gates, reloaded with /reload - the same
+        // suite-data posture as spawn pools. Placed gates re-read their
+        // condition live, so a reload reconfigures them in place.
+        NeoForge.EVENT_BUS.addListener(GateReloadListener::onAddReloadListeners);
         // Ambient spawns (plan sections 7/9, issue #40): in-dimension attempts
         // sized by the density curve, types from the profile's fodder pool.
         NeoForge.EVENT_BUS.addListener(AmbientSpawner::onLevelTick);

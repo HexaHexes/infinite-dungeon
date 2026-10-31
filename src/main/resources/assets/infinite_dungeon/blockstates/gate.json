@@ -1,0 +1,6 @@
+{
+    "variants": {
+        "open=false": { "model": "infinite_dungeon:block/gate" },
+        "open=true": { "model": "infinite_dungeon:block/gate_open" }
+    }
+}

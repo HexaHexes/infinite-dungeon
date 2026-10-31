@@ -12,12 +12,14 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
 import org.bitwisemadness.infinitedungeonapi.event.BossSlainEvent;
+import org.bitwisemadness.infinitedungeonapi.event.LayerCompletedEvent;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 
@@ -87,6 +89,12 @@ public final class GuardianScheduleGameTests {
      * consults DimensionProfiles concurrently (verified), the empty-pool
      * guard keeps the ambient driver silent throughout, and `finally` restores
      * roster, seam, flag, and profile for test-order hygiene.
+     *
+     * Extended by #249: the same flow pins the LayerCompletedEvent
+     * announcement - never for declined kills, exactly once for the first
+     * guardian fall, never for respawn deaths, and (no player exists anywhere
+     * near this harness) as the zero-player completion case, since the chain
+     * carries no presence guard.
      */
     @GameTest(template = "empty")
     public static void guardian_slain_unlocks_the_layer_once_and_for_all(GameTestHelper helper) {
@@ -103,6 +111,8 @@ public final class GuardianScheduleGameTests {
         LayerUnlocks.setGuardianAssigned(layer -> layer == 0);
         LayerUnlocks unlocks = LayerUnlocks.of(level);
         unlocks.lock(0); // harness world data survives between runs: force the premise
+        LayerCompletedCounter completions = new LayerCompletedCounter();
+        NeoForge.EVENT_BUS.register(completions);
         try {
             helper.assertTrue(LayerUnlocks.isSealed(level, 0),
                     "precondition: the assigned layer must start sealed");
@@ -115,12 +125,16 @@ public final class GuardianScheduleGameTests {
             NeoForge.EVENT_BUS.post(new BossSlainEvent(level.dimension(), 0, creeper));
             helper.assertTrue(LayerUnlocks.isSealed(level, 0),
                     "a non-guardian's fall must not open the gate");
+            helper.assertTrue(completions.fired == 0,
+                    "a non-guardian's fall must not announce layer completion");
 
             NeoForge.EVENT_BUS.post(new BossSlainEvent(
                     ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse("minecraft:the_end")),
                     0, zombie));
             helper.assertTrue(LayerUnlocks.isSealed(level, 0),
                     "a non-dungeon dimension must decline even with the right boss");
+            helper.assertTrue(completions.fired == 0,
+                    "a declined kill must not announce layer completion");
 
             NeoForge.EVENT_BUS.post(new BossSlainEvent(level.dimension(), 0, zombie));
             helper.assertTrue(!LayerUnlocks.isSealed(level, 0),
@@ -128,16 +142,46 @@ public final class GuardianScheduleGameTests {
                             + "player reads, the C7a team-share rule by construction");
             helper.assertTrue(unlocks.isUnlocked(0),
                     "the flag must be recorded in world saved data");
+            helper.assertTrue(completions.fired == 1,
+                    "the first guardian fall must announce layer completion exactly once, got "
+                            + completions.fired);
+            helper.assertTrue(completions.layer == 0
+                            && harnessDimension.equals(completions.dimensionId),
+                    "the completion must carry the completed layer and its dimension, got "
+                            + completions.layer + "/" + completions.dimensionId);
 
             NeoForge.EVENT_BUS.post(new BossSlainEvent(level.dimension(), 0, zombie));
             helper.assertTrue(unlocks.isUnlocked(0),
                     "a second fall must stay idempotent - the flag only ever opens");
+            helper.assertTrue(completions.fired == 1,
+                    "a respawned guardian's fall must not re-fire: once per layer per world, got "
+                            + completions.fired);
             helper.succeed();
         } finally {
+            NeoForge.EVENT_BUS.unregister(completions);
             GuardianSchedule.setRoster(List.of());
             LayerUnlocks.setGuardianAssigned(layer -> false);
             unlocks.lock(0);
             DimensionProfiles.remove(harnessDimension);
+        }
+    }
+
+    /**
+     * Records LayerCompletedEvent posts; public so the bus can invoke it.
+     * Bus posts and the test's reads all happen on the server thread,
+     * so plain fields suffice.
+     */
+    public static final class LayerCompletedCounter {
+
+        int fired;
+        int layer = -1;
+        String dimensionId = "";
+
+        @SubscribeEvent
+        public void onLayerCompleted(LayerCompletedEvent event) {
+            fired++;
+            layer = event.layer();
+            dimensionId = event.dimensionId();
         }
     }
 

@@ -3,7 +3,9 @@ package org.bitwisemadness.infinitedungeon.lanes;
 import java.util.Optional;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
+import net.neoforged.neoforge.common.NeoForge;
 import org.bitwisemadness.infinitedungeonapi.event.BossSlainEvent;
+import org.bitwisemadness.infinitedungeonapi.event.LayerCompletedEvent;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 
 /**
@@ -26,9 +28,17 @@ import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
  * resolves per-player READS, and the gate read is not one. A future
  * per-player flag model would revisit this note (recorded on #42's design).</p>
  *
- * <p>No production poster exists yet (verified org-wide); #43's spawn side
- * becomes the source. Until then the listener ships live and the harness
- * proves it by posting - the #37 pattern.</p>
+ * <p><b>Poster chain (issue #249):</b> {@code BossSlainEvent} is posted by
+ * the guardian chamber's death side (the #43 spawn loop), and THIS listener
+ * is the {@code LayerCompletedEvent} poster: the first validated guardian
+ * fall per layer per world announces completion exactly where the unlock
+ * transition proves it - respawn deaths never re-fire. The chain carries no
+ * player-presence guard, so an environmental death with zero players present
+ * still completes the layer; consumers treat that as unknown attribution
+ * rather than player credit (U-10, HexaHexes/tensura-quests#7). Attribution
+ * rides infinite-dungeon-api#53 as the follow-up once this module compiles
+ * against a release carrying the completing-player overload - until then the
+ * event posts via its current constructor.</p>
  */
 public final class GuardianGating {
 
@@ -54,6 +64,13 @@ public final class GuardianGating {
         if (!guardian.get().equals(slain)) {
             return; // a boss, but not THIS layer's guardian
         }
-        LayerUnlocks.of(level).unlock(event.layer());
+        boolean firstFall = LayerUnlocks.of(level).unlock(event.layer());
+        if (firstFall) {
+            // The completion announcement: first validated guardian fall per
+            // layer per world (the unlock transition proves "first"). Posted
+            // via the current constructor; the completing-player overload
+            // follows infinite-dungeon-api#53 once a release carries it.
+            NeoForge.EVENT_BUS.post(new LayerCompletedEvent(event.dimension(), event.layer()));
+        }
     }
 }

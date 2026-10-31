@@ -21,6 +21,7 @@ import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
 import org.bitwisemadness.infinitedungeon.portal.LobbyEntranceFeature;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
+import org.bitwisemadness.infinitedungeon.spawn.AmbientSpawner;
 import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
 import org.bitwisemadness.infinitedungeon.spawn.SpawnAttributeScaling;
 import org.bitwisemadness.infinitedungeon.spawn.SpawnPoolReloadListener;
@@ -113,6 +114,9 @@ public final class InfiniteDungeon {
         // suite data type - core owns the registry, the API owns the
         // machinery (I32).
         NeoForge.EVENT_BUS.addListener(SpawnPoolReloadListener::onAddReloadListeners);
+        // Ambient spawns (plan sections 7/9, issue #40): in-dimension attempts
+        // sized by the density curve, types from the profile's fodder pool.
+        NeoForge.EVENT_BUS.addListener(AmbientSpawner::onLevelTick);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

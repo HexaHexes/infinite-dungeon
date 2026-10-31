@@ -27,8 +27,8 @@ bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in
   placement was bytecode-verified (#66).
 - Optional: everything else, through the suite's integration modules.
 
-**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` and `SpawnPoolGameTests` (28 tests).
-`expectedTests = 28` in `build.gradle` must match the `@GameTest` count.
+**Test:** `./gradlew runGameTestServer` - `InfiniteDungeonGameTests` and `SpawnPoolGameTests` (29 tests).
+`expectedTests = 29` in `build.gradle` must match the `@GameTest` count.
 
 **Remote:** `github.com/HexaHexes/infinite-dungeon` (public, default branch
 `main`).

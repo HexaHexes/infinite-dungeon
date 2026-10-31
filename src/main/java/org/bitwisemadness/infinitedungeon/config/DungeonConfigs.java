@@ -69,6 +69,7 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.IntValue PARTY_RADIUS;
     private static final ModConfigSpec.DoubleValue PARTY_PER_MEMBER;
     private static final ModConfigSpec.BooleanValue MAGICULE_TENSURA_ATTRIBUTE_SCALING;
+    private static final ModConfigSpec.DoubleValue BOSS_POWER_BAND_PERCENT;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -93,6 +94,16 @@ public final class DungeonConfigs {
                 .comment("Shown when a layer transition portal refuses passage:")
                 .comment("the layer's guardian has not fallen yet (boss gating).")
                 .define("laneSealed", AnnouncementTexts.LANE_SEALED);
+        builder.pop();
+        builder.push("boss");
+        BOSS_POWER_BAND_PERCENT = builder
+                .comment("Half-width of the per-layer guardian power band, in percent:")
+                .comment("selection fits candidates whose effective power (after depth")
+                .comment("scaling; depth-exempt families measured raw) lands within")
+                .comment("center * (1 -/+ percent/100), where center = roster median *")
+                .comment("the difficulty curve at the layer (plan section 6). A")
+                .comment("dimension profile's guardian.powerBandPercent overrides this.")
+                .defineInRange("powerBandPercent", 30.0D, 0D, 100D);
         builder.pop();
         builder.push("time");
         TIME_FLOWS = builder
@@ -323,6 +334,11 @@ public final class DungeonConfigs {
     /** The configured boss awakening text. */
     public static String bossAwakening() {
         return BOSS_AWAKENING.get();
+    }
+
+    /** The default guardian power-band half-width in percent (plan section 6; default 30). */
+    public static double bossPowerBandPercent() {
+        return BOSS_POWER_BAND_PERCENT.get();
     }
 
     /** The configured room event text. */

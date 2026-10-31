@@ -60,6 +60,9 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.DoubleValue DENSITY_QUADRATIC_PER_LAYER;
     private static final ModConfigSpec.DoubleValue DENSITY_PER_POINT;
     private static final ModConfigSpec.IntValue DENSITY_MAX_PER_CHUNK;
+    private static final ModConfigSpec.DoubleValue SPAWNS_BASE_ATTEMPTS;
+    private static final ModConfigSpec.IntValue SPAWNS_ATTEMPT_INTERVAL;
+    private static final ModConfigSpec.IntValue SPAWNS_PLAYER_RANGE;
     private static final ModConfigSpec.DoubleValue STRUCTURE_ELEVATION_AMOUNT;
     private static final ModConfigSpec.DoubleValue STRUCTURE_ELEVATION_RADIUS;
     private static final ModConfigSpec.DoubleValue DIFFICULTY_STAT_MULTIPLIER_PER_POINT;
@@ -243,6 +246,22 @@ public final class DungeonConfigs {
                 .comment("Absolute safety clamp: a chunk's spawn target never exceeds")
                 .comment("this, whatever the curve says.")
                 .defineInRange("maxPerChunk", 24, 0, 1024);
+        builder.pop();
+        builder.push("spawns");
+        SPAWNS_BASE_ATTEMPTS = builder
+                .comment("Baseline ambient spawn attempts per chunk area per cycle")
+                .comment("(plan section 9): the effective target is this times")
+                .comment("(1 + S * density.perPoint), clamped by density.maxPerChunk.")
+                .comment("0 disables ambient spawning outright.")
+                .defineInRange("baseAttempts", 4.0D, 0D, 100D);
+        SPAWNS_ATTEMPT_INTERVAL = builder
+                .comment("Ticks between ambient spawn attempts at one chunk - the")
+                .comment("vanilla mob-spawn cycle length; chunks stagger by phase.")
+                .defineInRange("attemptInterval", 400, 20, 72000);
+        SPAWNS_PLAYER_RANGE = builder
+                .comment("No ambient spawn without a player within this many blocks of")
+                .comment("the position (vanilla's activation distance).")
+                .defineInRange("playerRange", 128, 16, 384);
         builder.pop();
         builder.push("structureElevation");
         STRUCTURE_ELEVATION_AMOUNT = builder
@@ -451,6 +470,21 @@ public final class DungeonConfigs {
     /** The absolute per-chunk spawn-target clamp (plan section 7; default 24). */
     public static int densityMaxPerChunk() {
         return DENSITY_MAX_PER_CHUNK.get();
+    }
+
+    /** The baseline ambient attempts per chunk area (plan section 9; default 4.0). */
+    public static double spawnsBaseAttempts() {
+        return SPAWNS_BASE_ATTEMPTS.get();
+    }
+
+    /** Ticks between ambient spawn attempts at a chunk (plan section 9; default 400). */
+    public static int spawnAttemptInterval() {
+        return SPAWNS_ATTEMPT_INTERVAL.get();
+    }
+
+    /** The player-proximity requirement for ambient spawns (plan section 9; default 128). */
+    public static int spawnPlayerRange() {
+        return SPAWNS_PLAYER_RANGE.get();
     }
 
     /** Each elevation source's additive amount (plan section 7; default 2.0). */

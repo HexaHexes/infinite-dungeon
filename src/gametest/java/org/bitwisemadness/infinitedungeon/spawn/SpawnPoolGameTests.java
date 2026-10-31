@@ -105,4 +105,20 @@ public final class SpawnPoolGameTests {
                 "the malformed entry must drop while the valid half survives: got " + revived);
         helper.succeed();
     }
+
+    /**
+     * The ambient driver's decline path (issue #40): outside a dungeon
+     * dimension the cycle answers zero before any other check - the harness
+     * is the overworld, so a tick through the driver must spawn nothing. The
+     * positive path cannot run here (the harness never hosts the dungeon
+     * dimension - the #37 finding), so the count/phase arithmetic is JUnit
+     * and the in-dimension spawn route is pack-verified at wiring.
+     */
+    @GameTest(template = "empty")
+    public static void ambient_spawner_declines_outside_the_dungeon(GameTestHelper helper) {
+        int spawned = AmbientSpawner.tick(helper.getLevel());
+        helper.assertTrue(spawned == 0,
+                "outside the dungeon the driver must spawn nothing, spawned " + spawned);
+        helper.succeed();
+    }
 }

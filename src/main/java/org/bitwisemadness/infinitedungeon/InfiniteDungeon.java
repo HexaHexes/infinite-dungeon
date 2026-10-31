@@ -19,6 +19,7 @@ import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
+import org.bitwisemadness.infinitedungeon.lock.ProtectionListeners;
 import org.bitwisemadness.infinitedungeon.magicule.DungeonMagiculeProvider;
 import org.bitwisemadness.infinitedungeon.magicule.MagiculeElevation;
 import org.bitwisemadness.infinitedungeon.magicule.MagiculeParticles;
@@ -65,6 +66,13 @@ public final class InfiniteDungeon {
         NeoForge.EVENT_BUS.addListener(DungeonLock::onDimensionChange);
         NeoForge.EVENT_BUS.addListener(DungeonLock::onLoggedIn);
         NeoForge.EVENT_BUS.addListener(DungeonLock::onBlockBreak);
+        // Room-content protection (issue #251): the four verified hooks -
+        // break, explosion, piston, mob griefing - all fast-path on a
+        // declared registration, so they are inert until content registers.
+        NeoForge.EVENT_BUS.addListener(ProtectionListeners::onBreak);
+        NeoForge.EVENT_BUS.addListener(ProtectionListeners::onExplosion);
+        NeoForge.EVENT_BUS.addListener(ProtectionListeners::onPiston);
+        NeoForge.EVENT_BUS.addListener(ProtectionListeners::onMobGrief);
         // Death policy: a dungeon death continues at the lobby - the first
         // layer. The marker attachment rides through respawn.
         LobbyReturn.register(modBus);

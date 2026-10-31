@@ -370,6 +370,19 @@ public final class InfiniteDungeonGameTests {
 
         player.kill();
 
+        // #260's rule for any killing test: the mod's death hook spawns a
+        // corpse unconditionally (DeathEvents, verified in 1.1.21 bytecode),
+        // and an empty one ages out at 600 ticks into the mock-connection crash.
+        for (var corpse : helper.getLevel().getEntitiesOfClass(CorpseEntity.class,
+                player.getBoundingBox().inflate(4.0))) {
+            try {
+                corpse.discard();
+            } catch (UnsupportedOperationException ex) {
+                helper.assertTrue(corpse.isRemoved(),
+                        "the auto-spawned corpse must be gone even when its notification fails");
+            }
+        }
+
         helper.assertTrue(!DungeonDimensions.LEVEL.equals(player.getRespawnDimension()),
                 "a stored dungeon respawn must be cleared at death");
         helper.succeed();

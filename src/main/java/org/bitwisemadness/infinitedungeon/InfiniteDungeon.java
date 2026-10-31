@@ -10,6 +10,7 @@ import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
 import org.bitwisemadness.infinitedungeon.death.LobbyReturn;
 import org.bitwisemadness.infinitedungeon.lanes.FallbackHallFeature;
+import org.bitwisemadness.infinitedungeon.lanes.GuardianChambers;
 import org.bitwisemadness.infinitedungeon.lanes.GuardianGating;
 import org.bitwisemadness.infinitedungeon.lanes.GuardianScheduleHook;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
@@ -126,6 +127,12 @@ public final class InfiniteDungeon {
         // Gating reaction (issue #42, with the C7a team-share rule via #79):
         // a guardian's fall opens its layer in world saved data, once.
         NeoForge.EVENT_BUS.addListener(GuardianGating::onBossSlain);
+        // Guardian respawn (issue #43): chamber-entry spawns on the level
+        // tick (singleton, cooldown, EVENT-typed so the natural-spawn gates
+        // never block a scripted boss), and tagged guardian deaths become the
+        // BossSlainEvent above plus the cooldown stamp.
+        NeoForge.EVENT_BUS.addListener(GuardianChambers::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(GuardianChambers::onLivingDeath);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

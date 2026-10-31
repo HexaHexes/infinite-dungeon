@@ -28,6 +28,10 @@ public final class AnnouncementTexts {
     public static final String LANE_SEALED =
             "This passage is sealed until the layer's guardian falls.";
 
+    /** Shown when a chamber is entered during the guardian's cooldown. */
+    public static final String BOSS_RECOVERING =
+            "The guardian has not yet recovered from its last defeat.";
+
     private AnnouncementTexts() {
     }
 }

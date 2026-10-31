@@ -1,3 +1,5 @@
 {
-  "item.infinite_dungeon.key": "Dungeon Key"
+  "item.infinite_dungeon.key": "Dungeon Key",
+  "dungeon.entry": "You step into the infinite dungeon.",
+  "dungeon.layer": "Layer %s"
 }

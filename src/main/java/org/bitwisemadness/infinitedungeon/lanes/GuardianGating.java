@@ -35,10 +35,12 @@ import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
  * transition proves it - respawn deaths never re-fire. The chain carries no
  * player-presence guard, so an environmental death with zero players present
  * still completes the layer; consumers treat that as unknown attribution
- * rather than player credit (U-10, HexaHexes/tensura-quests#7). Attribution
- * rides infinite-dungeon-api#53 as the follow-up once this module compiles
- * against a release carrying the completing-player overload - until then the
- * event posts via its current constructor.</p>
+ * rather than player credit (U-10, HexaHexes/tensura-quests#7). The
+ * completion forwards this fall's attributable killer from the
+ * {@code BossSlainEvent} payload (the API's attribution, added by
+ * HexaHexes/infinite-dungeon-api#86 and carried since {@code
+ * api_version=1.0.0-alpha.13}); an environmental fall forwards the
+ * documented unknown.</p>
  */
 public final class GuardianGating {
 
@@ -67,10 +69,12 @@ public final class GuardianGating {
         boolean firstFall = LayerUnlocks.of(level).unlock(event.layer());
         if (firstFall) {
             // The completion announcement: first validated guardian fall per
-            // layer per world (the unlock transition proves "first"). Posted
-            // via the current constructor; the completing-player overload
-            // follows infinite-dungeon-api#53 once a release carries it.
-            NeoForge.EVENT_BUS.post(new LayerCompletedEvent(event.dimension(), event.layer()));
+            // layer per world (the unlock transition proves "first").
+            // Completer = this fall's attributable killer forwarded from the
+            // BossSlainEvent payload (api#86); empty = environmental fall,
+            // ADR-0003's documented unknown.
+            NeoForge.EVENT_BUS.post(new LayerCompletedEvent(event.dimension(), event.layer(),
+                    event.killingPlayer().orElse(null)));
         }
     }
 }

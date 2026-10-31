@@ -2,6 +2,7 @@ package org.bitwisemadness.infinitedungeon.lanes;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -127,6 +128,8 @@ public final class GuardianScheduleGameTests {
                     "a non-guardian's fall must not open the gate");
             helper.assertTrue(completions.fired == 0,
                     "a non-guardian's fall must not announce layer completion");
+            helper.assertTrue(completions.completer == null,
+                    "no completion means no completer to forward");
 
             NeoForge.EVENT_BUS.post(new BossSlainEvent(
                     ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse("minecraft:the_end")),
@@ -136,7 +139,8 @@ public final class GuardianScheduleGameTests {
             helper.assertTrue(completions.fired == 0,
                     "a declined kill must not announce layer completion");
 
-            NeoForge.EVENT_BUS.post(new BossSlainEvent(level.dimension(), 0, zombie));
+            UUID killer = UUID.randomUUID();
+            NeoForge.EVENT_BUS.post(new BossSlainEvent(level.dimension(), 0, zombie, killer));
             helper.assertTrue(!LayerUnlocks.isSealed(level, 0),
                     "the guardian's fall must open the gate - world state every "
                             + "player reads, the C7a team-share rule by construction");
@@ -149,8 +153,11 @@ public final class GuardianScheduleGameTests {
                             && harnessDimension.equals(completions.dimensionId),
                     "the completion must carry the completed layer and its dimension, got "
                             + completions.layer + "/" + completions.dimensionId);
+            helper.assertTrue(killer.equals(completions.completer),
+                    "the completion must forward the fall's attributable killer (api#86), got "
+                            + completions.completer);
 
-            NeoForge.EVENT_BUS.post(new BossSlainEvent(level.dimension(), 0, zombie));
+            NeoForge.EVENT_BUS.post(new BossSlainEvent(level.dimension(), 0, zombie, killer));
             helper.assertTrue(unlocks.isUnlocked(0),
                     "a second fall must stay idempotent - the flag only ever opens");
             helper.assertTrue(completions.fired == 1,
@@ -176,12 +183,14 @@ public final class GuardianScheduleGameTests {
         int fired;
         int layer = -1;
         String dimensionId = "";
+        UUID completer;
 
         @SubscribeEvent
         public void onLayerCompleted(LayerCompletedEvent event) {
             fired++;
             layer = event.layer();
             dimensionId = event.dimensionId();
+            completer = event.completingPlayer().orElse(null);
         }
     }
 

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suppressions PUBLIC "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN" "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<!-- Grandfathered findings from the Checkstyle pull: burn-down only, never new code. -->
+<suppressions>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeonGameTests.java" lines="160"/>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeonGameTests.java" lines="205"/>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeonGameTests.java" lines="293"/>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeonGameTests.java" lines="614"/>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeonGameTests.java" lines="915"/>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeonGameTests.java" lines="1053"/>
+    <suppress checks="RegexpMultiline" files="GuardianScheduleGameTests.java" lines="41"/>
+    <suppress checks="RegexpMultiline" files="GuardianScheduleGameTests.java" lines="173"/>
+    <suppress checks="RegexpMultiline" files="GuardianScheduleGameTests.java" lines="185"/>
+    <suppress checks="RegexpMultiline" files="GuardianScheduleGameTests.java" lines="202"/>
+    <suppress checks="RegexpMultiline" files="GuardianScheduleGameTests.java" lines="209"/>
+    <suppress checks="RegexpMultiline" files="SpawnPoolGameTests.java" lines="236"/>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeon.java" lines="112"/>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeon.java" lines="120"/>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeon.java" lines="128"/>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeon.java" lines="139"/>
+    <suppress checks="RegexpMultiline" files="InfiniteDungeon.java" lines="145"/>
+    <suppress checks="RegexpMultiline" files="FloorSchedule.java" lines="37"/>
+    <suppress checks="RegexpMultiline" files="WaystoneEntranceFeature.java" lines="101"/>
+    <suppress checks="RegexpMultiline" files="MagiculeElevation.java" lines="149"/>
+    <suppress checks="RegexpMultiline" files="DungeonPortalTravel.java" lines="43"/>
+    <suppress checks="RegexpMultiline" files="AmbientSpawner.java" lines="152"/>
+    <suppress checks="RegexpMultiline" files="Minibosses.java" lines="132"/>
+    <suppress checks="RegexpMultiline" files="DensityCurveTest.java" lines="117"/>
+    <suppress checks="RegexpMultiline" files="DifficultyCurveTest.java" lines="57"/>
+    <suppress checks="RegexpMultiline" files="DifficultyCurveTest.java" lines="127"/>
+    <suppress checks="RegexpMultiline" files="MagiculeCurveTest.java" lines="112"/>
+    <suppress checks="RegexpMultiline" files="GuardianScheduleTest.java" lines="82"/>
+</suppressions>

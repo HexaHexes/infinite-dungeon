@@ -3,7 +3,9 @@ package org.bitwisemadness.infinitedungeon.lanes;
 import java.util.Optional;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
+import net.neoforged.neoforge.common.NeoForge;
 import org.bitwisemadness.infinitedungeonapi.event.BossSlainEvent;
+import org.bitwisemadness.infinitedungeonapi.event.LayerCompletedEvent;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 
 /**
@@ -26,9 +28,19 @@ import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
  * resolves per-player READS, and the gate read is not one. A future
  * per-player flag model would revisit this note (recorded on #42's design).</p>
  *
- * <p>No production poster exists yet (verified org-wide); #43's spawn side
- * becomes the source. Until then the listener ships live and the harness
- * proves it by posting - the #37 pattern.</p>
+ * <p><b>Poster chain (issue #249):</b> {@code BossSlainEvent} is posted by
+ * the guardian chamber's death side (the #43 spawn loop), and THIS listener
+ * is the {@code LayerCompletedEvent} poster: the first validated guardian
+ * fall per layer per world announces completion exactly where the unlock
+ * transition proves it - respawn deaths never re-fire. The chain carries no
+ * player-presence guard, so an environmental death with zero players present
+ * still completes the layer; consumers treat that as unknown attribution
+ * rather than player credit (U-10, HexaHexes/tensura-quests#7). The
+ * completion forwards this fall's attributable killer from the
+ * {@code BossSlainEvent} payload (the API's attribution, added by
+ * HexaHexes/infinite-dungeon-api#86 and carried since {@code
+ * api_version=1.0.0-alpha.13}); an environmental fall forwards the
+ * documented unknown.</p>
  */
 public final class GuardianGating {
 
@@ -54,6 +66,15 @@ public final class GuardianGating {
         if (!guardian.get().equals(slain)) {
             return; // a boss, but not THIS layer's guardian
         }
-        LayerUnlocks.of(level).unlock(event.layer());
+        boolean firstFall = LayerUnlocks.of(level).unlock(event.layer());
+        if (firstFall) {
+            // The completion announcement: first validated guardian fall per
+            // layer per world (the unlock transition proves "first").
+            // Completer = this fall's attributable killer forwarded from the
+            // BossSlainEvent payload (api#86); empty = environmental fall,
+            // ADR-0003's documented unknown.
+            NeoForge.EVENT_BUS.post(new LayerCompletedEvent(event.dimension(), event.layer(),
+                    event.killingPlayer().orElse(null)));
+        }
     }
 }

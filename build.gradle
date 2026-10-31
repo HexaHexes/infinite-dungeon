@@ -290,6 +290,15 @@ spotbugsMain {
     }
 }
 
+spotbugsGametest {
+    // Same layout as main so findings are readable locally and ride
+    // the CI's spotbugs-report artifact upload.
+    reports {
+        html.required = true
+        xml.required = false
+    }
+}
+
 spotless {
     enforceCheck false
     java {

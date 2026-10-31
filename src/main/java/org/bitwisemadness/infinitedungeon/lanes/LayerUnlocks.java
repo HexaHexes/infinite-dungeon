@@ -60,11 +60,18 @@ public final class LayerUnlocks extends SavedData {
         return unlocked.contains(layer);
     }
 
-    /** Records a guardian's fall; idempotent. */
-    public void unlock(int layer) {
-        if (unlocked.add(layer)) {
+    /**
+     * Records a guardian's fall; idempotent.
+     *
+     * @return true only on the FIRST fall for the layer - the completion
+     *     transition the {@code LayerCompletedEvent} poster announces
+     */
+    public boolean unlock(int layer) {
+        boolean firstFall = unlocked.add(layer);
+        if (firstFall) {
             setDirty();
         }
+        return firstFall;
     }
 
     /**

@@ -23,6 +23,7 @@ import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
 import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
 import org.bitwisemadness.infinitedungeon.spawn.SpawnAttributeScaling;
+import org.bitwisemadness.infinitedungeon.spawn.SpawnPoolReloadListener;
 import org.bitwisemadness.infinitedungeon.time.DungeonTime;
 import org.bitwisemadness.infinitedungeonapi.magicule.AmbientMagicule;
 import org.slf4j.Logger;
@@ -107,6 +108,11 @@ public final class InfiniteDungeon {
         SpawnAttributeScaling.registerDefaultRows();
         NeoForge.EVENT_BUS.addListener(SpawnAttributeScaling::onLevelLoad);
         NeoForge.EVENT_BUS.addListener(SpawnAttributeScaling::onEntityJoin);
+        // Spawn pools (plan section 10, issue #39): datapack JSON under
+        // data/<ns>/infinite_dungeon/pools, reloaded with /reload like every
+        // suite data type - core owns the registry, the API owns the
+        // machinery (I32).
+        NeoForge.EVENT_BUS.addListener(SpawnPoolReloadListener::onAddReloadListeners);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

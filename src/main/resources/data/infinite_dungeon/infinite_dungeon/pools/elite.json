@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {"entity": "mowziesmobs:frostmaw", "required_mod": "mowziesmobs"},
+    {"entity": "mowziesmobs:naga", "required_mod": "mowziesmobs"},
+    {"entity": "mowziesmobs:sculptor", "required_mod": "mowziesmobs"},
+    {"entity": "mowziesmobs:wroughtnaut", "required_mod": "mowziesmobs"},
+    {"entity": "mowziesmobs:umvuthana", "required_mod": "mowziesmobs"},
+    {"entity": "mowziesmobs:umvuthana_crane", "required_mod": "mowziesmobs"},
+    {"entity": "mowziesmobs:umvuthana_raptor", "required_mod": "mowziesmobs"},
+    {"entity": "mowziesmobs:umvuthi", "required_mod": "mowziesmobs"},
+    {"entity": "mobs_of_mythology:wendigo", "required_mod": "mobs_of_mythology"},
+    {"entity": "mobs_of_mythology:drake", "required_mod": "mobs_of_mythology"}
+  ]
+}

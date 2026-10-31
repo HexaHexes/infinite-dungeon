@@ -1,6 +1,8 @@
 package org.bitwisemadness.infinitedungeon.spawn;
 
 import com.google.gson.JsonParser;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -243,6 +245,48 @@ public final class SpawnPoolGameTests {
             SpawnPools.setDatapack(Map.of());
             DimensionProfiles.remove(harnessDimension);
         }
+    }
+    /**
+     * The SHIPPED roster defaults parse and stay gated (issue #61): reads the
+     * real resources off the classpath through the real listener - exact
+     * entry counts pin the shipped content - and, because every entry carries
+     * a verified required_mod while the harness has no such mods, the pools
+     * answer EMPTY candidates at every layer: the "data for optional content"
+     * contract the schema exists for, proven on production bytes.
+     */
+    @GameTest(template = "empty")
+    public static void shipped_roster_pools_parse_and_stay_gated(GameTestHelper helper) {
+        var listener = new SpawnPoolReloadListener();
+        try {
+            int expectedFodder = 15;
+            int expectedElite = 10;
+            for (Object[] pool : new Object[][] {
+                    {"fodder", expectedFodder}, {"elite", expectedElite}}) {
+                String name = (String) pool[0];
+                int expected = (Integer) pool[1];
+                String path = "/data/infinite_dungeon/infinite_dungeon/pools/" + name + ".json";
+                var stream = SpawnPoolReloadListener.class.getResourceAsStream(path);
+                helper.assertTrue(stream != null, "the shipped " + name + " pool must exist: " + path);
+                ResourceLocation location = ResourceLocation.fromNamespaceAndPath(
+                        InfiniteDungeon.MOD_ID, "infinite_dungeon/pools/" + name);
+                List<SpawnPoolEntry> parsed = listener.parse(location, JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8)));
+                helper.assertTrue(parsed.size() == expected,
+                        "the shipped " + name + " pool must carry its verified entries: got "
+                                + parsed.size() + ", want " + expected);
+                listener.applyEntries(Map.of(location, parsed));
+                String poolId = InfiniteDungeon.MOD_ID + ":" + name;
+                helper.assertTrue(SpawnPools.exists(poolId),
+                        "the pool id must be the location minus the data directory");
+                for (int layer : new int[] {0, 5, 10}) {
+                    helper.assertTrue(SpawnPools.candidates(poolId, layer).isEmpty(),
+                            name + " must stay gated without its mods (layer " + layer
+                                    + "): got " + SpawnPools.candidates(poolId, layer));
+                }
+            }
+        } finally {
+            SpawnPools.setDatapack(Map.of());
+        }
+        helper.succeed();
     }
     /** The live tagged miniboss of a floor, or null (visible sections only). */
     private static Mob findMiniboss(ServerLevel level, int layer, int floor) {

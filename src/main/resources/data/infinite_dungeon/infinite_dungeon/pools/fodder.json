@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {"entity": "mowziesmobs:foliaath", "required_mod": "mowziesmobs"},
+    {"entity": "mowziesmobs:grottol", "required_mod": "mowziesmobs"},
+    {"entity": "mowziesmobs:lantern", "required_mod": "mowziesmobs"},
+    {"entity": "mowziesmobs:bluff", "required_mod": "mowziesmobs"},
+    {"entity": "mobs_of_mythology:automaton", "required_mod": "mobs_of_mythology"},
+    {"entity": "mobs_of_mythology:basilisk", "required_mod": "mobs_of_mythology"},
+    {"entity": "mobs_of_mythology:chupacabra", "required_mod": "mobs_of_mythology"},
+    {"entity": "mobs_of_mythology:kobold", "required_mod": "mobs_of_mythology"},
+    {"entity": "mobs_of_mythology:kobold_warrior", "required_mod": "mobs_of_mythology"},
+    {"entity": "mobs_of_mythology:sporeling", "required_mod": "mobs_of_mythology"},
+    {"entity": "mobs_of_mythology:pegasus", "required_mod": "mobs_of_mythology"},
+    {"entity": "variantsandventures:gelid", "required_mod": "variantsandventures"},
+    {"entity": "variantsandventures:murk", "required_mod": "variantsandventures"},
+    {"entity": "variantsandventures:thicket", "required_mod": "variantsandventures"},
+    {"entity": "variantsandventures:verdant", "required_mod": "variantsandventures"}
+  ]
+}

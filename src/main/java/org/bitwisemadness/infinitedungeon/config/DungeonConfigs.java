@@ -73,6 +73,10 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.ConfigValue<String> BOSS_RECOVERING;
     private static final ModConfigSpec.IntValue BOSS_RESPAWN_COOLDOWN;
     private static final ModConfigSpec.IntValue BOSS_ENTRY_RADIUS;
+    private static final ModConfigSpec.IntValue MINIBOSS_START_LAYER;
+    private static final ModConfigSpec.IntValue MINIBOSS_EVERY_N_FLOORS;
+    private static final ModConfigSpec.DoubleValue MINIBOSS_STAT_MULTIPLIER;
+    private static final ModConfigSpec.BooleanValue TREASURE_ROOMS_REQUIRE_KEY;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -121,6 +125,28 @@ public final class DungeonConfigs {
                 .comment("Blocks from a layer's departure interior at which a player")
                 .comment("counts as entering the guardian's chamber.")
                 .defineInRange("entryRadius", 16, 1, 64);
+        builder.pop();
+        builder.push("miniboss");
+        MINIBOSS_START_LAYER = builder
+                .comment("First layer (inclusive) whose floors may field a miniboss")
+                .comment("(plan section 6, default 3).")
+                .defineInRange("startLayer", 3, 0, 1000);
+        MINIBOSS_EVERY_N_FLOORS = builder
+                .comment("One miniboss per this many floors within a layer (plan")
+                .comment("section 6, default 3) - deeper layers with more floors get")
+                .comment("more minibosses. Floor 0 never fields one: entrances are")
+                .comment("safe rooms (plan section 11).")
+                .defineInRange("everyNFloors", 3, 1, 100);
+        MINIBOSS_STAT_MULTIPLIER = builder
+                .comment("Miniboss stats multiply by this ON TOP of the depth-and-party")
+                .comment("factor (plan section 7: the miniboss multiplier stacks last).")
+                .defineInRange("statMultiplier", 2.0D, 0.1D, 100D);
+        builder.pop();
+        builder.push("treasure");
+        TREASURE_ROOMS_REQUIRE_KEY = builder
+                .comment("Whether sealed treasure rooms demand the miniboss key (plan")
+                .comment("section 11; consumed by the treasure room issue).")
+                .define("requireKey", true);
         builder.pop();
         builder.push("time");
         TIME_FLOWS = builder
@@ -371,6 +397,26 @@ public final class DungeonConfigs {
     /** The within-cooldown chamber flavor message (issue #43). */
     public static String bossRecovering() {
         return BOSS_RECOVERING.get();
+    }
+
+    /** First layer (inclusive) fielding minibosses (plan section 6; default 3). */
+    public static int minibossStartLayer() {
+        return MINIBOSS_START_LAYER.get();
+    }
+
+    /** Floors between minibosses within a layer (plan section 6; default 3). */
+    public static int minibossEveryNFloors() {
+        return MINIBOSS_EVERY_N_FLOORS.get();
+    }
+
+    /** The miniboss stat stack multiplier (plan section 7; default 2.0). */
+    public static double minibossStatMultiplier() {
+        return MINIBOSS_STAT_MULTIPLIER.get();
+    }
+
+    /** Whether treasure rooms demand the key (plan section 11; default on). */
+    public static boolean treasureRoomsRequireKey() {
+        return TREASURE_ROOMS_REQUIRE_KEY.get();
     }
 
     /** The configured room event text. */

@@ -26,9 +26,11 @@ import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeon.portal.PortalIgnition;
 import org.bitwisemadness.infinitedungeon.spawn.AmbientSpawner;
 import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
+import org.bitwisemadness.infinitedungeon.spawn.Minibosses;
 import org.bitwisemadness.infinitedungeon.spawn.SpawnAttributeScaling;
 import org.bitwisemadness.infinitedungeon.spawn.SpawnPoolReloadListener;
 import org.bitwisemadness.infinitedungeon.time.DungeonTime;
+import org.bitwisemadness.infinitedungeon.treasure.KeyItems;
 import org.bitwisemadness.infinitedungeonapi.magicule.AmbientMagicule;
 import org.slf4j.Logger;
 /**
@@ -52,6 +54,7 @@ public final class InfiniteDungeon {
         // here is safe on both distributions (it is only loaded on the client).
         PortalTint.register(container);
         PortalBlocks.register(modBus);
+        KeyItems.register(modBus);
         // The per-player entry anchor is a data attachment: registered here,
         // persisted with the player.
         EntryAnchors.register(modBus);
@@ -133,6 +136,12 @@ public final class InfiniteDungeon {
         // BossSlainEvent above plus the cooldown stamp.
         NeoForge.EVENT_BUS.addListener(GuardianChambers::onLevelTick);
         NeoForge.EVENT_BUS.addListener(GuardianChambers::onLivingDeath);
+        // Miniboss raids (issue #41): floor-entry spawns beside the entrant
+        // (the trigger's production poster is the depth tracker, #238 - this
+        // listener ships testable-by-posting, the #42 pattern); tagged deaths
+        // stamp the floor and drop the key.
+        NeoForge.EVENT_BUS.addListener(Minibosses::onFloorEntered);
+        NeoForge.EVENT_BUS.addListener(Minibosses::onLivingDeath);
         LOGGER.info("Infinite Dungeon initialized");
     }
 }

@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.level.ChunkPos;
@@ -96,22 +97,34 @@ public final class GuardianChambers {
         }
         long now = level.getGameTime();
         for (ServerPlayer player : level.players()) {
-            Outcome outcome = consider(level, player.blockPosition(), now);
-            if (outcome == Outcome.COOLDOWN && flavorDue(player, now)) {
+            Decision decision = consider(level, player.blockPosition(), now);
+            if (decision.outcome() == Outcome.COOLDOWN && flavorDue(player, now)) {
                 DungeonAnnouncements.send(player, Announcement.BOSS_RECOVERING);
             }
         }
     }
 
     /**
-     * One player's approach at a position: the complete decision, as an
-     * outcome. Package-visible so the harness drives the real logic without
-     * a player entity (the design's test seam).
+     * One player's approach at a position: the complete decision as
+     * outcome plus the spawned entity when there is one. Package-visible so
+     * the harness drives the real logic without a player entity (the
+     * design's test seam). The entity rides the result rather than being
+     * re-found through {@code getAllEntities}: that iterates only VISIBLE
+     * entity sections, so a seed-jittered spawn outside the harness's
+     * loaded region would exist yet be unfindable (the CI flake the result
+     * payload fixes).
      */
-    static Outcome consider(ServerLevel level, BlockPos playerPos, long now) {
+    record Decision(Outcome outcome, LivingEntity spawned) {
+
+        static Decision of(Outcome outcome) {
+            return new Decision(outcome, null);
+        }
+    }
+
+    static Decision consider(ServerLevel level, BlockPos playerPos, long now) {
         var placement = LaneGrid.placement();
         if (placement == null) {
-            return Outcome.OUT_OF_RANGE; // lanes unreadable: quiet, like pairTarget
+            return Decision.of(Outcome.OUT_OF_RANGE); // lanes unreadable: quiet, like pairTarget
         }
         long seed = level.getSeed();
         ChunkPos cell = placement.getPotentialStructureChunk(
@@ -122,47 +135,52 @@ public final class GuardianChambers {
         long dy = playerPos.getY() - interior.getY();
         long dz = playerPos.getZ() - interior.getZ();
         if (dx * dx + dy * dy + dz * dz > (long) radius * radius) {
-            return Outcome.OUT_OF_RANGE;
+            return Decision.of(Outcome.OUT_OF_RANGE);
         }
         int layer = LaneGeometry.laneIndex(interior.getX(), LaneGrid.laneStride());
         if (layer < 0 || !LayerUnlocks.hasGuardian(layer)) {
-            return Outcome.NOT_ASSIGNED;
+            return Decision.of(Outcome.NOT_ASSIGNED);
         }
         if (guardianAlive(level, layer)) {
-            return Outcome.ALIVE;
+            return Decision.of(Outcome.ALIVE);
         }
         long cooldown = cooldownFor(level, layer);
         if (!RespawnCooldown.canRespawn(
                 GuardianDefeats.of(level).elapsedSeconds(layer, now), cooldown)) {
-            return Outcome.COOLDOWN;
+            return Decision.of(Outcome.COOLDOWN);
         }
-        return spawn(level, layer, interior) ? Outcome.SPAWNED : Outcome.REFUSED;
+        LivingEntity spawned = spawn(level, layer, interior);
+        if (spawned == null) {
+            return Decision.of(Outcome.REFUSED);
+        }
+        return new Decision(Outcome.SPAWNED, spawned);
     }
 
-    private static boolean spawn(ServerLevel level, int layer, BlockPos interior) {
+    /** The guardian, or null when identity/creation/vanilla sanity refused. */
+    private static LivingEntity spawn(ServerLevel level, int layer, BlockPos interior) {
         Optional<String> guardian = GuardianScheduleHook.guardianIdFor(level, layer);
         if (guardian.isEmpty()) {
-            return false;
+            return null;
         }
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(
                 ResourceLocation.parse(guardian.get()));
         var created = type.create(level);
         if (!(created instanceof Mob mob)) {
-            return false;
+            return null;
         }
         mob.setPos(interior.getX() + 0.5, interior.getY(), interior.getZ() + 0.5);
         if (!EventHooks.checkSpawnPosition(mob, level, MobSpawnType.EVENT)) {
-            return false; // vanilla sanity said no; never added, nothing to undo
+            return null; // vanilla sanity said no; never added, nothing to undo
         }
         mob.finalizeSpawn(level, level.getCurrentDifficultyAt(interior),
                 MobSpawnType.EVENT, null);
         if (!level.addFreshEntity(mob)) {
-            return false;
+            return null;
         }
         mob.addTag(GUARDIAN_TAG);
         mob.addTag(LAYER_TAG_PREFIX + layer);
         DungeonAnnouncements.broadcast(level, Announcement.BOSS_AWAKENING);
-        return true;
+        return mob;
     }
 
     /** Whether the layer's tagged guardian currently walks the level. */

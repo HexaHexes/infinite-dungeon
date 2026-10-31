@@ -8,7 +8,6 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
@@ -171,10 +170,22 @@ public final class GuardianScheduleGameTests {
         var interior = LaneTransitions.departureInterior(minBuild, cell);
         helper.assertTrue(LaneGeometry.laneIndex(interior.getX(), LaneGrid.laneStride()) == 0,
                 "the probe cell must sit in lane 0, got " + interior);
+        // The cell's chunk is seed-jittered inside region 0, unloaded beyond
+        // the harness's spawn radius on some seeds: addFreshEntity accepts an
+        // unloaded chunk's entity, but getAllEntities iterates only visible
+        // sections (the CI flake, root-caused). Forcing is ASYNC - the chunk
+        // loads over the following ticks - so the whole scenario runs one
+        // delay AFTER setup, exactly like production entries, which are
+        // seconds apart on the per-second scan.
+        level.setChunkForced(cell.x, cell.z, true);
         level.setBlock(interior, Blocks.AIR.defaultBlockState(), 3);
         level.setBlock(interior.above(), Blocks.AIR.defaultBlockState(), 3);
         level.setBlock(interior.above(2), Blocks.AIR.defaultBlockState(), 3);
 
+        // Premise resets at START: the harness world persists between runs and
+        // across continuations (a failure inside the hop never reaches the
+        // end-of-test restore, so the next run must self-heal - the guardian
+        // purge below doubles as the leftover cleaner).
         String harnessDimension = level.dimension().location().toString();
         DimensionProfiles.register(new DimensionProfile(
                 harnessDimension,
@@ -185,29 +196,40 @@ public final class GuardianScheduleGameTests {
         LayerUnlocks.setGuardianAssigned(layer -> false);
         var defeats = GuardianDefeats.of(level);
         defeats.forget(0);
-        try {
+        LivingEntity[] spawnedHolder = new LivingEntity[1];
+
+        helper.runAfterDelay(5, () -> {
+            for (var entity : level.getAllEntities()) {
+                if (entity.getTags().contains(GuardianChambers.GUARDIAN_TAG)) {
+                    entity.discard(); // leftovers of earlier runs are not premise
+                }
+            }
             long now = level.getGameTime();
-            helper.assertTrue(GuardianChambers.consider(level, interior, now)
+            helper.assertTrue(GuardianChambers.consider(level, interior, now).outcome()
                             == GuardianChambers.Outcome.NOT_ASSIGNED,
                     "before assignment the chamber must stay quiet");
 
             LayerUnlocks.setGuardianAssigned(layer -> layer == 0);
-            helper.assertTrue(GuardianChambers.consider(level, interior.offset(-40, 0, 0), now)
+            helper.assertTrue(GuardianChambers.consider(level, interior.offset(-40, 0, 0), now).outcome()
                             == GuardianChambers.Outcome.OUT_OF_RANGE,
                     "an approach outside entryRadius must not trigger");
 
-            helper.assertTrue(GuardianChambers.consider(level, interior, now)
+            var firstSpawn = GuardianChambers.consider(level, interior, now);
+            helper.assertTrue(firstSpawn.outcome()
                             == GuardianChambers.Outcome.SPAWNED,
-                    "the first entry must spawn the guardian at once (no first-spawn wait)");
-            LivingEntity alive = findGuardian(level);
-            helper.assertTrue(alive != null, "the spawned guardian must be tagged and findable");
+                    "the first entry must spawn the guardian at once (no first-spawn wait); got "
+                            + firstSpawn.outcome());
+            LivingEntity alive = firstSpawn.spawned();
+            spawnedHolder[0] = alive;
+            helper.assertTrue(alive != null, "the spawn payload must carry the guardian");
             helper.assertTrue(alive.getTags().contains(GuardianChambers.GUARDIAN_TAG)
                             && alive.getTags().contains("infinite_dungeon_guardian_layer_0"),
                     "guardian and layer tags must be set");
 
-            helper.assertTrue(GuardianChambers.consider(level, interior, now)
+            var secondEntry = GuardianChambers.consider(level, interior, now);
+            helper.assertTrue(secondEntry.outcome()
                             == GuardianChambers.Outcome.ALIVE,
-                    "the singleton must hold on a second entry");
+                    "the singleton must hold on a second entry; got " + secondEntry.outcome());
 
             NeoForge.EVENT_BUS.post(new LivingDeathEvent(alive, level.damageSources().generic()));
             alive.discard(); // the real death removes the body too
@@ -216,35 +238,29 @@ public final class GuardianScheduleGameTests {
             helper.assertTrue(defeats.elapsedSeconds(0, level.getGameTime()).isPresent(),
                     "the death must stamp the cooldown");
 
-            helper.assertTrue(GuardianChambers.consider(level, interior, level.getGameTime())
+            var duringCooldown = GuardianChambers.consider(level, interior, level.getGameTime());
+            helper.assertTrue(duringCooldown.outcome()
                             == GuardianChambers.Outcome.COOLDOWN,
-                    "within the cooldown the chamber must stay empty");
+                    "within the cooldown the chamber must stay empty; got "
+                            + duringCooldown.outcome());
 
             defeats.record(0, level.getGameTime() - 601L * 20L);
-            helper.assertTrue(GuardianChambers.consider(level, interior, level.getGameTime())
+            var returnSpawn = GuardianChambers.consider(level, interior, level.getGameTime());
+            helper.assertTrue(returnSpawn.outcome()
                             == GuardianChambers.Outcome.SPAWNED,
-                    "past the cooldown the guardian must return on entry");
-            helper.succeed();
-        } finally {
-            LivingEntity survivor = findGuardian(level);
-            if (survivor != null) {
-                survivor.discard();
+                    "past the cooldown the guardian must return on entry; got "
+                            + returnSpawn.outcome());
+
+            // End-of-test restore (happy path; start-premise covers failures).
+            if (spawnedHolder[0] != null) {
+                spawnedHolder[0].discard();
             }
             GuardianSchedule.setRoster(List.of());
             LayerUnlocks.setGuardianAssigned(layer -> false);
             defeats.forget(0);
             DimensionProfiles.remove(harnessDimension);
-        }
-    }
-
-    /** The live tagged guardian of any layer, or null. */
-    private static LivingEntity findGuardian(ServerLevel level) {
-        for (Entity entity : level.getAllEntities()) {
-            if (entity instanceof LivingEntity living
-                    && living.getTags().contains(GuardianChambers.GUARDIAN_TAG)) {
-                return living;
-            }
-        }
-        return null;
+            level.setChunkForced(cell.x, cell.z, false);
+            helper.succeed();
+        });
     }
 }

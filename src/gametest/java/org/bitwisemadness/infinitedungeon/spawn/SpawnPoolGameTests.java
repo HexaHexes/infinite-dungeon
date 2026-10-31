@@ -6,15 +6,18 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.block.Blocks;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -24,6 +27,7 @@ import org.bitwisemadness.infinitedungeon.lanes.BossRosterBootstrap;
 import org.bitwisemadness.infinitedungeon.lanes.GuardianSchedule;
 import org.bitwisemadness.infinitedungeon.treasure.KeyItems;
 import org.bitwisemadness.infinitedungeonapi.event.FloorEnteredEvent;
+import org.bitwisemadness.infinitedungeonapi.event.MinibossSlainEvent;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 import org.bitwisemadness.infinitedungeonapi.profile.ProfilePools;
@@ -263,6 +267,8 @@ public final class SpawnPoolGameTests {
             }
         }
         player.setPos(px + 0.5, py, pz + 0.5);
+        MinibossSlainCounter raids = new MinibossSlainCounter();
+        NeoForge.EVENT_BUS.register(raids);
         try {
             // The listener's thin resolution path runs for an unassigned floor
             // (best-effort glue; the seam below carries the observable logic).
@@ -295,13 +301,40 @@ public final class SpawnPoolGameTests {
                     "the death must stamp the floor as slain");
             helper.assertTrue(hasKeyDrop(level),
                     "the death must drop the dungeon key");
+            helper.assertTrue(raids.fired == 1,
+                    "the death must announce MinibossSlainEvent exactly once, got " + raids.fired);
+            helper.assertTrue(raids.layer == 3 && raids.floor == 3,
+                    "the announcement must carry the tagged layer and floor, got "
+                            + raids.layer + "/" + raids.floor);
+            helper.assertTrue(raids.boss == miniboss,
+                    "the announcement must carry the slain boss");
+            helper.assertTrue(raids.killerId == null,
+                    "an environmental kill must carry the documented unknown killer, got "
+                            + raids.killerId);
 
             helper.assertTrue(Minibosses.onApproach(level, player, 3, 3)
                             == Minibosses.Outcome.SLAIN,
                     "a slain floor must stay quiet on re-entry; got "
                             + Minibosses.onApproach(level, player, 3, 3));
+
+            // A fresh raid on the same floor, this time killed by the player:
+            // the ADR-0003 attribution forwards the killing player (api#83).
+            slay.forget(3, 3);
+            helper.assertTrue(Minibosses.onApproach(level, player, 3, 3)
+                            == Minibosses.Outcome.SPAWNED,
+                    "the reset floor must re-field the miniboss; got "
+                            + Minibosses.onApproach(level, player, 3, 3));
+            var second = findMiniboss(level, 3, 3);
+            helper.assertTrue(second != null, "the second raid must be findable");
+            NeoForge.EVENT_BUS.post(new LivingDeathEvent(second, level.damageSources().playerAttack(player)));
+            second.discard();
+            helper.assertTrue(raids.fired == 2,
+                    "the second death must announce too, got " + raids.fired);
+            helper.assertTrue(player.getUUID().equals(raids.killerId),
+                    "a player kill must forward the killing player's id, got " + raids.killerId);
             helper.succeed();
         } finally {
+            NeoForge.EVENT_BUS.unregister(raids);
             var survivor = findMiniboss(level, 3, 3);
             if (survivor != null) {
                 survivor.discard();
@@ -312,6 +345,30 @@ public final class SpawnPoolGameTests {
             DimensionProfiles.remove(harnessDimension);
         }
     }
+
+    /**
+     * Records MinibossSlainEvent posts; public so the bus can invoke it.
+     * Bus posts and the test's reads all happen on the server thread,
+     * so plain fields suffice.
+     */
+    public static final class MinibossSlainCounter {
+
+        int fired;
+        int layer = -1;
+        int floor = -1;
+        LivingEntity boss;
+        UUID killerId;
+
+        @SubscribeEvent
+        public void onMinibossSlain(MinibossSlainEvent event) {
+            fired++;
+            layer = event.layer();
+            floor = event.floor();
+            boss = event.boss();
+            killerId = event.killingPlayer().orElse(null);
+        }
+    }
+
     /**
      * The SHIPPED roster defaults parse and stay gated (issue #61): reads the
      * real resources off the classpath through the real listener - exact

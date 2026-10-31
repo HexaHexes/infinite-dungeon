@@ -1,20 +1,24 @@
 package org.bitwisemadness.infinitedungeon.spawn;
 
 import java.util.Optional;
+import java.util.UUID;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.treasure.KeyItems;
 import org.bitwisemadness.infinitedungeonapi.event.FloorEnteredEvent;
+import org.bitwisemadness.infinitedungeonapi.event.MinibossSlainEvent;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 import org.bitwisemadness.infinitedungeonapi.stats.AttributeScaling;
@@ -43,7 +47,10 @@ import org.bitwisemadness.infinitedungeonapi.stats.AttributeScaling;
  *
  * <p><b>Death</b>: the floor stamps {@link MinibossSlain} and the key drops
  * unconditionally - the treasure toggle governs REQUIRING keys, never
- * earning them.</p>
+ * earning them - and the fall posts {@code MinibossSlainEvent} (api#83):
+ * layer and floor straight from the tag that proved identity, the boss
+ * valid at fire, and the attributable killer (ADR-0003 - a player source
+ * only, documented unknown otherwise).</p>
  */
 public final class Minibosses {
 
@@ -175,7 +182,11 @@ public final class Minibosses {
         return Outcome.SPAWNED;
     }
 
-    /** The death side: stamp the floor, drop the key. */
+    /**
+     * The death side: stamp the floor, drop the key, announce the raid.
+     * The tag is the authority for identity and coordinates; the announcement
+     * rides the same payload the stamp used.
+     */
     public static void onLivingDeath(LivingDeathEvent event) {
         if (!event.getEntity().getTags().contains(MINIBOSS_TAG)) {
             return;
@@ -192,6 +203,19 @@ public final class Minibosses {
         }
         MinibossSlain.of(level).slay(coordinates[0], coordinates[1]);
         event.getEntity().spawnAtLocation(new ItemStack(KeyItems.KEY.get()));
+        NeoForge.EVENT_BUS.post(new MinibossSlainEvent(level.dimension(),
+                coordinates[0], coordinates[1], event.getEntity(), killerId(event.getSource())));
+    }
+
+    /**
+     * ADR-0003: the killing player where the kill is attributable to one;
+     * {@code null} is the documented unknown (environmental or mob kills -
+     * presence must never be used to invent a killer). The indirect entity
+     * wins first so a player's projectile still credits its shooter.
+     */
+    private static UUID killerId(DamageSource source) {
+        Entity killer = source.getEntity() != null ? source.getEntity() : source.getDirectEntity();
+        return killer instanceof Player player ? player.getUUID() : null;
     }
 
     private static boolean guardianOfKindAlive(ServerLevel level, String tag) {

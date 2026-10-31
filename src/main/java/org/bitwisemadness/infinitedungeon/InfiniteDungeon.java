@@ -5,6 +5,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import org.bitwisemadness.infinitedungeon.boss.BossBars;
 import org.bitwisemadness.infinitedungeon.client.PortalTint;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.death.CorpseCleanup;
@@ -137,6 +138,10 @@ public final class InfiniteDungeon {
         // suite data type - core owns the registry, the API owns the
         // machinery (I32).
         NeoForge.EVENT_BUS.addListener(SpawnPoolReloadListener::onAddReloadListeners);
+        // Boss bars (issue #253, D35 presentation-only): the single lifecycle
+        // listener - progress, audience, and reaping - for the fights the two
+        // spawn sites register through BossBars.track.
+        NeoForge.EVENT_BUS.addListener(BossBars::onLevelTick);
         // Room gate instances (issue #252): datapack JSON under
         // data/<ns>/infinite_dungeon/gates, reloaded with /reload - the same
         // suite-data posture as spawn pools. Placed gates re-read their

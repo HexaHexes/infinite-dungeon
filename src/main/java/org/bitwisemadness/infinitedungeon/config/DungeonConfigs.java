@@ -73,6 +73,7 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.ConfigValue<String> BOSS_RECOVERING;
     private static final ModConfigSpec.IntValue BOSS_RESPAWN_COOLDOWN;
     private static final ModConfigSpec.IntValue BOSS_ENTRY_RADIUS;
+    private static final ModConfigSpec.BooleanValue BOSS_BAR_ENABLED;
     private static final ModConfigSpec.IntValue MINIBOSS_START_LAYER;
     private static final ModConfigSpec.IntValue MINIBOSS_EVERY_N_FLOORS;
     private static final ModConfigSpec.DoubleValue MINIBOSS_STAT_MULTIPLIER;
@@ -125,6 +126,12 @@ public final class DungeonConfigs {
                 .comment("Blocks from a layer's departure interior at which a player")
                 .comment("counts as entering the guardian's chamber.")
                 .defineInRange("entryRadius", 16, 1, 64);
+        BOSS_BAR_ENABLED = builder
+                .comment("Show a boss bar for each fight entity (guardian, miniboss,")
+                .comment("adopted boss) while it walks the level (issue #253).")
+                .comment("Presentation only - no gameplay effect. Turning this off")
+                .comment("reaps every visible bar on the next tick.")
+                .define("bossBar", true);
         builder.pop();
         builder.push("miniboss");
         MINIBOSS_START_LAYER = builder
@@ -392,6 +399,20 @@ public final class DungeonConfigs {
     /** The chamber-entry proximity radius in blocks (issue #43; default 16). */
     public static int bossEntryRadius() {
         return BOSS_ENTRY_RADIUS.get();
+    }
+
+    /** Whether fight entities get a boss bar (issue #253; default on). */
+    public static boolean bossBarEnabled() {
+        return BOSS_BAR_ENABLED.get();
+    }
+
+    /**
+     * Flips the boss-bar toggle through the real config value (issue #253).
+     * Called by the gametests, which need the off switch provable without a
+     * config file edit - the {@code setGuardianAssigned} seam's pattern.
+     */
+    public static void setBossBarEnabled(boolean enabled) {
+        BOSS_BAR_ENABLED.set(enabled);
     }
 
     /** The within-cooldown chamber flavor message (issue #43). */

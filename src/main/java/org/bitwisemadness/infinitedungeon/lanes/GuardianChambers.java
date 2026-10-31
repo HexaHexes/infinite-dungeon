@@ -20,6 +20,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
+import org.bitwisemadness.infinitedungeon.boss.BossBars;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.spawn.EventSpawnSanity;
 import org.bitwisemadness.infinitedungeonapi.event.BossSlainEvent;
@@ -201,6 +202,10 @@ public final class GuardianChambers {
         }
         mob.addTag(GUARDIAN_TAG);
         mob.addTag(LAYER_TAG_PREFIX + layer);
+        // Boss bar (issue #253): present the fight while it walks the level;
+        // called here - after the tags - because the join event fires before
+        // them, and ambient spawns never call it.
+        BossBars.track(level, mob);
         DungeonAnnouncements.broadcast(level, Announcement.BOSS_AWAKENING);
         return new Decision(Outcome.SPAWNED, mob);
     }

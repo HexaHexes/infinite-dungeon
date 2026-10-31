@@ -16,9 +16,12 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.lanes.FightRecords;
+import org.bitwisemadness.infinitedungeon.lanes.RespawnGate;
 import org.bitwisemadness.infinitedungeon.treasure.KeyItems;
 import org.bitwisemadness.infinitedungeonapi.event.FloorEnteredEvent;
 import org.bitwisemadness.infinitedungeonapi.event.MinibossSlainEvent;
+import org.bitwisemadness.infinitedungeonapi.profile.BossRespawnPolicy;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 import org.bitwisemadness.infinitedungeonapi.stats.AttributeScaling;
@@ -111,7 +114,8 @@ public final class Minibosses {
                 DungeonConfigs.minibossStartLayer(), DungeonConfigs.minibossEveryNFloors())) {
             return Outcome.NOT_ASSIGNED;
         }
-        if (MinibossSlain.of(level).isSlain(layer, floor)) {
+        if (MinibossSlain.of(level).isSlain(layer, floor)
+                && !respawnAllowed(level, player, layer, floor)) {
             return Outcome.SLAIN;
         }
         if (guardianOfKindAlive(level, floorTag(layer, floor))) {
@@ -201,7 +205,9 @@ public final class Minibosses {
         if (coordinates == null) {
             return; // foreign/corrupt tag: never stamp on a guess
         }
-        MinibossSlain.of(level).slay(coordinates[0], coordinates[1]);
+        MinibossSlain.of(level).slay(coordinates[0], coordinates[1], level.getGameTime());
+        FightRecords.recordPresentAt(level, coordinates[0], coordinates[1],
+                event.getEntity(), event.getSource().getEntity(), DungeonConfigs.bossEntryRadius());
         event.getEntity().spawnAtLocation(new ItemStack(KeyItems.KEY.get()));
         NeoForge.EVENT_BUS.post(new MinibossSlainEvent(level.dimension(),
                 coordinates[0], coordinates[1], event.getEntity(), killerId(event.getSource())));
@@ -216,6 +222,32 @@ public final class Minibosses {
     private static UUID killerId(DamageSource source) {
         Entity killer = source.getEntity() != null ? source.getEntity() : source.getDirectEntity();
         return killer instanceof Player player ? player.getUUID() : null;
+    }
+
+    /**
+     * Whether a fallen floor may field its miniboss again under the declared
+     * policy (issue #259). No declared policy: slain is permanent - today's
+     * behaviour, byte-for-byte; the per-player mode re-spawns only for a
+     * player who never had THIS floor's fight, and TIMER waits out the delay
+     * from the stamped fall (an un-timed fall counts as one-time).
+     */
+    private static boolean respawnAllowed(ServerLevel level, Player player, int layer, int floor) {
+        Optional<BossRespawnPolicy> policy = DimensionProfiles
+                .get(level.dimension().location().toString())
+                .flatMap(profile -> profile.bossRespawn());
+        if (policy.isEmpty()) {
+            return false;
+        }
+        BossRespawnPolicy declared = policy.get();
+        return switch (declared.mode()) {
+            case ONCE -> false;
+            case TIMER -> {
+                var elapsed = MinibossSlain.of(level).elapsedSeconds(layer, floor, level.getGameTime());
+                yield elapsed.isPresent()
+                        && elapsed.get() >= RespawnGate.cooldownSeconds(declared.respawnTicks());
+            }
+            case PER_PLAYER -> !FightRecords.of(level).hasFought(layer, floor, player.getUUID());
+        };
     }
 
     private static boolean guardianOfKindAlive(ServerLevel level, String tag) {

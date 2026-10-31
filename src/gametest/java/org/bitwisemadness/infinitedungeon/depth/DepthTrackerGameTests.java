@@ -67,6 +67,7 @@ public final class DepthTrackerGameTests {
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(),
                 Optional.of(new ProfileAnnouncements("dungeon.entry", "dungeon.layer")),
+                Optional.empty(),
                 Optional.empty()));
         DepthTracker.reset();
         var collector = new Collector();

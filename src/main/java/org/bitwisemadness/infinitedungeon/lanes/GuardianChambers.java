@@ -3,6 +3,7 @@ package org.bitwisemadness.infinitedungeon.lanes;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -22,6 +23,7 @@ import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.spawn.EventSpawnSanity;
 import org.bitwisemadness.infinitedungeonapi.event.BossSlainEvent;
+import org.bitwisemadness.infinitedungeonapi.profile.BossRespawnPolicy;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 import org.bitwisemadness.infinitedungeonapi.profile.GuardianRules;
@@ -99,7 +101,7 @@ public final class GuardianChambers {
         }
         long now = level.getGameTime();
         for (ServerPlayer player : level.players()) {
-            Decision decision = consider(level, player.blockPosition(), now);
+            Decision decision = consider(level, player.blockPosition(), player.getUUID(), now);
             if (decision.outcome() == Outcome.COOLDOWN && flavorDue(player, now)) {
                 DungeonAnnouncements.send(player, Announcement.BOSS_RECOVERING);
             }
@@ -110,7 +112,9 @@ public final class GuardianChambers {
      * One player's approach at a position: the complete decision as
      * outcome plus the spawned entity when there is one. Package-visible so
      * the harness drives the real logic without a player entity (the
-     * design's test seam). The entity rides the result rather than being
+     * design's test seam - identity arrives as a plain UUID, which is all
+     * the per-player respawn policy needs, issue #259). The entity rides the
+     * result rather than being
      * re-found through {@code getAllEntities}: that iterates only VISIBLE
      * entity sections, so a seed-jittered spawn outside the harness's
      * loaded region would exist yet be unfindable (the CI flake the result
@@ -123,7 +127,17 @@ public final class GuardianChambers {
         }
     }
 
+    /**
+     * The identity-free seam: an approach whose profile declares no
+     * {@code bossRespawn} policy runs the legacy cooldown path, where the
+     * UUID is never read - so legacy-coherence tests pass no identity at all.
+     * Tests exercising an opt-in policy MUST use the four-argument form.
+     */
     static Decision consider(ServerLevel level, BlockPos playerPos, long now) {
+        return consider(level, playerPos, new UUID(0L, 0L), now);
+    }
+
+    static Decision consider(ServerLevel level, BlockPos playerPos, UUID player, long now) {
         var placement = LaneGrid.placement();
         if (placement == null) {
             return Decision.of(Outcome.OUT_OF_RANGE); // lanes unreadable: quiet, like pairTarget
@@ -146,9 +160,19 @@ public final class GuardianChambers {
         if (guardianAlive(level, layer)) {
             return Decision.of(Outcome.ALIVE);
         }
-        long cooldown = cooldownFor(level, layer);
-        if (!RespawnCooldown.canRespawn(
-                GuardianDefeats.of(level).elapsedSeconds(layer, now), cooldown)) {
+        var elapsed = GuardianDefeats.of(level).elapsedSeconds(layer, now);
+        var policy = policyFor(level);
+        if (policy.isPresent()) {
+            // Opted-in path (issue #259): the declared mode decides.
+            BossRespawnPolicy declared = policy.get();
+            boolean hasFought =
+                    FightRecords.of(level).hasFought(layer, FightRecords.GUARDIAN, player);
+            if (!RespawnGate.maySpawn(declared.mode(), elapsed,
+                    RespawnGate.cooldownSeconds(declared.respawnTicks()), hasFought)) {
+                return Decision.of(Outcome.COOLDOWN);
+            }
+        } else if (!RespawnCooldown.canRespawn(elapsed, cooldownFor(level, layer))) {
+            // Legacy path, byte-for-byte: no declared policy, no behaviour change.
             return Decision.of(Outcome.COOLDOWN);
         }
         return spawn(level, layer, interior);
@@ -201,6 +225,27 @@ public final class GuardianChambers {
                 .orElseGet(DungeonConfigs::bossRespawnCooldownSeconds);
     }
 
+    /**
+     * The declared respawn policy; empty when the profile opts out, which is
+     * the legacy cooldown path (issue #259: behaviour changes only where a
+     * pack opts in - the API's per-player default is NOT today's behaviour).
+     */
+    private static Optional<BossRespawnPolicy> policyFor(ServerLevel level) {
+        String dimensionId = level.dimension().location().toString();
+        return DimensionProfiles.get(dimensionId).flatMap(DimensionProfile::bossRespawn);
+    }
+
+    /**
+     * The fall's present players - plus the credited killer, wherever they
+     * stood - have had their fight (D39's "present when it fell" half).
+     * Recorded whether or not a policy is declared, so opting in later
+     * recognises fights that already happened.
+     */
+    private static void recordFighters(ServerLevel level, int layer, LivingEntity fallen, Entity killer) {
+        FightRecords.recordPresentAt(level, layer, FightRecords.GUARDIAN, fallen, killer,
+                DungeonConfigs.bossEntryRadius());
+    }
+
     private static boolean flavorDue(ServerPlayer player, long now) {
         String key = player.getUUID() + "@" + player.level().dimension().location();
         Long last = FLAVOR_AT.get(key);
@@ -233,6 +278,7 @@ public final class GuardianChambers {
         }
         NeoForge.EVENT_BUS.post(new BossSlainEvent(level.dimension(), layer, event.getEntity()));
         GuardianDefeats.of(level).record(layer, level.getGameTime());
+        recordFighters(level, layer, event.getEntity(), event.getSource().getEntity());
     }
 
     private static Integer layerOf(Entity entity) {

@@ -29,7 +29,10 @@ public enum Announcement {
     PORTAL_NOT_ALLOWED(DungeonConfigs::portalNotAllowed),
 
     /** Shown when a layer transition refuses passage: the layer's guardian has not fallen. */
-    LANE_SEALED(DungeonConfigs::laneSealed);
+    LANE_SEALED(DungeonConfigs::laneSealed),
+
+    /** Shown when a chamber is entered while the guardian still recovers (issue #43). */
+    BOSS_RECOVERING(DungeonConfigs::bossRecovering);
 
     private final Supplier<String> text;
 

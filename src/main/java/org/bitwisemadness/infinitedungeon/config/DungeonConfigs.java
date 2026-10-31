@@ -70,6 +70,9 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.DoubleValue PARTY_PER_MEMBER;
     private static final ModConfigSpec.BooleanValue MAGICULE_TENSURA_ATTRIBUTE_SCALING;
     private static final ModConfigSpec.DoubleValue BOSS_POWER_BAND_PERCENT;
+    private static final ModConfigSpec.ConfigValue<String> BOSS_RECOVERING;
+    private static final ModConfigSpec.IntValue BOSS_RESPAWN_COOLDOWN;
+    private static final ModConfigSpec.IntValue BOSS_ENTRY_RADIUS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -94,6 +97,10 @@ public final class DungeonConfigs {
                 .comment("Shown when a layer transition portal refuses passage:")
                 .comment("the layer's guardian has not fallen yet (boss gating).")
                 .define("laneSealed", AnnouncementTexts.LANE_SEALED);
+        BOSS_RECOVERING = builder
+                .comment("Shown when a chamber is entered while the guardian still")
+                .comment("recovers from its last defeat (issue #43).")
+                .define("bossRecovering", AnnouncementTexts.BOSS_RECOVERING);
         builder.pop();
         builder.push("boss");
         BOSS_POWER_BAND_PERCENT = builder
@@ -104,6 +111,16 @@ public final class DungeonConfigs {
                 .comment("the difficulty curve at the layer (plan section 6). A")
                 .comment("dimension profile's guardian.powerBandPercent overrides this.")
                 .defineInRange("powerBandPercent", 30.0D, 0D, 100D);
+        BOSS_RESPAWN_COOLDOWN = builder
+                .comment("Seconds a defeated guardian's chamber waits before the")
+                .comment("guardian returns on entry (plan section 6, default 600 -")
+                .comment("repeatable farm content). A profile's guardian.respawnCooldown")
+                .comment("overrides this. First spawn has no wait.")
+                .defineInRange("respawnCooldownSeconds", 600, 0, 86400);
+        BOSS_ENTRY_RADIUS = builder
+                .comment("Blocks from a layer's departure interior at which a player")
+                .comment("counts as entering the guardian's chamber.")
+                .defineInRange("entryRadius", 16, 1, 64);
         builder.pop();
         builder.push("time");
         TIME_FLOWS = builder
@@ -339,6 +356,21 @@ public final class DungeonConfigs {
     /** The default guardian power-band half-width in percent (plan section 6; default 30). */
     public static double bossPowerBandPercent() {
         return BOSS_POWER_BAND_PERCENT.get();
+    }
+
+    /** The guardian respawn cooldown in seconds (plan section 6; default 600). */
+    public static int bossRespawnCooldownSeconds() {
+        return BOSS_RESPAWN_COOLDOWN.get();
+    }
+
+    /** The chamber-entry proximity radius in blocks (issue #43; default 16). */
+    public static int bossEntryRadius() {
+        return BOSS_ENTRY_RADIUS.get();
+    }
+
+    /** The within-cooldown chamber flavor message (issue #43). */
+    public static String bossRecovering() {
+        return BOSS_RECOVERING.get();
     }
 
     /** The configured room event text. */

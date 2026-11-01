@@ -98,14 +98,9 @@ public final class WaystoneEntranceFeature extends Feature<NoneFeatureConfigurat
                 || !level.getBlockState(spot.above()).canBeReplaced()) {
             return false;
         }
-        // Mirrors WaystonesAPI.placeWaystone's recipe - its bytecode, member
-        // for member - because the API takes a Level while features carry a
-        // WorldGenLevel, and every member touched here is public: a Waystones
-        // refactor that renames one fails this compile, never silently. The
-        // origin differs from the API's hardcoded PLAYER on purpose - these
-        // are dungeon-generated entrances, what WaystoneOrigin.DUNGEON exists
-        // for (and the chunk-entity init is what registers the waystone;
-        // #66 verified placeWaystone itself does no database writes).
+        // Mirrors WaystonesAPI.placeWaystone's recipe, member for member: the API takes a Level
+        // while features carry a WorldGenLevel and every member touched is public - a Waystones
+        // refactor renames fail this compile, never silently (chunk-entity init registers it; #66).
         Block block = BuiltInRegistries.BLOCK.get(WaystoneStyles.DEFAULT.getBlockRegistryName());
         level.setBlock(spot, block.defaultBlockState()
                 .setValue(WaystoneBlockBase.HALF, DoubleBlockHalf.LOWER)

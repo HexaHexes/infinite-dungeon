@@ -238,12 +238,9 @@ public final class SpawnPoolGameTests {
         MinibossSlain slay = MinibossSlain.of(level);
         slay.forget(3, 3); // harness world data survives runs: force the premise
         var player = helper.makeMockServerPlayerInLevel();
-        // PathfinderMob.checkSpawnRules is a WALK-VALUE rule: monsters refuse
-        // bright ground, and the harness platform is open sky (the guardian
-        // test passes because its interior is deep and dark). Give the entrant
-        // a dark pocket - walls, roof, air inside - exactly the harness
-        // manipulation the block-clearing precedent uses; the raid then finds
-        // shade within its first candidate ring, as it would in a real room.
+        // PathfinderMob.checkSpawnRules is a WALK-VALUE rule: monsters refuse bright ground, and the
+        // harness platform is open sky (the guardian test's interior is deep and dark). Give the
+        // entrant a dark pocket - walls, roof, air inside - so the raid finds shade in its first ring.
         int px = (int) Math.floor(player.getX());
         int py = (int) Math.floor(player.getY());
         int pz = (int) Math.floor(player.getZ());

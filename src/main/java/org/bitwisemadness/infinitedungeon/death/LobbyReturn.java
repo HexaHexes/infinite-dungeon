@@ -122,11 +122,9 @@ public final class LobbyReturn {
         if (!(lobby.getBlockState(spot).getBlock() instanceof DungeonPortalBlock)
                 && !(DungeonConfigs.reformMissingPortal()
                         && PortalFrameBuilder.build(lobby, spot, Direction.Axis.X))) {
-            // The entrance's frame was destroyed and re-formation is refused
-            // or blocked: fall back rather than drop the player into whatever
-            // now stands there. The anchor stores only a position, so
-            // re-formed portals use the X axis (PortalFrameBuilder's
-            // contract, as the walk-out path assumes).
+            // The entrance's frame was destroyed and re-formation is refused or blocked: fall back
+            // rather than drop the player into whatever now stands there. The anchor stores only a
+            // position, so re-formed portals use the X axis (PortalFrameBuilder's contract).
             DungeonPortalTravel.worldSpawn(player, true);
             return;
         }

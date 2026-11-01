@@ -140,10 +140,9 @@ public final class GateGameTests {
     private static net.minecraft.world.level.ChunkPos probeLayerDefeatedSource(
             GameTestHelper helper, ServerLevel level) {
         int stride = LaneGrid.laneStride();
-        // Lane OWN_LANE, arbitrary in-lane Z; the gate derives its lane from X.
-        // The lane position must be absolute for the gate's own X-based lane
-        // derivation, so this probe drives level.setBlock directly and asserts
-        // through the level rather than the absolute-izing helper.
+        // Lane OWN_LANE, arbitrary in-lane Z; the gate derives its lane from X. The lane position
+        // must be absolute for the gate's own X-based lane derivation, so this probe drives
+        // level.setBlock directly and asserts through the level, not the absolute-izing helper.
         BlockPos gatePos = new BlockPos(OWN_LANE * stride + 10, 64, 10);
         var gateChunk = new net.minecraft.world.level.ChunkPos(gatePos);
         level.setChunkForced(gateChunk.x, gateChunk.z, true); // ticker precondition

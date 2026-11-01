@@ -109,12 +109,9 @@ public class MagiculeCurveTest {
 
     @Test
     void coefficientsAreIndependentOfTheDifficultyCurve() {
-        // Plan section 7: the three curves are mutually independent - each
-        // carries its OWN coefficient set. Same coordinates, each curve with
-        // its own plan defaults yields its own documented value (4.5 vs 5.75),
-        // and passing difficulty's coefficients to M reproduces difficulty's
-        // arithmetic exactly - the curves are pure in their parameters, so
-        // there is no shared or global coefficient state to couple them.
+        // Plan section 7: the three curves are mutually independent - each carries its OWN coefficient
+        // set. Same coordinates, each curve with its own plan defaults yields its own documented value
+        // (4.5 vs 5.75), and passing difficulty's coefficients to M reproduces that arithmetic exactly.
         double m = MagiculeCurve.concentration(10, 5, 0D, 0.1D, 0.04D);
         double d = DifficultyCurve.difficulty(10, 5, 0D, 0.15D, 0.05D);
         assertEquals(4.5D, m, EPS);

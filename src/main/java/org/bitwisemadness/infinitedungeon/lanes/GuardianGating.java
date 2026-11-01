@@ -68,11 +68,9 @@ public final class GuardianGating {
         }
         boolean firstFall = LayerUnlocks.of(level).unlock(event.layer());
         if (firstFall) {
-            // The completion announcement: first validated guardian fall per
-            // layer per world (the unlock transition proves "first").
-            // Completer = this fall's attributable killer forwarded from the
-            // BossSlainEvent payload (api#86); empty = environmental fall,
-            // ADR-0003's documented unknown.
+            // The completion announcement: first validated guardian fall per layer per world (the
+            // unlock transition proves "first"). Completer = this fall's attributable killer forwarded
+            // from the BossSlainEvent payload (api#86); empty = environmental fall (ADR-0003's unknown).
             NeoForge.EVENT_BUS.post(new LayerCompletedEvent(event.dimension(), event.layer(),
                     event.killingPlayer().orElse(null)));
         }

@@ -1,6 +1,5 @@
 package org.bitwisemadness.infinitedungeon.lock;
 
-import java.util.HashSet;
 import java.util.function.Supplier;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerPlayer;

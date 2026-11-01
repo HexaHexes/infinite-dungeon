@@ -1,7 +1,5 @@
 package org.bitwisemadness.infinitedungeon.depth;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;

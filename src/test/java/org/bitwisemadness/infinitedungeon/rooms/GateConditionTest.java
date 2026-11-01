@@ -10,11 +10,13 @@ import org.junit.jupiter.api.Test;
 class GateConditionTest {
 
     @Test
-    void theTwoShippedWordsParse() {
+    void theShippedWordsParse() {
         assertEquals(GateCondition.KEY,
                 GateCondition.parse("key", "gates/treasure_door"));
         assertEquals(GateCondition.LAYER_DEFEATED,
                 GateCondition.parse("layer_defeated", "gates/boss_door"));
+        assertEquals(GateCondition.TRIALS_COMPLETE,
+                GateCondition.parse("trials_complete", "gates/trial_door"));
     }
 
     @Test
@@ -22,6 +24,8 @@ class GateConditionTest {
         assertEquals(GateCondition.KEY, GateCondition.parse("  KEY ", "gates/a"));
         assertEquals(GateCondition.LAYER_DEFEATED,
                 GateCondition.parse("Layer_Defeated", "gates/b"));
+        assertEquals(GateCondition.TRIALS_COMPLETE,
+                GateCondition.parse(" Trials_Complete ", "gates/c"));
     }
 
     @Test
@@ -30,7 +34,8 @@ class GateConditionTest {
                 () -> GateCondition.parse("keyy", "gates/treasure_door"));
         assertTrue(failure.getMessage().contains("keyy"), failure.getMessage());
         assertTrue(failure.getMessage().contains("gates/treasure_door"), failure.getMessage());
-        assertTrue(failure.getMessage().contains("key or layer_defeated"), failure.getMessage());
+        assertTrue(failure.getMessage().contains(
+                "key, layer_defeated or trials_complete"), failure.getMessage());
     }
 
     @Test

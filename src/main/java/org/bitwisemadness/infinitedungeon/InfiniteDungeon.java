@@ -5,6 +5,8 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import org.bitwisemadness.infinitedungeon.boss.AdoptionHooks;
+import org.bitwisemadness.infinitedungeon.boss.AdoptionReloadListener;
 import org.bitwisemadness.infinitedungeon.boss.BossBars;
 import org.bitwisemadness.infinitedungeon.client.PortalTint;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
@@ -147,6 +149,13 @@ public final class InfiniteDungeon {
         // suite-data posture as spawn pools. Placed gates re-read their
         // condition live, so a reload reconfigures them in place.
         NeoForge.EVENT_BUS.addListener(GateReloadListener::onAddReloadListeners);
+        // Boss challenge adoption (issue #255, D40): declared types are
+        // tagged and presented on spawn; a player-kill earns the defeat stamp
+        // (uncredited deaths re-arm the source) and the layer it appeared in
+        // is notified with attribution.
+        NeoForge.EVENT_BUS.addListener(AdoptionReloadListener::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(AdoptionHooks::onEntityJoin);
+        NeoForge.EVENT_BUS.addListener(AdoptionHooks::onLivingDeath);
         // Ambient spawns (plan sections 7/9, issue #40): in-dimension attempts
         // sized by the density curve, types from the profile's fodder pool.
         NeoForge.EVENT_BUS.addListener(AmbientSpawner::onLevelTick);

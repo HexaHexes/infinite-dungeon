@@ -7,11 +7,12 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
 /**
- * Where gates are configured (issue #252): the merged view of datapack
- * instances ({@code data/<ns>/infinite_dungeon/gates/*.json}) and code
- * registration, read LIVE on every interaction and tick - never cached by the
- * block - so a {@code /reload} takes effect on already-loaded gates exactly
- * like it does for spawn pools.
+ * Where gates are configured (issue #252, extended by #255 for trial
+ * declarations): the merged view of datapack instances
+ * ({@code data/<ns>/infinite_dungeon/gates/*.json}) and code registration,
+ * read LIVE on every interaction and tick - never cached by the block - so a
+ * {@code /reload} takes effect on already-loaded gates exactly like it does
+ * for spawn pools.
  *
  * <p>A declaration may name a dimension; one that does applies there and only
  * there (the lobby and a dungeon could share coordinates), one that does not
@@ -23,22 +24,27 @@ import net.minecraft.world.level.Level;
  */
 public final class GateInstances {
 
-    private static Map<ResourceKey<Level>, Map<BlockPos, GateCondition>> scopedCode = new HashMap<>();
-    private static Map<BlockPos, GateCondition> globalCode = new HashMap<>();
-    private static Map<ResourceKey<Level>, Map<BlockPos, GateCondition>> scopedDatapack = new HashMap<>();
-    private static Map<BlockPos, GateCondition> globalDatapack = new HashMap<>();
+    private static Map<ResourceKey<Level>, Map<BlockPos, GateDeclaration>> scopedCode = new HashMap<>();
+    private static Map<BlockPos, GateDeclaration> globalCode = new HashMap<>();
+    private static Map<ResourceKey<Level>, Map<BlockPos, GateDeclaration>> scopedDatapack = new HashMap<>();
+    private static Map<BlockPos, GateDeclaration> globalDatapack = new HashMap<>();
 
     private GateInstances() {
     }
 
     /** Declares a gate for one dimension (the content-authored path, for #47/#49). */
     public static void register(ResourceKey<Level> dimension, BlockPos pos, GateCondition condition) {
-        scopedCode.computeIfAbsent(dimension, key -> new HashMap<>()).put(pos.immutable(), condition);
+        register(dimension, pos, GateDeclaration.of(condition));
+    }
+
+    /** Declares a full gate (condition plus whatever it evaluates) for one dimension. */
+    public static void register(ResourceKey<Level> dimension, BlockPos pos, GateDeclaration declaration) {
+        scopedCode.computeIfAbsent(dimension, key -> new HashMap<>()).put(pos.immutable(), declaration);
     }
 
     /** Declares a gate in every dimension (the dimension-less form). */
     public static void registerGlobal(BlockPos pos, GateCondition condition) {
-        globalCode.put(pos.immutable(), condition);
+        globalCode.put(pos.immutable(), GateDeclaration.of(condition));
     }
 
     /**
@@ -49,7 +55,7 @@ public final class GateInstances {
      * the seam it will call.
      */
     public static void remove(ResourceKey<Level> dimension, BlockPos pos) {
-        Map<BlockPos, GateCondition> gates = scopedCode.get(dimension);
+        Map<BlockPos, GateDeclaration> gates = scopedCode.get(dimension);
         if (gates != null) {
             gates.remove(pos);
         }
@@ -62,16 +68,26 @@ public final class GateInstances {
 
     /** Replaces every datapack instance (the reload path; clears on reload). */
     public static void setDatapack(
-            Map<ResourceKey<Level>, Map<BlockPos, GateCondition>> scoped,
-            Map<BlockPos, GateCondition> global) {
+            Map<ResourceKey<Level>, Map<BlockPos, GateDeclaration>> scoped,
+            Map<BlockPos, GateDeclaration> global) {
         scopedDatapack = new HashMap<>();
         scoped.forEach((dimension, gates) -> scopedDatapack.put(dimension, Map.copyOf(gates)));
         globalDatapack = Map.copyOf(global);
     }
 
-    /** The condition declared for the position, empty when unconfigured. */
+    /** The condition declared for the position, null when unconfigured. */
     public static GateCondition conditionAt(Level level, BlockPos pos) {
-        GateCondition hit = lookup(scopedDatapack, level.dimension(), pos);
+        GateDeclaration declaration = declarationAt(level, pos);
+        return declaration == null ? null : declaration.condition();
+    }
+
+    /**
+     * The full declaration for the position - condition plus declared trial
+     * spawners - null when unconfigured. #255's ticker reads this; the
+     * interaction path reads {@link #conditionAt}.
+     */
+    public static GateDeclaration declarationAt(Level level, BlockPos pos) {
+        GateDeclaration hit = lookup(scopedDatapack, level.dimension(), pos);
         if (hit != null) {
             return hit;
         }
@@ -83,11 +99,11 @@ public final class GateInstances {
         return hit != null ? hit : globalCode.get(pos);
     }
 
-    private static GateCondition lookup(
-            Map<ResourceKey<Level>, Map<BlockPos, GateCondition>> source,
+    private static GateDeclaration lookup(
+            Map<ResourceKey<Level>, Map<BlockPos, GateDeclaration>> source,
             ResourceKey<Level> dimension,
             BlockPos pos) {
-        Map<BlockPos, GateCondition> gates = source.get(dimension);
+        Map<BlockPos, GateDeclaration> gates = source.get(dimension);
         return gates != null ? gates.get(pos) : null;
     }
 

@@ -1,7 +1,6 @@
 package org.bitwisemadness.infinitedungeon.portal;
 
 import java.util.LinkedHashSet;
-import java.util.Objects;
 import java.util.Set;
 import org.bitwisemadness.infinitedungeon.spawn.SpawnPolicy;
 

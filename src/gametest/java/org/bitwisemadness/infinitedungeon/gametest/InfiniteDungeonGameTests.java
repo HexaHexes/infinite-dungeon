@@ -155,10 +155,9 @@ public final class InfiniteDungeonGameTests {
             helper.assertTrue(stem.result().isPresent(),
                     "the dungeon dimension must parse with its biome reference: " + stem.error());
 
-            // The 2026-10-30 ruling: Dungeon Crawl's natural generation stays
-            // disabled on this dimension - our lane set is the sole placement
-            // authority, so we control what generates and when while still
-            // reusing dungeoncrawl:dungeon through our own set.
+            // The 2026-10-30 ruling: Dungeon Crawl's natural generation stays disabled on this
+            // dimension - our lane set is the sole placement authority, so we control what generates
+            // and when while still reusing dungeoncrawl:dungeon through our own set.
             var settings = net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings.CODEC
                     .parse(ops, json.getAsJsonObject().get("generator")
                             .getAsJsonObject().get("settings"))
@@ -200,10 +199,9 @@ public final class InfiniteDungeonGameTests {
                         instanceof net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement spread
                         && spread.spacing() == 32 && spread.separation() == 12,
                 "the lane grid must match Dungeon Crawl: spacing 32, separation 12");
-        // salt() is protected, so the salt is asserted through the codec's own
-        // encode path - the same field the datapack wrote. Holder encoding
-        // needs registry context, so the encode runs against registry ops just
-        // like the dimension parse above.
+        // salt() is protected, so the salt is asserted through the codec's own encode path - the
+        // same field the datapack wrote. Holder encoding needs registry context, so the encode runs
+        // against registry ops just like the dimension parse above.
         var encoded = net.minecraft.world.level.levelgen.structure.StructureSet.DIRECT_CODEC
                 .encodeStart(registries.createSerializationContext(com.mojang.serialization.JsonOps.INSTANCE),
                         laneSet)
@@ -288,12 +286,9 @@ public final class InfiniteDungeonGameTests {
         var parameters = LayoutParameters.forServer(level);
         helper.assertTrue(parameters.laneStride() == 512,
                 "the effective stride must reach the derivation: " + parameters.laneStride());
-        // The factory must transmit its level's own vertical extents. The
-        // harness hosts its own flat-preset level (not our dimension, which
-        // never becomes a level here - see the dimension-type test), so the
-        // locked -64/2048 pair is asserted on the datapack registry there;
-        // on a real server the level IS the dungeon and the pair flows through
-        // this exact path.
+        // The factory must transmit its level's own vertical extents: the harness hosts its own
+        // flat-preset level (not our dimension - see the dimension-type test), so the locked -64/2048
+        // pair is asserted on the datapack registry there; on a real server the level IS the dungeon.
         helper.assertTrue(parameters.minY() == level.getMinBuildHeight()
                         && parameters.availableHeight() == level.getHeight(),
                 "the level's vertical extents must reach the derivation: " + parameters.minY()
@@ -632,10 +627,9 @@ public final class InfiniteDungeonGameTests {
                 "a corpse holding items must stay for its owner to reclaim");
         helper.assertTrue(!litter.isRemoved(), "an unrelated entity must never be swept");
 
-        // Leftovers leave through the contained path the sweep uses (issue
-        // #189): mock players never declare Corpse's particle channel, and a
-        // corpse left ticking would age out mid-batch - Corpse's own tick
-        // discard bypasses removeCorpse's catch and crashes the run.
+        // Leftovers leave through the contained path the sweep uses (issue #189): mock players
+        // never declare Corpse's particle channel, and a corpse left ticking would age out
+        // mid-batch - Corpse's own tick discard bypasses removeCorpse's catch and crashes the run.
         try {
             laden.discard();
         } catch (UnsupportedOperationException ex) {
@@ -937,12 +931,9 @@ public final class InfiniteDungeonGameTests {
         helper.assertTrue(Math.floorDiv(cell.z, placement.spacing()) == 0,
                 "the probe cell must be the rz-0 entrance region");
         var origin = new BlockPos(cell.x << 4, minBuild + 1, cell.z << 4);
-        // The harness world persists between runs (its chunks survive in
-        // run/world), and this spot is seed-derived - so a waystone from a
-        // previous run can still stand there. Production refuses to overwrite
-        // a standing waystone BY DESIGN; the test clears the two blocks
-        // first, the same "not guaranteed empty" accommodation the other
-        // world-writing tests make.
+        // The harness world persists between runs (its chunks survive in run/world) and the spot is
+        // seed-derived, so a waystone from a previous run may still stand there; production refuses
+        // to overwrite a standing waystone BY DESIGN - the test clears the two blocks first.
         int clearFloors = FloorSchedule.floorsInLayer(seed, lane,
                 DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
         BlockPos spotToClear = LaneTransitions.arrivalInterior(minBuild, level.getHeight(), clearFloors, cell)

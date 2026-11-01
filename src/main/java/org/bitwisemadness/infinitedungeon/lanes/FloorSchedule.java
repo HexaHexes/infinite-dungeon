@@ -36,10 +36,9 @@ public final class FloorSchedule {
         if (low < 1) {
             throw new IllegalArgumentException("floor counts must be at least 1, got [" + min + ", " + max + "]");
         }
-        // Golden-ratio salt per layer over a splitmix-style finalizer: adjacent
-        // layers and adjacent seeds spread apart, the result is stable across
-        // JVMs and versions (plain long arithmetic, no library hash), and
-        // floorMod keeps the mapping inside the range for any long.
+        // Golden-ratio salt per layer over a splitmix-style finalizer: adjacent layers and adjacent
+        // seeds spread apart, the result is stable across JVMs and versions (plain long arithmetic,
+        // no library hash), and floorMod keeps the mapping inside the range for any long.
         long mixed = worldSeed + layerIndex * 0x9E3779B97F4A7C15L;
         mixed = (mixed ^ (mixed >>> 30)) * 0xBF58476D1CE4E5B9L;
         mixed = (mixed ^ (mixed >>> 27)) * 0x94D049BB133111EBL;

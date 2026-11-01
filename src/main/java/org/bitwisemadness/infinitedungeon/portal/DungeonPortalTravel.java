@@ -41,11 +41,9 @@ public final class DungeonPortalTravel {
         if (player.isOnPortalCooldown() || !player.isAlive() || player.isPassenger()) {
             return;
         }
-        // Lane transitions (issue #31): a hop between layers inside the
-        // dungeon resolves from the position alone - before the anchor logic
-        // runs, so a lane portal can never bind or consume the overworld
-        // return anchor. The dimension gate lives here; the hop itself is
-        // public for the harness, which can never host this dimension.
+        // Lane transitions (issue #31): a hop between layers inside the dungeon resolves from the
+        // position alone - before the anchor logic runs, so a lane portal can never bind or consume
+        // the overworld return anchor. The dimension gate lives here; the hop is public for the harness.
         if (DungeonDimensions.LEVEL.equals(serverLevel.dimension())
                 && laneHop(serverLevel, portalPos, player)) {
             return;
@@ -90,12 +88,9 @@ public final class DungeonPortalTravel {
         if (dungeon == null) {
             return;
         }
-        // Issue #246: the lobby is the Overworld entrance site, so the
-        // dimension's content starts at layer 1. The descent lands at layer
-        // 1's canonical arrival interior - the same slot a lane hop targets,
-        // inside the portal plane with the cooldown guarding the re-trigger.
-        // The lookup forces the chunk, so an absent frame leaves the player
-        // where they stand rather than dropping them into the void.
+        // Issue #246: the lobby is the Overworld entrance site, so the dimension's content starts
+        // at layer 1; the descent lands at layer 1's canonical arrival interior (the same slot a
+        // lane hop targets). The lookup forces the chunk - an absent frame leaves the player be.
         var arrival = LaneTransitions.descentTarget(dungeon);
         if (arrival.isPresent()
                 && dungeon.getBlockState(arrival.get()).getBlock() instanceof DungeonPortalBlock) {

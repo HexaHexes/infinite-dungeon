@@ -2,7 +2,6 @@ package org.bitwisemadness.infinitedungeon.config;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;

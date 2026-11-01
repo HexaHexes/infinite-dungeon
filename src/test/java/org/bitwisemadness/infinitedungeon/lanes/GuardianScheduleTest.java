@@ -79,10 +79,9 @@ public class GuardianScheduleTest {
 
     @Test
     void familyMembersNeverWeakenWithDepth() {
-        // One depth-exempt family spanning the band width; D grows with depth
-        // (base 1, quadratic 1 -> 1, 2, 5, 10...) so the center climbs while
-        // exempt raw power stays put - the watermark must keep the picked raw
-        // power non-decreasing across layers.
+        // One depth-exempt family spanning the band width; D grows with depth (base 1, quadratic 1
+        // -> 1, 2, 5, 10...) so the center climbs while exempt raw power stays put - the watermark
+        // must keep the picked raw power non-decreasing across layers.
         GuardianSchedule.setRoster(List.of(
                 new BossCandidate("mod:weak", 300.0, true, Optional.of("family")),
                 new BossCandidate("mod:mid", 500.0, true, Optional.of("family")),

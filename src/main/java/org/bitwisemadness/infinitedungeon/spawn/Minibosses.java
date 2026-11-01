@@ -23,7 +23,6 @@ import org.bitwisemadness.infinitedungeon.treasure.KeyItems;
 import org.bitwisemadness.infinitedungeonapi.event.FloorEnteredEvent;
 import org.bitwisemadness.infinitedungeonapi.event.MinibossSlainEvent;
 import org.bitwisemadness.infinitedungeonapi.profile.BossRespawnPolicy;
-import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 import org.bitwisemadness.infinitedungeonapi.stats.AttributeScaling;
 
@@ -141,12 +140,9 @@ public final class Minibosses {
         if (!(created instanceof Mob mob)) {
             return Outcome.REFUSED;
         }
-        // Beside, not ON the entrant (their body fails obstruction), on the
-        // ENTRANT'S FLOOR PLANE - and outward: PathfinderMob.checkSpawnRules
-        // is a WALK-VALUE rule, so monsters refuse bright ground; the wider
-        // ring seeks shade when the room has any, and REFUSED_RULES stays the
-        // honest answer for a floor lit corner to corner (documented on the
-        // class: the raid declines there rather than lying about vanilla).
+        // Beside, not ON the entrant (their body fails obstruction), on the entrant's floor plane -
+        // and outward: PathfinderMob.checkSpawnRules is a WALK-VALUE rule, so monsters refuse bright
+        // ground; the wider ring seeks shade (REFUSED_RULES stays honest for a fully lit floor).
         double[][] offsets = {
             {2.0D, 0.0D}, {0.0D, 2.0D}, {-2.0D, 0.0D}, {0.0D, -2.0D},
             {2.0D, 2.0D}, {-2.0D, 2.0D}, {2.0D, -2.0D}, {-2.0D, -2.0D},

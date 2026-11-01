@@ -114,10 +114,9 @@ public class DensityCurveTest {
 
     @Test
     void allThreeCurvesAreMutuallyIndependent() {
-        // Section 7 ships three curves with their own coefficient sets; at the
-        // same coordinates each yields its own documented value, and each
-        // curve fed another's coefficients reproduces that arithmetic - pure
-        // parameters, no shared state anywhere.
+        // Section 7 ships three curves with their own coefficient sets; at the same coordinates each
+        // yields its own documented value, and each curve fed another's coefficients reproduces that
+        // arithmetic - pure parameters, no shared state anywhere.
         double d = DifficultyCurve.difficulty(10, 5, 0D, 0.15D, 0.05D);
         double m = MagiculeCurve.concentration(10, 5, 0D, 0.1D, 0.04D);
         double s = DensityCurve.density(10, 5, 0D, 0.1D, 0.03D);

@@ -146,11 +146,9 @@ public final class MagiculeElevation {
         var iterator = references.iterator();
         while (iterator.hasNext()) {
             if (new ChunkPos(iterator.nextLong()).equals(chunk.getPos())) {
-                // The start sits in this chunk: the mouth's neighbourhood is
-                // THIS chunk's surface, so the sphere hugs where players and
-                // mobs actually stand. (Surface of the loaded chunk - the
-                // start chunk IS this chunk, so the heightmap is the right
-                // one by construction.)
+                // The start sits in this chunk: the mouth's neighbourhood is THIS chunk's surface, so
+                // the sphere hugs where players and mobs actually stand (the start chunk IS this
+                // chunk, so the loaded chunk's heightmap is the right one by construction).
                 int surface = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, 8, 8);
                 registerSource(level, new BlockPos(
                         chunk.getPos().getMiddleBlockX(), surface,

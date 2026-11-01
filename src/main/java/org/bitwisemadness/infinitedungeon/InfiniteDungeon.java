@@ -111,12 +111,9 @@ public final class InfiniteDungeon {
         FallbackHallFeature.register(modBus);
         TransitionFramesFeature.register(modBus);
         WaystoneEntranceFeature.register(modBus);
-        // No lobby feature since issue #246: the lobby is the Overworld
-        // entrance site (Reading B), so the dungeon dimension generates no
-        // lobby - its content starts at layer 1.
-        // The ambient magicule service (API-owned) reads the dungeon's M(L,f)
-        // through this provider - consumers reach it via the API contract,
-        // never by calling into this mod (plan section 7, issue #201).
+        // No lobby feature since issue #246: the lobby is the Overworld entrance site (Reading B),
+        // so the dungeon dimension generates no lobby - its content starts at layer 1. The ambient
+        // magicule service (API-owned) reads M(L,f) here; consumers reach it via the API contract (7, #201).
         AmbientMagicule.registerProvider(DungeonMagiculeProvider.PROVIDER);
         // Ambient magicule particles render the same number (plan section 7,
         // issue #200): visual only, dungeon-dimension gated like the clock.
@@ -127,59 +124,49 @@ public final class InfiniteDungeon {
         NeoForge.EVENT_BUS.addListener(MagiculeElevation::onLevelLoad);
         NeoForge.EVENT_BUS.addListener(MagiculeElevation::onLevelUnload);
         NeoForge.EVENT_BUS.addListener(MagiculeElevation::onChunkLoad);
-        // Spawn attribute scaling (plan sections 7/9, issue #37): the default
-        // rows join the API's list (core configures, API holds - I32), and the
-        // fresh-join hook scales in-dungeon mob spawns. The magicule toggle
-        // pushes at first level load - config values do not exist yet at
-        // construction time (the gate caught exactly that).
+        // Spawn attribute scaling (plan sections 7/9, issue #37): the default rows join the API's
+        // list (core configures, API holds - I32), and the fresh-join hook scales in-dungeon spawns.
+        // The magicule toggle pushes at first level load - config values do not exist at construction.
         SpawnAttributeScaling.registerDefaultRows();
         NeoForge.EVENT_BUS.addListener(SpawnAttributeScaling::onLevelLoad);
         NeoForge.EVENT_BUS.addListener(SpawnAttributeScaling::onEntityJoin);
-        // Spawn pools (plan section 10, issue #39): datapack JSON under
-        // data/<ns>/infinite_dungeon/pools, reloaded with /reload like every
-        // suite data type - core owns the registry, the API owns the
-        // machinery (I32).
+        // Spawn pools (plan section 10, issue #39): datapack JSON under data/<ns>/infinite_dungeon/
+        // pools, reloaded with /reload like every suite data type - core owns the registry, the
+        // API owns the machinery (I32).
         NeoForge.EVENT_BUS.addListener(SpawnPoolReloadListener::onAddReloadListeners);
         // Boss bars (issue #253, D35 presentation-only): the single lifecycle
         // listener - progress, audience, and reaping - for the fights the two
         // spawn sites register through BossBars.track.
         NeoForge.EVENT_BUS.addListener(BossBars::onLevelTick);
-        // Room gate instances (issue #252): datapack JSON under
-        // data/<ns>/infinite_dungeon/gates, reloaded with /reload - the same
-        // suite-data posture as spawn pools. Placed gates re-read their
-        // condition live, so a reload reconfigures them in place.
+        // Room gate instances (issue #252): datapack JSON under data/<ns>/infinite_dungeon/gates,
+        // reloaded with /reload - the same suite-data posture as spawn pools. Placed gates re-read
+        // their condition live, so a reload reconfigures them in place.
         NeoForge.EVENT_BUS.addListener(GateReloadListener::onAddReloadListeners);
-        // Boss challenge adoption (issue #255, D40): declared types are
-        // tagged and presented on spawn; a player-kill earns the defeat stamp
-        // (uncredited deaths re-arm the source) and the layer it appeared in
-        // is notified with attribution.
+        // Boss challenge adoption (issue #255, D40): declared types are tagged and presented on
+        // spawn; a player-kill earns the defeat stamp (uncredited deaths re-arm the source) and
+        // the layer it appeared in is notified with attribution.
         NeoForge.EVENT_BUS.addListener(AdoptionReloadListener::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(AdoptionHooks::onEntityJoin);
         NeoForge.EVENT_BUS.addListener(AdoptionHooks::onLivingDeath);
         // Ambient spawns (plan sections 7/9, issue #40): in-dimension attempts
         // sized by the density curve, types from the profile's fodder pool.
         NeoForge.EVENT_BUS.addListener(AmbientSpawner::onLevelTick);
-        // Guardian schedule (plan section 6, issue #231): installs the
-        // LayerUnlocks seam predicate at dungeon level load with the world
-        // seed; empty roster = interim open state (#31's contract).
-        // Boss roster (issue #60): derives the schedule's roster from the
-        // profile's boss pool at the same load - the setRoster seam #231
-        // left; empty pool = interim open state.
+        // Guardian schedule (plan 6, #231): installs the LayerUnlocks seam predicate at dungeon
+        // level load with the world seed (empty roster = interim open state, #31). Boss roster
+        // (#60) derives it from the profile's boss pool at the same load - the setRoster seam.
         NeoForge.EVENT_BUS.addListener(BossRosterBootstrap::onLevelLoad);
         NeoForge.EVENT_BUS.addListener(GuardianScheduleHook::onLevelLoad);
         // Gating reaction (issue #42, with the C7a team-share rule via #79):
         // a guardian's fall opens its layer in world saved data, once.
         NeoForge.EVENT_BUS.addListener(GuardianGating::onBossSlain);
-        // Guardian respawn (issue #43): chamber-entry spawns on the level
-        // tick (singleton, cooldown, EVENT-typed so the natural-spawn gates
-        // never block a scripted boss), and tagged guardian deaths become the
-        // BossSlainEvent above plus the cooldown stamp.
+        // Guardian respawn (issue #43): chamber-entry spawns on the level tick (singleton, cooldown,
+        // EVENT-typed so the natural-spawn gates never block a scripted boss), and tagged guardian
+        // deaths become the BossSlainEvent above plus the cooldown stamp.
         NeoForge.EVENT_BUS.addListener(GuardianChambers::onLevelTick);
         NeoForge.EVENT_BUS.addListener(GuardianChambers::onLivingDeath);
-        // Miniboss raids (issue #41): floor-entry spawns beside the entrant
-        // (the trigger's production poster is the depth tracker, #238 - this
-        // listener ships testable-by-posting, the #42 pattern); tagged deaths
-        // stamp the floor and drop the key.
+        // Miniboss raids (issue #41): floor-entry spawns beside the entrant (the trigger's
+        // production poster is the depth tracker, #238 - this listener ships testable-by-posting,
+        // the #42 pattern); tagged deaths stamp the floor and drop the key.
         NeoForge.EVENT_BUS.addListener(Minibosses::onFloorEntered);
         // Depth tracker (issue #238): posts FloorEntered/LayerEntered and
         // sends the profile announcements - the production poster the raid

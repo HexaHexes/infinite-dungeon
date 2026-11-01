@@ -149,10 +149,9 @@ public final class AmbientSpawner {
         }
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(
                 ResourceLocation.parse(picked.get().entityId()));
-        // ENTITY_TYPE is a DefaultedRegistry: get() never returns null (an
-        // unknown id answers the default entry) - and candidates were
-        // presence-checked at expansion, so the id resolves to itself.
-        // instanceof covers the create() null without a redundant branch.
+        // ENTITY_TYPE is a DefaultedRegistry: get() never returns null (an unknown id answers the
+        // default entry), and candidates were presence-checked at expansion, so the id resolves to
+        // itself; instanceof covers the create() null without a redundant branch.
         var created = type.create(level);
         if (!(created instanceof Mob mob)) {
             return false; // pools name mobs; anything else is declined

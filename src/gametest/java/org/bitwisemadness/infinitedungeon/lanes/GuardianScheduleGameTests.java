@@ -44,10 +44,9 @@ public final class GuardianScheduleGameTests {
 
     @GameTest(template = "empty")
     public static void guardian_schedule_feeds_the_layer_unlock_seam(GameTestHelper helper) {
-        // D = 1 for every layer (base 1, no increments); roster {100, 300}
-        // bands at 30% around median 100 -> [70, 130] -> only 300 fits, so
-        // the pick is deterministic WITHOUT relying on seed luck, and the
-        // family watermark keeps later layers at or above it.
+        // D = 1 for every layer (base 1, no increments); roster {100, 300} bands at 30% around
+        // median 100 -> [70, 130] -> only 300 fits, so the pick is deterministic WITHOUT seed luck,
+        // and the family watermark keeps later layers at or above it.
         GuardianSchedule.setRoster(List.of(
                 new BossCandidate("minecraft:zombie", 100.0, false, Optional.of("f")),
                 new BossCandidate("minecraft:creeper", 300.0, false, Optional.of("f"))));
@@ -227,22 +226,17 @@ public final class GuardianScheduleGameTests {
         var interior = LaneTransitions.departureInterior(minBuild, cell);
         helper.assertTrue(LaneGeometry.laneIndex(interior.getX(), LaneGrid.laneStride()) == 0,
                 "the probe cell must sit in lane 0, got " + interior);
-        // The cell's chunk is seed-jittered inside region 0, unloaded beyond
-        // the harness's spawn radius on some seeds: addFreshEntity accepts an
-        // unloaded chunk's entity, but getAllEntities iterates only visible
-        // sections (the CI flake, root-caused). Forcing is ASYNC - the chunk
-        // loads over the following ticks - so the whole scenario runs one
-        // delay AFTER setup, exactly like production entries, which are
-        // seconds apart on the per-second scan.
+        // The cell's chunk is seed-jittered inside region 0, unloaded beyond the harness's spawn
+        // radius on some seeds: addFreshEntity accepts it, but getAllEntities iterates only visible
+        // sections (the CI flake) - forcing is ASYNC, so the scenario runs one delay after setup.
         level.setChunkForced(cell.x, cell.z, true);
         level.setBlock(interior, Blocks.AIR.defaultBlockState(), 3);
         level.setBlock(interior.above(), Blocks.AIR.defaultBlockState(), 3);
         level.setBlock(interior.above(2), Blocks.AIR.defaultBlockState(), 3);
 
-        // Premise resets at START: the harness world persists between runs and
-        // across continuations (a failure inside the hop never reaches the
-        // end-of-test restore, so the next run must self-heal - the guardian
-        // purge below doubles as the leftover cleaner).
+        // Premise resets at START: the harness world persists between runs and across continuations
+        // (a failure inside the hop never reaches the end-of-test restore, so the next run must
+        // self-heal - the guardian purge below doubles as the leftover cleaner).
         String harnessDimension = level.dimension().location().toString();
         DimensionProfiles.register(new DimensionProfile(
                 harnessDimension,
@@ -259,17 +253,15 @@ public final class GuardianScheduleGameTests {
         LivingEntity[] spawnedHolder = new LivingEntity[1];
 
         helper.runAfterDelay(20, () -> {
-            // Re-establish shared statics INSIDE the hop: sibling tests in
-            // this batch mutate the same roster/seam in their finally blocks,
-            // and a sibling body landing between setup and hop wiped them (the
-            // identity-REFUSED regression).
+            // Re-establish shared statics INSIDE the hop: sibling tests in this batch mutate the
+            // same roster/seam in their finally blocks, and a sibling body landing between setup
+            // and hop wiped them (the identity-REFUSED regression).
             GuardianSchedule.setRoster(List.of(
                     new BossCandidate("minecraft:zombie", 100.0, false, Optional.empty())));
             LayerUnlocks.setGuardianAssigned(layer -> false);
-            // ...and the profile: the sibling miniboss test registers and
-            // REMOVES the shared key around this window - #42's gate reads it
-            // first, so a vanished profile silently skipped the unlock (the
-            // death-chain regression).
+            // ...and the profile: the sibling miniboss test registers and REMOVES the shared key
+            // around this window - #42's gate reads it first, so a vanished profile silently
+            // skipped the unlock (the death-chain regression).
             DimensionProfiles.register(new DimensionProfile(
                     level.dimension().location().toString(),
                     Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
@@ -327,11 +319,9 @@ public final class GuardianScheduleGameTests {
                     "past the cooldown the guardian must return on entry; got "
                             + returnSpawn.outcome());
 
-            // The opt-in leg (issue #259, core side of api#85): every legacy
-            // assertion above must hold WITHOUT a declared policy, and with
-            // one the per-player fairness rule overrides the fresh cooldown.
-            // Declared here, inside this single seam-owning test - a second
-            // test sharing this seam races the batch (recorded rule).
+            // The opt-in leg (issue #259, core side of api#85): every legacy assertion above must
+            // hold WITHOUT a declared policy, and with one the per-player fairness rule overrides
+            // the fresh cooldown - declared in this single seam-owning test (sharing it races).
             if (returnSpawn.spawned() != null) {
                 returnSpawn.spawned().discard();
             }

@@ -124,10 +124,9 @@ public final class AdoptionGameTests {
 
             helper.succeed();
         } finally {
-            // Restore on EVERY path: probe mobs are try-scoped because a
-            // leaked mob in the shared harness world outlives the run (the
-            // wardens die in-body on the happy path; failure paths and the
-            // always-alive zombie would otherwise linger).
+            // Restore on EVERY path: probe mobs are try-scoped because a leaked mob in the shared
+            // harness world outlives the run - the wardens die in-body on the happy path; failure
+            // paths and the always-alive zombie would otherwise linger.
             NeoForge.EVENT_BUS.unregister(collector);
             if (adopted != null) {
                 adopted.discard();

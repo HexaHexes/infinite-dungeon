@@ -54,15 +54,9 @@ public class DifficultyCurveTest {
 
     @Test
     void monotonicInFloorAndInLayer() {
-        // Two-axis monotonicity: with non-negative coefficients D never
-        // decreases along either depth axis separately - within a layer every
-        // floor deeper is harder, and at any fixed floor index every layer
-        // deeper is harder (floor 0 is that layer's entry band, #183's axis).
-        //
-        // The claim is deliberately per-axis: floor indices restart at each
-        // layer's entry, so the player-path sequence resets the floor term at
-        // every layer transition by design - the shape test above pins that
-        // arithmetic instead of pretending it away.
+        // Two-axis monotonicity: with non-negative coefficients D never decreases along either depth
+        // axis - within a layer every deeper floor is harder; at a fixed floor index every deeper
+        // layer is harder (#183's axis; deliberately per-axis - floor indices restart each layer).
         for (int layer = 0; layer <= 12; layer++) {
             for (int floor = 1; floor <= 12; floor++) {
                 double deeper = DifficultyCurve.difficulty(layer, floor, BASE, LINEAR, QUADRATIC);
@@ -124,12 +118,9 @@ public class DifficultyCurveTest {
 
     @Test
     void layerEntryResetsTheFloorTerm() {
-        // Documented consequence of the accepted shape: f restarts at each
-        // layer's entry band, so every transition drops the floor term while
-        // the quadratic term lifts the band - with the plan defaults layer 1's
-        // entry (0.05) sits below layer 0's deepest floor (1.35 for 10
-        // floors). The entries themselves still rise monotonically with L;
-        // deep enough, the quadratic term outruns the reset entirely.
+        // Documented consequence of the accepted shape: f restarts at each layer's entry band, so
+        // every transition drops the floor term while the quadratic lifts the band - layer 1's entry
+        // (0.05) sits below layer 0's deepest floor (1.35 for 10 floors); the entries still rise with L.
         double layer0Deepest = DifficultyCurve.difficulty(0, 9, BASE, LINEAR, QUADRATIC);
         double layer1Entry = DifficultyCurve.difficulty(1, 0, BASE, LINEAR, QUADRATIC);
         assertTrue(layer1Entry < layer0Deepest,

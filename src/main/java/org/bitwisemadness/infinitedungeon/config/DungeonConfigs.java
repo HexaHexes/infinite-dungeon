@@ -62,6 +62,7 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.DoubleValue SPAWNS_BASE_ATTEMPTS;
     private static final ModConfigSpec.IntValue SPAWNS_ATTEMPT_INTERVAL;
     private static final ModConfigSpec.IntValue SPAWNS_PLAYER_RANGE;
+    private static final ModConfigSpec.BooleanValue SPAWNS_INTERIOR_ONLY;
     private static final ModConfigSpec.DoubleValue STRUCTURE_ELEVATION_AMOUNT;
     private static final ModConfigSpec.DoubleValue STRUCTURE_ELEVATION_RADIUS;
     private static final ModConfigSpec.DoubleValue DIFFICULTY_STAT_MULTIPLIER_PER_POINT;
@@ -322,6 +323,13 @@ public final class DungeonConfigs {
                 .comment("No ambient spawn without a player within this many blocks of")
                 .comment("the position (vanilla's activation distance).")
                 .defineInRange("playerRange", 128, 16, 384);
+        SPAWNS_INTERIOR_ONLY = builder
+                .comment("Only NATURAL spawns inside dungeon interiors (issue #254):")
+                .comment("in a dimension whose only terrain is structures, a position")
+                .comment("that sees open sky is exterior - roofs, void cells, band gaps")
+                .comment("and ledge tops are denied. Off restores exact vanilla")
+                .comment("behaviour; the ambient spawner then keeps placing on roofs.")
+                .define("interiorOnly", true);
         builder.pop();
         builder.push("structureElevation");
         STRUCTURE_ELEVATION_AMOUNT = builder
@@ -599,6 +607,20 @@ public final class DungeonConfigs {
     /** The player-proximity requirement for ambient spawns (plan section 9; default 128). */
     public static int spawnPlayerRange() {
         return SPAWNS_PLAYER_RANGE.get();
+    }
+
+    /** Whether natural spawns must land inside dungeon interiors (issue #254; default on). */
+    public static boolean spawnsInteriorOnly() {
+        return SPAWNS_INTERIOR_ONLY.get();
+    }
+
+    /**
+     * Flips the interior-only toggle through the real config value (issue
+     * #254). Called by the gametests, which need both states provable without
+     * a config file edit - the {@code setBossBarEnabled} seam's pattern.
+     */
+    public static void setSpawnsInteriorOnly(boolean interiorOnly) {
+        SPAWNS_INTERIOR_ONLY.set(interiorOnly);
     }
 
     /** Each elevation source's additive amount (plan section 7; default 2.0). */

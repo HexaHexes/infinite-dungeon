@@ -33,6 +33,7 @@ import org.bitwisemadness.infinitedungeon.rooms.GateBlocks;
 import org.bitwisemadness.infinitedungeon.rooms.GateReloadListener;
 import org.bitwisemadness.infinitedungeon.spawn.AmbientSpawner;
 import org.bitwisemadness.infinitedungeon.spawn.DungeonSpawnGuard;
+import org.bitwisemadness.infinitedungeon.spawn.InteriorSpawnGate;
 import org.bitwisemadness.infinitedungeon.spawn.Minibosses;
 import org.bitwisemadness.infinitedungeon.spawn.SpawnAttributeScaling;
 import org.bitwisemadness.infinitedungeon.spawn.SpawnPoolReloadListener;
@@ -151,6 +152,10 @@ public final class InfiniteDungeon {
         // Ambient spawns (plan sections 7/9, issue #40): in-dimension attempts
         // sized by the density curve, types from the profile's fodder pool.
         NeoForge.EVENT_BUS.addListener(AmbientSpawner::onLevelTick);
+        // Interior bounds (issue #254): natural spawns in the dungeon
+        // dimension are denied outside interiors - roofs, void cells, band
+        // gaps, ledge tops (rule: InteriorRule).
+        NeoForge.EVENT_BUS.addListener(InteriorSpawnGate::onPositionCheck);
         // Guardian schedule (plan 6, #231): installs the LayerUnlocks seam predicate at dungeon
         // level load with the world seed (empty roster = interim open state, #31). Boss roster
         // (#60) derives it from the profile's boss pool at the same load - the setRoster seam.

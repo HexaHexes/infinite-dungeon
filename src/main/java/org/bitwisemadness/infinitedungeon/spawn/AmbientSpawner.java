@@ -3,8 +3,10 @@ package org.bitwisemadness.infinitedungeon.spawn;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -139,7 +141,14 @@ public final class AmbientSpawner {
         if (!DungeonLayout.inDungeon(parameters, x)) {
             return false; // the void edge of a split chunk
         }
-        int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+        // Interior-first vertical pick (issue #254): the surface here is a
+        // roof, and the gate denies exterior spawns - a roof-selected y would
+        // be denied and ambient spawning would silently stop.
+        OptionalInt interior = interiorSpawnY(level, x, z);
+        if (interior.isEmpty()) {
+            return false; // no interior floor in this column: nothing spawns outside one
+        }
+        int y = interior.getAsInt();
         if (!nearbyPlayer(players, range, x, y, z)) {
             return false;
         }
@@ -166,6 +175,30 @@ public final class AmbientSpawner {
         mob.finalizeSpawn(level, level.getCurrentDifficultyAt(BlockPos.containing(x, y, z)),
                 MobSpawnType.NATURAL, null);
         return level.addFreshEntity(mob);
+    }
+
+    /**
+     * The column's first interior spawn height (issue #254): descending from
+     * below the surface heightmap, the first air position with a sturdy floor
+     * - in this dimension that is the room under a structure roof, standing
+     * on an interior floor. Empty when the column has no interior at all
+     * (roof-less void, band gaps) - those legitimately spawn nothing. The
+     * scan costs a few blocks per attempt; attempts are sparse (one
+     * mob-spawn cycle).
+     */
+    static OptionalInt interiorSpawnY(ServerLevel level, int x, int z) {
+        int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+        for (int y = surface - 1; y > level.getMinBuildHeight(); y--) {
+            BlockPos position = new BlockPos(x, y, z);
+            if (!level.getBlockState(position).isAir()) {
+                continue; // inside the roof itself: keep descending to the room
+            }
+            BlockPos below = position.below();
+            if (level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
+                return OptionalInt.of(y);
+            }
+        }
+        return OptionalInt.empty();
     }
 
     private static boolean nearbyPlayer(List<ServerPlayer> players, int range,

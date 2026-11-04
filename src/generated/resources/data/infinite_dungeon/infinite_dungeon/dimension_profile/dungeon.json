@@ -1,0 +1,12 @@
+{
+  "announcements": {
+    "entry": "dungeon.entry",
+    "layer": "dungeon.layer"
+  },
+  "dimension": "infinite_dungeon:dungeon",
+  "pools": {
+    "boss": "infinite_dungeon:boss",
+    "elite": "infinite_dungeon:elite",
+    "fodder": "infinite_dungeon:fodder"
+  }
+}

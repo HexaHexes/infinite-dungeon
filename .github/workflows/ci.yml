@@ -77,6 +77,66 @@ jobs:
           fi
           echo "JUnit suite ran $TOTAL tests, all passing."
 
+      # Datapack drift gate (issue #130): only repos committing generated output
+      # at src/generated/resources have a runData task, so that directory is the
+      # activation signal and every other repo skips with a notice.
+      - name: Regenerate the datapack and fail on drift
+        env:
+          # runData still resolves the api from GitHub Packages.
+          GITHUB_TOKEN: ${{ secrets.PACKAGE_READ_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -d src/generated/resources ]; then
+            echo "::notice::No committed generated output at src/generated/resources - datapack drift gate does not apply."
+            exit 0
+          fi
+
+          ./gradlew runData --no-daemon --stacktrace
+
+          COUNT=$(find src/generated/resources/data -name '*.json' 2>/dev/null | wc -l)
+          echo "generated datapack files: $COUNT"
+          if [ "$COUNT" -le 0 ]; then
+            echo "::error::Datagen wrote no datapack files, so an unchanged tree would prove nothing."
+            exit 1
+          fi
+
+          STATUS=$(git status --porcelain -- src/generated/resources)
+          if [ -n "$STATUS" ]; then
+            echo "$STATUS"
+            echo "::error::src/generated/resources is stale. Run ./gradlew runData and commit the result."
+            exit 1
+          fi
+
+          echo "Committed datapack is byte-identical to the datagen output."
+
+      # The datapack lives inside the jar. Subset compare, not count equality,
+      # so hand-authored data files beside the generated ones stay legal.
+      - name: Assert the jar ships the datapack
+        run: |
+          set -euo pipefail
+
+          if [ ! -d src/generated/resources ]; then
+            echo "::notice::No committed generated output - jar assertion does not apply."
+            exit 0
+          fi
+
+          MOD_ID=$(grep '^mod_id=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')
+          JAR=$(ls build/libs/"$MOD_ID"-*.jar | head -1)
+          echo "jar: $JAR"
+
+          unzip -l "$JAR" | awk '{print $NF}' | grep '^data/.*\.json$' | sort > jar_files.txt
+          (cd src/generated/resources && find data -name '*.json' | sort) > disk_files.txt
+          MISSING=$(comm -23 disk_files.txt jar_files.txt)
+
+          if [ -n "$MISSING" ]; then
+            echo "::error::Generated datapack files missing from the jar:"
+            echo "$MISSING"
+            exit 1
+          fi
+
+          echo "Jar ships all $(wc -l < disk_files.txt) generated datapack files."
+
       - name: Upload jar
         if: always()
         uses: actions/upload-artifact@v7

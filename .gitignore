@@ -2,6 +2,12 @@ build/
 .gradle/
 out/
 run/
+run-data/
 *.iml
 .idea/
 repo/
+
+# src/generated is deliberately NOT ignored: it holds the committed datagen
+# output (runData), which has to ship in the jar. Only the datagen cache is
+# ignored.
+src/generated/resources/.cache

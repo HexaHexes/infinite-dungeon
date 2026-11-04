@@ -28,6 +28,15 @@ sourceSets {
         compileClasspath += sourceSets.main.output + configurations.compileClasspath
         runtimeClasspath += output + sourceSets.main.output + configurations.runtimeClasspath
     }
+    main {
+        resources {
+            // The committed datagen output ships in the jar alongside
+            // src/main/resources (never hand-authored there - see
+            // .github/workflows/ci.yml's drift gate).
+            srcDir 'src/generated/resources'
+            exclude 'src/generated/**/.cache'
+        }
+    }
 }
 
 neoForge {
@@ -49,6 +58,17 @@ neoForge {
         gameTestServer {
             type = "gameTestServer"
             gameDirectory = project.layout.projectDirectory.dir('run')
+        }
+
+        // Datagen (issue #130): the mod's providers write the internal datapack
+        // to the committed src/generated/resources, which ships in the jar. A
+        // manual step - CI regenerates it and fails on drift.
+        data {
+            data()
+            gameDirectory = project.layout.projectDirectory.dir('run-data')
+            programArguments.addAll '--mod', project.mod_id, '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath()
         }
     }
 

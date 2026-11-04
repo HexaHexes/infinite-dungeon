@@ -48,6 +48,8 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.DoubleValue DIFFICULTY_BASE;
     private static final ModConfigSpec.DoubleValue DIFFICULTY_LINEAR_PER_FLOOR;
     private static final ModConfigSpec.DoubleValue DIFFICULTY_QUADRATIC_PER_LAYER;
+    private static final ModConfigSpec.DoubleValue LOOT_QUANTITY_PER_POINT;
+    private static final ModConfigSpec.DoubleValue LOOT_QUALITY_PER_POINT;
     private static final ModConfigSpec.DoubleValue MAGICULE_BASE;
     private static final ModConfigSpec.DoubleValue MAGICULE_LINEAR_PER_FLOOR;
     private static final ModConfigSpec.DoubleValue MAGICULE_QUADRATIC_PER_LAYER;
@@ -247,6 +249,18 @@ public final class DungeonConfigs {
                 .comment("partyMultiplier (plan section 7). The curve is the attribute's")
                 .comment("own key - DIFFICULTY rows read D, MAGICULE rows read M.")
                 .defineInRange("statMultiplierPerPoint", 1.0D, 0D, 100D);
+        builder.pop();
+        builder.push("loot");
+        LOOT_QUANTITY_PER_POINT = builder
+                .comment("Extra item count per point of D (issue #51): a rolled entry's")
+                .comment("count becomes round(base * (1 + this * D)). 0 makes every")
+                .comment("table flat, exactly as the pre-loot baseline.")
+                .defineInRange("quantityPerPoint", 0.05D, 0D, 10D);
+        LOOT_QUALITY_PER_POINT = builder
+                .comment("Per-point share of a table's rare entries (issue #51): the")
+                .comment("rare sub-pool passes its depth gate with probability this * D,")
+                .comment("clamped to 1. 0 makes rare entries never drop.")
+                .defineInRange("qualityPerPoint", 0.02D, 0D, 10D);
         builder.pop();
         builder.push("magicule");
         MAGICULE_BASE = builder
@@ -537,6 +551,16 @@ public final class DungeonConfigs {
     /** The per-layer squared difficulty increment (plan section 7; default 0.05). */
     public static double difficultyQuadraticPerLayer() {
         return DIFFICULTY_QUADRATIC_PER_LAYER.get();
+    }
+
+    /** Extra loot count per point of D (issue #51; default 0.05). */
+    public static double lootQuantityPerPoint() {
+        return LOOT_QUANTITY_PER_POINT.get();
+    }
+
+    /** Per-point rare-entry share (issue #51; default 0.02). */
+    public static double lootQualityPerPoint() {
+        return LOOT_QUALITY_PER_POINT.get();
     }
 
     /** The magicule curve's origin value (plan section 7; default 0). */

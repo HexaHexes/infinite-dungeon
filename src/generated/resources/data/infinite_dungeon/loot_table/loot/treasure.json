@@ -1,0 +1,83 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "functions": [
+            {
+              "add": false,
+              "count": 1.0,
+              "function": "minecraft:set_count"
+            },
+            {
+              "function": "infinite_dungeon:depth_scaled"
+            }
+          ],
+          "name": "minecraft:golden_apple"
+        },
+        {
+          "type": "minecraft:item",
+          "conditions": [
+            {
+              "condition": "infinite_dungeon:depth_chance"
+            }
+          ],
+          "functions": [
+            {
+              "add": false,
+              "count": 3.0,
+              "function": "minecraft:set_count"
+            },
+            {
+              "function": "infinite_dungeon:depth_scaled"
+            }
+          ],
+          "name": "minecraft:diamond"
+        },
+        {
+          "type": "minecraft:item",
+          "conditions": [
+            {
+              "condition": "infinite_dungeon:depth_chance"
+            }
+          ],
+          "functions": [
+            {
+              "add": false,
+              "count": 1.0,
+              "function": "minecraft:set_count"
+            },
+            {
+              "function": "infinite_dungeon:depth_scaled"
+            }
+          ],
+          "name": "minecraft:netherite_scrap"
+        },
+        {
+          "type": "minecraft:item",
+          "conditions": [
+            {
+              "condition": "infinite_dungeon:depth_chance"
+            }
+          ],
+          "functions": [
+            {
+              "add": false,
+              "count": 1.0,
+              "function": "minecraft:set_count"
+            },
+            {
+              "function": "infinite_dungeon:depth_scaled"
+            }
+          ],
+          "name": "minecraft:emerald_block"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "infinite_dungeon:loot/treasure"
+}

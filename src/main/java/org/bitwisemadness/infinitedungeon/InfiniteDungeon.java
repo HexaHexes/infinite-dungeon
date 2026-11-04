@@ -23,6 +23,7 @@ import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.lock.ProtectionListeners;
+import org.bitwisemadness.infinitedungeon.loot.LootFunctions;
 import org.bitwisemadness.infinitedungeon.magicule.DungeonMagiculeProvider;
 import org.bitwisemadness.infinitedungeon.magicule.MagiculeElevation;
 import org.bitwisemadness.infinitedungeon.magicule.MagiculeParticles;
@@ -112,6 +113,7 @@ public final class InfiniteDungeon {
         FallbackHallFeature.register(modBus);
         TransitionFramesFeature.register(modBus);
         WaystoneEntranceFeature.register(modBus);
+        LootFunctions.register(modBus);
         // No lobby feature since issue #246: the lobby is the Overworld entrance site (Reading B),
         // so the dungeon dimension generates no lobby - its content starts at layer 1. The ambient
         // magicule service (API-owned) reads M(L,f) here; consumers reach it via the API contract (7, #201).

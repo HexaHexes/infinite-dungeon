@@ -24,6 +24,8 @@ import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.lock.ProtectionListeners;
 import org.bitwisemadness.infinitedungeon.loot.LootFunctions;
+import org.bitwisemadness.infinitedungeon.loot.LootInjectionReloadListener;
+import org.bitwisemadness.infinitedungeon.loot.LootModifiers;
 import org.bitwisemadness.infinitedungeon.magicule.DungeonMagiculeProvider;
 import org.bitwisemadness.infinitedungeon.magicule.MagiculeElevation;
 import org.bitwisemadness.infinitedungeon.magicule.MagiculeParticles;
@@ -114,6 +116,7 @@ public final class InfiniteDungeon {
         TransitionFramesFeature.register(modBus);
         WaystoneEntranceFeature.register(modBus);
         LootFunctions.register(modBus);
+        LootModifiers.register(modBus);
         // No lobby feature since issue #246: the lobby is the Overworld entrance site (Reading B),
         // so the dungeon dimension generates no lobby - its content starts at layer 1. The ambient
         // magicule service (API-owned) reads M(L,f) here; consumers reach it via the API contract (7, #201).
@@ -137,6 +140,7 @@ public final class InfiniteDungeon {
         // pools, reloaded with /reload like every suite data type - core owns the registry, the
         // API owns the machinery (I32).
         NeoForge.EVENT_BUS.addListener(SpawnPoolReloadListener::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(LootInjectionReloadListener::onAddReloadListeners);
         // Boss bars (issue #253, D35 presentation-only): the single lifecycle
         // listener - progress, audience, and reaping - for the fights the two
         // spawn sites register through BossBars.track.

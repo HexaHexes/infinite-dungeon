@@ -30,7 +30,9 @@ import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 import net.minecraft.world.level.levelgen.flat.FlatLayerInfo;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
+import net.minecraft.world.level.levelgen.placement.BiomeFilter;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
+import net.minecraft.world.level.levelgen.placement.PlacementModifier;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureSet;
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
@@ -145,12 +147,15 @@ final class DungeonWorldgen {
     static void placedFeatures(BootstrapContext<PlacedFeature> context) {
         HolderGetter<ConfiguredFeature<?, ?>> configured =
                 context.lookup(Registries.CONFIGURED_FEATURE);
+        // BiomeFilter.biome() last, as vanilla's datagen validator requires; the
+        // old hand-authored files omitted it (a latent flaw datagen surfaced).
+        List<PlacementModifier> placement = List.of(BiomeFilter.biome());
         context.register(FALLBACK_HALL_PLACED,
-                new PlacedFeature(configured.getOrThrow(FALLBACK_HALL), List.of()));
+                new PlacedFeature(configured.getOrThrow(FALLBACK_HALL), placement));
         context.register(TRANSITION_FRAMES_PLACED,
-                new PlacedFeature(configured.getOrThrow(TRANSITION_FRAMES), List.of()));
+                new PlacedFeature(configured.getOrThrow(TRANSITION_FRAMES), placement));
         context.register(WAYSTONE_ENTRANCE_PLACED,
-                new PlacedFeature(configured.getOrThrow(WAYSTONE_ENTRANCE), List.of()));
+                new PlacedFeature(configured.getOrThrow(WAYSTONE_ENTRANCE), placement));
     }
 
     static void structureSets(BootstrapContext<StructureSet> context) {

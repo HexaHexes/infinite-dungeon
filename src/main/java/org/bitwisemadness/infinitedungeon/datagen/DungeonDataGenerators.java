@@ -37,6 +37,9 @@ public final class DungeonDataGenerators {
         generator.addProvider(true, new DungeonHasStructureTagProvider(generator.getPackOutput()));
         generator.addProvider(true,
                 new DungeonLootProvider(generator.getPackOutput(), event.getLookupProvider()));
+        generator.addProvider(true, new DungeonLootInjectionsProvider(generator.getPackOutput()));
+        generator.addProvider(true,
+                new DungeonLootModifierProvider(generator.getPackOutput(), event.getLookupProvider()));
     }
 
     /** The dynamic-registry entries test-datapack generation bootstraps. */

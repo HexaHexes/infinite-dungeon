@@ -1,0 +1,16 @@
+{
+  "injections": [
+    {
+      "chance": 0.5,
+      "max_layer": 3,
+      "min_layer": 1,
+      "table": "infinite_dungeon:loot/common"
+    },
+    {
+      "chance": 0.25,
+      "max_layer": 99,
+      "min_layer": 4,
+      "table": "infinite_dungeon:loot/treasure"
+    }
+  ]
+}

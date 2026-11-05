@@ -1,4 +1,8 @@
 {
   "feature": "infinite_dungeon:waystone_entrance",
-  "placement": []
+  "placement": [
+    {
+      "type": "minecraft:biome"
+    }
+  ]
 }

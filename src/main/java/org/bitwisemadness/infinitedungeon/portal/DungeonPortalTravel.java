@@ -8,7 +8,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import org.bitwisemadness.infinitedungeon.announce.Announcement;
 import org.bitwisemadness.infinitedungeon.announce.DungeonAnnouncements;
-import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGeometry;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
@@ -44,13 +43,14 @@ public final class DungeonPortalTravel {
         // Lane transitions (issue #31): a hop between layers inside the dungeon resolves from the
         // position alone - before the anchor logic runs, so a lane portal can never bind or consume
         // the overworld return anchor. The dimension gate lives here; the hop is public for the harness.
-        if (DungeonDimensions.LEVEL.equals(serverLevel.dimension())
+        if (DungeonDimensions.isDungeon(serverLevel)
                 && laneHop(serverLevel, portalPos, player)) {
             return;
         }
-        boolean inDungeon = DungeonDimensions.LEVEL.equals(serverLevel.dimension());
+        boolean inDungeon = DungeonDimensions.isDungeon(serverLevel);
         TravelPolicy.Action action = TravelPolicy.decide(
-                inDungeon, EntryAnchors.has(player), DungeonConfigs.portalReturnMode());
+                inDungeon, EntryAnchors.has(player),
+                PortalRules.returnMode(serverLevel.dimension().location().toString()));
 
         switch (action) {
             case BIND_AND_ENTER -> enterDungeon(player, serverLevel, portalPos);
@@ -110,8 +110,9 @@ public final class DungeonPortalTravel {
         if (!(home.getBlockState(anchorPos).getBlock() instanceof DungeonPortalBlock)) {
             // The anchor frame was destroyed: nether-style re-formation.
             boolean rebuilt = PortalFrameBuilder.build(home, anchorPos, Direction.Axis.X);
-            if (TravelPolicy.afterReformAttempt(DungeonConfigs.reformMissingPortal(), rebuilt)
-                    == TravelPolicy.Action.RETURN_TO_ANCHOR) {
+            if (TravelPolicy.afterReformAttempt(
+                    PortalRules.reformMissingPortal(home.dimension().location().toString()),
+                    rebuilt) == TravelPolicy.Action.RETURN_TO_ANCHOR) {
                 teleport(player, home, anchorPos);
             } else {
                 worldSpawn(player, true);

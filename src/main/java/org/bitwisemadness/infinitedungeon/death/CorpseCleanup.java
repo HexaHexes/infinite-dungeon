@@ -49,7 +49,7 @@ public final class CorpseCleanup {
         if (!(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
-        if (!DungeonDimensions.LEVEL.equals(level.dimension())) {
+        if (!DungeonDimensions.isDungeon(level)) {
             return;
         }
         if (level.getGameTime() % SCAN_INTERVAL_TICKS != 0L) {

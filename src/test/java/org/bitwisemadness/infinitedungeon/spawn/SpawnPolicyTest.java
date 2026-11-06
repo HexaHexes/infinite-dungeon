@@ -3,6 +3,10 @@ package org.bitwisemadness.infinitedungeon.spawn;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
+import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -10,6 +14,20 @@ import org.junit.jupiter.api.Test;
  * the dungeon dimension ever trips.
  */
 class SpawnPolicyTest {
+
+    @BeforeAll
+    static void seedRegistry() {
+        // The gates resolve dungeon membership through the profile
+        // registry (issue #162); the plain-JVM suite seeds the core
+        // dimension's minimal profile directly.
+        DimensionProfiles.register(
+                DimensionProfile.forDimension("infinite_dungeon:dungeon"));
+    }
+
+    @AfterAll
+    static void clearRegistry() {
+        DimensionProfiles.reset();
+    }
 
     @Test
     void sleepPreservesTheSpawnPointInTheDungeonOnly() {

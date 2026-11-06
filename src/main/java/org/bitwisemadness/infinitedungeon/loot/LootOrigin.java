@@ -5,11 +5,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
-import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.depth.DifficultyCurve;
 import org.bitwisemadness.infinitedungeon.depth.DungeonLayout;
 import org.bitwisemadness.infinitedungeon.depth.DungeonPosition;
 import org.bitwisemadness.infinitedungeon.depth.LayoutParameters;
+import org.bitwisemadness.infinitedungeon.depth.ProfileCurves;
 import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
 
 /**
@@ -27,7 +27,7 @@ final class LootOrigin {
 
     static double difficultyAt(LootContext context) {
         ServerLevel level = context.getLevel();
-        if (!DungeonDimensions.LEVEL.equals(level.dimension())) {
+        if (!DungeonDimensions.isDungeon(level)) {
             return Double.NaN;
         }
         Vec3 origin = context.getParamOrNull(LootContextParams.ORIGIN);
@@ -40,9 +40,9 @@ final class LootOrigin {
             return Double.NaN;
         }
         DungeonPosition depth = DungeonLayout.derive(parameters, position.getX(), position.getY());
+        double[] coefficients =
+                ProfileCurves.difficulty(level.dimension().location().toString());
         return DifficultyCurve.difficulty(depth.layerIndex(), depth.floorInLayer(),
-                DungeonConfigs.difficultyBase(),
-                DungeonConfigs.difficultyLinearPerFloor(),
-                DungeonConfigs.difficultyQuadraticPerLayer());
+                coefficients[0], coefficients[1], coefficients[2]);
     }
 }

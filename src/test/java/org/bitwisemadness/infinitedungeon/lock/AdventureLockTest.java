@@ -5,10 +5,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Set;
+import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
+import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /** The adventure lock's two rules: where it holds, and what may be broken. */
 class AdventureLockTest {
+
+    @BeforeAll
+    static void seedRegistry() {
+        // The gates resolve dungeon membership through the profile
+        // registry (issue #162); the plain-JVM suite seeds the core
+        // dimension's minimal profile directly.
+        DimensionProfiles.register(
+                DimensionProfile.forDimension("infinite_dungeon:dungeon"));
+    }
+
+    @AfterAll
+    static void clearRegistry() {
+        DimensionProfiles.reset();
+    }
 
     @Test
     void theLockHoldsOnlyInDungeon() {

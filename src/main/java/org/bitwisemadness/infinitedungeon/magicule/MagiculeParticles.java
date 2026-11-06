@@ -41,7 +41,7 @@ public final class MagiculeParticles {
         if (!(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
-        if (!DungeonDimensions.LEVEL.equals(level.dimension())) {
+        if (!DungeonDimensions.isDungeon(level)) {
             return;
         }
         if (!DungeonConfigs.magiculeParticles()) {

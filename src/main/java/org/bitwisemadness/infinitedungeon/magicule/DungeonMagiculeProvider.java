@@ -4,13 +4,13 @@ import java.util.OptionalDouble;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.depth.DungeonLayout;
 import org.bitwisemadness.infinitedungeon.depth.DungeonPosition;
 import org.bitwisemadness.infinitedungeon.depth.LayoutParameters;
 import org.bitwisemadness.infinitedungeon.depth.MagiculeCurve;
-import org.bitwisemadness.infinitedungeon.dimension.DungeonDimensions;
+import org.bitwisemadness.infinitedungeon.depth.ProfileCurves;
 import org.bitwisemadness.infinitedungeonapi.magicule.MagiculeProvider;
+import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 
 /**
  * The dungeon dimension's ambient magicule provider (plan section 7, issue
@@ -46,13 +46,13 @@ public final class DungeonMagiculeProvider implements MagiculeProvider {
             // The contract is server-side; a client-level query has no answer.
             return OptionalDouble.empty();
         }
-        if (!DungeonDimensions.LEVEL.equals(server.dimension())) {
+        String dimensionId = server.dimension().location().toString();
+        if (!DimensionProfiles.isDungeonDimension(dimensionId)) {
             return OptionalDouble.empty();
         }
+        double[] coefficients = ProfileCurves.magicule(dimensionId);
         return concentrationAt(LayoutParameters.forServer(server), pos.getX(), pos.getY(),
-                DungeonConfigs.magiculeBase(),
-                DungeonConfigs.magiculeLinearPerFloor(),
-                DungeonConfigs.magiculeQuadraticPerLayer());
+                coefficients[0], coefficients[1], coefficients[2]);
     }
 
     /**

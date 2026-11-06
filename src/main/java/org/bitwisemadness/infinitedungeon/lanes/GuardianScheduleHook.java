@@ -4,6 +4,7 @@ import java.util.Optional;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.depth.ProfileCurves;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 import org.bitwisemadness.infinitedungeonapi.profile.GuardianRules;
 
@@ -52,10 +53,10 @@ public final class GuardianScheduleHook {
                 .flatMap(profile -> profile.guardian())
                 .map(GuardianRules::powerBandPercent)
                 .orElseGet(DungeonConfigs::bossPowerBandPercent);
+        double[] coefficients =
+                ProfileCurves.difficulty(level.dimension().location().toString());
         return GuardianSchedule.select(layer, level.getSeed(),
-                DungeonConfigs.difficultyBase(),
-                DungeonConfigs.difficultyLinearPerFloor(),
-                DungeonConfigs.difficultyQuadraticPerLayer(),
+                coefficients[0], coefficients[1], coefficients[2],
                 bandPercent);
     }
 }

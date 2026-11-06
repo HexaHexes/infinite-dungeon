@@ -69,7 +69,7 @@ public final class PortalIgnition {
         // The construction toggle and the dimension gate share one refusal:
         // the whole interaction is cancelled and the player is told why.
         if (!ConstructionPolicy.mayIgnite(
-                DungeonConfigs.portalAllowConstruction(),
+                PortalRules.allowConstruction(event.getLevel().dimension().location().toString()),
                 DungeonConfigs.portalBuildableDimensions()
                         .allows(event.getLevel().dimension().location().toString()))) {
             event.setCanceled(true);
@@ -110,7 +110,7 @@ public final class PortalIgnition {
         }
         if (event.getLevel() instanceof Level level) {
             if (!ConstructionPolicy.mayIgnite(
-                    DungeonConfigs.portalAllowConstruction(),
+                    PortalRules.allowConstruction(level.dimension().location().toString()),
                     DungeonConfigs.portalBuildableDimensions()
                             .allows(level.dimension().location().toString()))) {
                 notifyRefusal(event.getEntity());
@@ -133,7 +133,7 @@ public final class PortalIgnition {
      */
     public static boolean ignitionSealed(Level level, BlockPos interior) {
         if (!(level instanceof ServerLevel server)
-                || !DungeonDimensions.LEVEL.equals(server.dimension())) {
+                || !DungeonDimensions.isDungeon(server)) {
             return false;
         }
         return sealedAt(server, interior);

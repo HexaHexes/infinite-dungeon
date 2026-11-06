@@ -26,6 +26,7 @@ import org.bitwisemadness.infinitedungeon.lock.ProtectionListeners;
 import org.bitwisemadness.infinitedungeon.loot.LootFunctions;
 import org.bitwisemadness.infinitedungeon.loot.LootInjectionReloadListener;
 import org.bitwisemadness.infinitedungeon.loot.LootModifiers;
+import org.bitwisemadness.infinitedungeon.loot.LootSlotReloadListener;
 import org.bitwisemadness.infinitedungeon.magicule.DungeonMagiculeProvider;
 import org.bitwisemadness.infinitedungeon.magicule.MagiculeElevation;
 import org.bitwisemadness.infinitedungeon.magicule.MagiculeParticles;
@@ -141,6 +142,7 @@ public final class InfiniteDungeon {
         // API owns the machinery (I32).
         NeoForge.EVENT_BUS.addListener(SpawnPoolReloadListener::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(LootInjectionReloadListener::onAddReloadListeners);
+        NeoForge.EVENT_BUS.addListener(LootSlotReloadListener::onAddReloadListeners);
         // Boss bars (issue #253, D35 presentation-only): the single lifecycle
         // listener - progress, audience, and reaping - for the fights the two
         // spawn sites register through BossBars.track.

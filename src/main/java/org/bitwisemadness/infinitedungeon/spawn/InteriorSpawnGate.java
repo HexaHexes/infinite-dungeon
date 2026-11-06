@@ -66,7 +66,7 @@ public final class InteriorSpawnGate {
         ResourceKey<Level> forced = scopeOverrideForTests;
         return forced != null
                 ? forced.equals(level.dimension())
-                : DungeonDimensions.LEVEL.equals(level.dimension());
+                : DungeonDimensions.isDungeon(level);
     }
 
     /**

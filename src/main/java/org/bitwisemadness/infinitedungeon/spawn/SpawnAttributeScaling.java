@@ -85,7 +85,7 @@ public final class SpawnAttributeScaling {
         if (!(living.level() instanceof ServerLevel level)) {
             return;
         }
-        if (!DungeonDimensions.LEVEL.equals(level.dimension())) {
+        if (!DungeonDimensions.isDungeon(level)) {
             return;
         }
         if (living.tickCount != 0) {

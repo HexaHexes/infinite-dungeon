@@ -25,7 +25,7 @@ public final class DungeonTime {
         if (!(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
-        if (!DungeonDimensions.LEVEL.equals(level.dimension())) {
+        if (!DungeonDimensions.isDungeon(level)) {
             return;
         }
         TimePolicy policy = DungeonConfigs.timePolicy();

@@ -23,6 +23,7 @@ import org.bitwisemadness.infinitedungeon.depth.DensityCurve;
 import org.bitwisemadness.infinitedungeon.depth.DungeonLayout;
 import org.bitwisemadness.infinitedungeon.depth.DungeonPosition;
 import org.bitwisemadness.infinitedungeon.depth.LayoutParameters;
+import org.bitwisemadness.infinitedungeon.depth.ProfileCurves;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
 
@@ -116,11 +117,11 @@ public final class AmbientSpawner {
         }
         int centreY = level.getHeight(Heightmap.Types.WORLD_SURFACE, centreX, centreZ);
         DungeonPosition depth = DungeonLayout.derive(parameters, centreX, centreY);
+        double[] density =
+                ProfileCurves.density(level.dimension().location().toString());
         int attempts = AmbientMath.attempts(base,
                 DensityCurve.density(depth.layerIndex(), depth.floorInLayer(),
-                        DungeonConfigs.densityBase(),
-                        DungeonConfigs.densityLinearPerFloor(),
-                        DungeonConfigs.densityQuadraticPerLayer()),
+                        density[0], density[1], density[2]),
                 DungeonConfigs.densityPerPoint(), DungeonConfigs.densityMaxPerChunk());
         int spawned = 0;
         for (int attempt = 0; attempt < attempts; attempt++) {

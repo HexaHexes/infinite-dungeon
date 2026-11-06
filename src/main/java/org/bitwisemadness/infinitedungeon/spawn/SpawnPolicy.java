@@ -1,5 +1,7 @@
 package org.bitwisemadness.infinitedungeon.spawn;
 
+import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
+
 /**
  * The spawn-point invariant, as pure logic: the player's actual spawn point is
  * never settable inside the dungeon dimension.
@@ -46,6 +48,8 @@ public final class SpawnPolicy {
 
     /** Whether the dimension id is the dungeon. */
     public static boolean isDungeon(String dimensionId) {
-        return DUNGEON_DIMENSION.equals(dimensionId);
+        // Profile-driven since #162: any dimension with a registered profile
+        // is a dungeon dimension, not just the core's own.
+        return DimensionProfiles.isDungeonDimension(dimensionId);
     }
 }

@@ -25,12 +25,12 @@ final class DungeonLootInjectionsProvider implements DataProvider {
     @Override
     public CompletableFuture<?> run(CachedOutput cache) {
         JsonObject early = new JsonObject();
-        early.addProperty("table", InfiniteDungeon.MOD_ID + ":loot/common");
+        early.addProperty("slot", InfiniteDungeon.MOD_ID + ":common");
         early.addProperty("min_layer", 1);
         early.addProperty("max_layer", 3);
         early.addProperty("chance", 0.5D);
         JsonObject deep = new JsonObject();
-        deep.addProperty("table", InfiniteDungeon.MOD_ID + ":loot/treasure");
+        deep.addProperty("slot", InfiniteDungeon.MOD_ID + ":treasure");
         deep.addProperty("min_layer", 4);
         deep.addProperty("max_layer", 99);
         deep.addProperty("chance", 0.25D);

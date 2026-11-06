@@ -1,0 +1,25 @@
+{
+  "mappings": [
+    {
+      "max_layer": 3,
+      "min_layer": 1,
+      "slot": "infinite_dungeon:common",
+      "table": "infinite_dungeon:loot/common",
+      "theme": "infinite_dungeon:dungeon"
+    },
+    {
+      "max_layer": 99,
+      "min_layer": 4,
+      "slot": "infinite_dungeon:treasure",
+      "table": "infinite_dungeon:loot/treasure",
+      "theme": "infinite_dungeon:dungeon"
+    },
+    {
+      "max_layer": 3,
+      "min_layer": 1,
+      "slot": "infinite_dungeon:common",
+      "table": "infinite_dungeon:loot/treasure",
+      "theme": "infinite_dungeon:example_theme"
+    }
+  ]
+}

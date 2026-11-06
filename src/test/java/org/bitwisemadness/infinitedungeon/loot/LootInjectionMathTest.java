@@ -12,7 +12,8 @@ import org.junit.jupiter.api.Test;
 class LootInjectionMathTest {
 
     private static LootInjection injection(int minLayer, int maxLayer, double chance) {
-        return new LootInjection("test:table", minLayer, maxLayer, chance, Optional.empty());
+        return new LootInjection(Optional.of("test:table"), Optional.empty(),
+                minLayer, maxLayer, chance, Optional.empty());
     }
 
     @Test

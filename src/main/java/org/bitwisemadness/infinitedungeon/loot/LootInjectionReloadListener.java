@@ -54,10 +54,6 @@ public final class LootInjectionReloadListener
 
     private static LootInjection parseEntry(JsonElement element) {
         JsonObject entry = element.getAsJsonObject();
-        JsonElement table = entry.get("table");
-        if (table == null) {
-            throw new JsonParseException("injection needs a table reference");
-        }
         int minLayer = entry.has("min_layer") ? entry.get("min_layer").getAsInt() : 0;
         int maxLayer = entry.has("max_layer") ? entry.get("max_layer").getAsInt() : Integer.MAX_VALUE;
         double chance = entry.has("chance") ? entry.get("chance").getAsDouble() : 1.0D;
@@ -65,7 +61,15 @@ public final class LootInjectionReloadListener
                 && entry.get("required_mod").isJsonPrimitive()
                 ? Optional.of(entry.get("required_mod").getAsString())
                 : Optional.empty();
-        return new LootInjection(table.getAsString(), minLayer, maxLayer, chance, requiredMod);
+        return new LootInjection(read(entry, "table"), read(entry, "slot"),
+                minLayer, maxLayer, chance, requiredMod);
+    }
+
+    private static Optional<String> read(JsonObject entry, String field) {
+        JsonElement value = entry.get(field);
+        return value == null || !value.isJsonPrimitive()
+                ? Optional.empty()
+                : Optional.of(value.getAsString());
     }
 
     @Override

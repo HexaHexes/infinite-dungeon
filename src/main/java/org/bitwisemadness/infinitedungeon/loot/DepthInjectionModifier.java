@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -70,12 +71,19 @@ public final class DepthInjectionModifier extends LootModifier {
                 LootInjectionMath.filterByLayer(LootInjections.all(), layer),
                 LootInjection::requiredMod,
                 modId -> ModList.get().isLoaded(modId));
+        String theme = level.dimension().location().toString();
         for (LootInjection injection : allowed) {
             if (!LootInjectionMath.passesChance(injection.chance(), context.getRandom().nextDouble())) {
                 continue;
             }
+            Optional<String> tableId = injection.table().isPresent()
+                    ? injection.table()
+                    : LootSlots.resolve(injection.slot().orElseThrow(), theme, layer);
+            if (tableId.isEmpty()) {
+                continue;
+            }
             ResourceKey<LootTable> key = ResourceKey.create(Registries.LOOT_TABLE,
-                    ResourceLocation.parse(injection.table()));
+                    ResourceLocation.parse(tableId.get()));
             LootTable table = level.getServer().reloadableRegistries().getLootTable(key);
             if (table != null) {
                 table.getRandomItemsRaw(context, loot::add);

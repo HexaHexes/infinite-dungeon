@@ -38,6 +38,7 @@ public final class DungeonDataGenerators {
         generator.addProvider(true,
                 new DungeonLootProvider(generator.getPackOutput(), event.getLookupProvider()));
         generator.addProvider(true, new DungeonLootInjectionsProvider(generator.getPackOutput()));
+        generator.addProvider(true, new DungeonLootSlotsProvider(generator.getPackOutput()));
         generator.addProvider(true,
                 new DungeonLootModifierProvider(generator.getPackOutput(), event.getLookupProvider()));
     }

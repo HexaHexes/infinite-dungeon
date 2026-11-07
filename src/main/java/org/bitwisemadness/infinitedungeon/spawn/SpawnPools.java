@@ -50,6 +50,11 @@ public final class SpawnPools {
         return datapack.containsKey(poolId);
     }
 
+    /** Every loaded pool's raw entries, unfiltered (authoring validation, issue #257). */
+    public static Map<String, List<SpawnPoolEntry>> entries() {
+        return datapack;
+    }
+
     /**
      * The concrete candidates for a pool at a layer: the filter pipeline in
      * order - band, required mod, expansion - with one candidate per entity a

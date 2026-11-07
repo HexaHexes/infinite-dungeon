@@ -43,6 +43,7 @@ import org.bitwisemadness.infinitedungeon.spawn.SpawnAttributeScaling;
 import org.bitwisemadness.infinitedungeon.spawn.SpawnPoolReloadListener;
 import org.bitwisemadness.infinitedungeon.time.DungeonTime;
 import org.bitwisemadness.infinitedungeon.treasure.KeyItems;
+import org.bitwisemadness.infinitedungeon.validation.ContentValidationReloadListener;
 import org.bitwisemadness.infinitedungeonapi.magicule.AmbientMagicule;
 import org.slf4j.Logger;
 /**
@@ -143,6 +144,8 @@ public final class InfiniteDungeon {
         NeoForge.EVENT_BUS.addListener(SpawnPoolReloadListener::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(LootInjectionReloadListener::onAddReloadListeners);
         NeoForge.EVENT_BUS.addListener(LootSlotReloadListener::onAddReloadListeners);
+        // Registered last: the validation pass reads the schemas above (issue #257).
+        NeoForge.EVENT_BUS.addListener(ContentValidationReloadListener::onAddReloadListeners);
         // Boss bars (issue #253, D35 presentation-only): the single lifecycle
         // listener - progress, audience, and reaping - for the fights the two
         // spawn sites register through BossBars.track.

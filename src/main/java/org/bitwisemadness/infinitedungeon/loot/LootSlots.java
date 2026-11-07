@@ -24,6 +24,11 @@ public final class LootSlots {
         datapack = List.copyOf(mappings);
     }
 
+    /** Every loaded mapping (authoring validation, issue #257). */
+    public static List<LootSlotMapping> all() {
+        return datapack;
+    }
+
     /** Resolves the loaded mappings for a slot, theme and layer. */
     public static Optional<String> resolve(String slot, String theme, int layer) {
         return resolveFor(datapack, slot, theme, layer);

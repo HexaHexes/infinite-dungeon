@@ -66,6 +66,16 @@ versionRange = "[21.1.46,)"
 ordering = "AFTER"
 side = "BOTH"
 reason = "Layer entrances are Waystones: placed, named Layer N, and used for fast travel."
+# Corpse - optional: the death-marker leg is gated (absence no-ops it), so
+# the dimension works fully without it.
+[[dependencies.${mod_id}]]
+modId = "corpse"
+type = "optional"
+versionRange = "[1.1.22,)"
+ordering = "AFTER"
+side = "BOTH"
+reason = "Corpses mark the death spot inside the dungeon; without Corpse the leg is skipped."
+
 # The one sanctioned mixin exception (issue #174 ruling; agents/REPO.md): lets
 # Dungeon Crawl's structure generate inside void dimensions' build height.
 [[mixins]]

@@ -9,7 +9,7 @@ import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConf
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
-import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.depth.ProfileFloors;
 import org.bitwisemadness.infinitedungeon.portal.PortalFrameBuilder;
 
 /**
@@ -83,8 +83,8 @@ public final class TransitionFramesFeature extends Feature<NoneFeatureConfigurat
                 LaneTransitions.departureInterior(minBuild, candidate),
                 Direction.Axis.X, false);
         int available = level.getHeight();
-        int floors = FloorSchedule.floorsInLayer(level.getSeed(), lane,
-                DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+        int floors = ProfileFloors.floorsInLayer(
+                level.getLevel().dimension().location().toString(), level.getSeed(), lane);
 
         // Layer 1's arrival is the dimension's exit gate (#246), so it is
         // built lit: the way home never needs a first light. Deeper arrivals

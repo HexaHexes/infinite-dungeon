@@ -4,7 +4,7 @@ import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
-import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.depth.ProfileFloors;
 
 /**
  * The physical layer transition (plan section 6; amendment C2c/#74: portals
@@ -84,12 +84,12 @@ public final class LaneTransitions {
         if (insideInterior(portalPos, departure)) {
             return partnerCell(placement, seed, lane + 1, cell)
                     .map(partner -> arrivalInterior(minBuild, available,
-                            floorsOf(seed, lane + 1), partner));
+                            floorsOf(level, seed, lane + 1), partner));
         }
         // Layer 1's arrival is the exit gate (#246), not a lane pair - only
         // layers 2+ serve arrival-side walks back to their predecessor.
         if (lane >= 2) {
-            var arrival = arrivalInterior(minBuild, available, floorsOf(seed, lane), cell);
+            var arrival = arrivalInterior(minBuild, available, floorsOf(level, seed, lane), cell);
             if (insideInterior(portalPos, arrival)) {
                 return partnerCell(placement, seed, lane - 1, cell)
                         .map(partner -> departureInterior(minBuild, partner));
@@ -119,7 +119,7 @@ public final class LaneTransitions {
         ChunkPos cell = placement.getPotentialStructureChunk(
                 level.getSeed(), placement.spacing(), 0);
         return Optional.of(arrivalInterior(level.getMinBuildHeight(),
-                level.getHeight(), floorsOf(level.getSeed(), 1), cell));
+                level.getHeight(), floorsOf(level, level.getSeed(), 1), cell));
     }
 
     /** The departure slot's interior base: one ring block above the floor plane. */
@@ -157,8 +157,8 @@ public final class LaneTransitions {
         return Optional.of(partner);
     }
 
-    private static int floorsOf(long seed, int layer) {
-        return FloorSchedule.floorsInLayer(seed, layer,
-                DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+    private static int floorsOf(ServerLevel level, long seed, int layer) {
+        return ProfileFloors.floorsInLayer(
+                level.dimension().location().toString(), seed, layer);
     }
 }

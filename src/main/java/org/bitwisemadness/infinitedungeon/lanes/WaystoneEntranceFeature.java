@@ -17,7 +17,7 @@ import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConf
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
-import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.depth.ProfileFloors;
 
 /**
  * The layer-entrance Waystone (plan section 6, issue #68): one per layer,
@@ -88,8 +88,8 @@ public final class WaystoneEntranceFeature extends Feature<NoneFeatureConfigurat
             return false; // one waystone per layer: the rz-0 entrance cell
         }
 
-        int floors = FloorSchedule.floorsInLayer(level.getSeed(), lane,
-                DungeonConfigs.floorsPerLayerMin(), DungeonConfigs.floorsPerLayerMax());
+        int floors = ProfileFloors.floorsInLayer(
+                level.getLevel().dimension().location().toString(), level.getSeed(), lane);
         var spot = LaneTransitions.arrivalInterior(minBuild, level.getHeight(), floors, candidate)
                 .offset(0, 0, OFFSET_Z);
         // The recipe writes unconditionally, so the two-block space is

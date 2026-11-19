@@ -1,17 +1,24 @@
 package org.bitwisemadness.infinitedungeon.gametest;
 
+import java.util.Optional;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
+import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 import org.bitwisemadness.infinitedungeon.death.DeathPolicy;
+import org.bitwisemadness.infinitedungeon.depth.LayoutParameters;
 import org.bitwisemadness.infinitedungeon.depth.ProfileCurves;
+import org.bitwisemadness.infinitedungeon.depth.ProfileFloors;
+import org.bitwisemadness.infinitedungeon.lanes.FloorSchedule;
 import org.bitwisemadness.infinitedungeon.spawn.SpawnPolicy;
 import org.bitwisemadness.infinitedungeonapi.profile.CurveCoefficients;
 import org.bitwisemadness.infinitedungeonapi.profile.CurveOverrides;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfile;
 import org.bitwisemadness.infinitedungeonapi.profile.DimensionProfiles;
+import org.bitwisemadness.infinitedungeonapi.profile.FloorsPerLayer;
 
 /**
  * The second-profile acceptance (issue #162): a dimension with a registered
@@ -82,6 +89,39 @@ public final class ProfileDimensionsGameTests {
         } finally {
             DimensionProfiles.remove(SECOND);
         }
+        helper.succeed();
+    }
+
+    /** Floor bounds resolve profile-over-config: absent falls to the config, a declared pair wins (issue #81). */
+    @GameTest(template = "empty")
+    public static void profile_floors_override_the_config_defaults(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int configMin = DungeonConfigs.floorsPerLayerMin();
+        int configMax = DungeonConfigs.floorsPerLayerMax();
+        helper.assertTrue(ProfileFloors.of(SECOND).min() == configMin
+                        && ProfileFloors.of(SECOND).max() == configMax,
+                "without a profile the config pair must supply the bounds, got "
+                        + ProfileFloors.of(SECOND).describe());
+        LayoutParameters defaulted = LayoutParameters.forServer(level);
+        helper.assertTrue(defaulted.floorsMin() == configMin && defaulted.floorsMax() == configMax,
+                "the level read must fall to the config bounds too, got ["
+                        + defaulted.floorsMin() + ", " + defaulted.floorsMax() + "]");
+        try {
+            DimensionProfiles.register(new DimensionProfile(SECOND,
+                    Optional.empty(), Optional.of(new FloorsPerLayer(3, 4)),
+                    Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                    Optional.empty(), Optional.empty(), Optional.empty()).sanitised());
+            FloorsPerLayer overridden = ProfileFloors.of(SECOND);
+            helper.assertTrue(overridden.min() == 3 && overridden.max() == 4,
+                    "the profile's floor pair must win, got " + overridden.describe());
+            helper.assertTrue(ProfileFloors.floorsInLayer(SECOND, level.getSeed(), 1)
+                            == FloorSchedule.floorsInLayer(level.getSeed(), 1, 3, 4),
+                    "the layer derivation must run on the profile's bounds");
+        } finally {
+            DimensionProfiles.remove(SECOND);
+        }
+        helper.assertTrue(ProfileFloors.of(SECOND).min() == configMin,
+                "removing the profile must restore the config default");
         helper.succeed();
     }
 }

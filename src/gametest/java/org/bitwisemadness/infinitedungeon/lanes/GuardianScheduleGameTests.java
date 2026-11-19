@@ -1,5 +1,6 @@
 package org.bitwisemadness.infinitedungeon.lanes;
 
+import com.mojang.authlib.GameProfile;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -9,7 +10,9 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ChunkPos;
@@ -173,6 +176,73 @@ public final class GuardianScheduleGameTests {
             LayerUnlocks.setGuardianAssigned(layer -> false);
             unlocks.lock(0);
             DimensionProfiles.remove(harnessDimension);
+        }
+    }
+
+    /**
+     * Issue #269: the guardian DEATH SITE must carry attribution (ADR-0003's
+     * killer, api#86) into BossSlainEvent - a player-attributable fall
+     * forwards the killer, an environmental fall (no source entity) forwards
+     * the documented unknown. Drives the REAL GuardianChambers.onLivingDeath
+     * handler; the #42/#249 test posts BossSlainEvent directly, bypassing the
+     * site that dropped the killer. The dimension is registered as a dungeon
+     * and the layer-0 guardian tagged, so no roster or seam is consulted.
+     */
+    @GameTest(template = "empty")
+    public static void guardian_slain_attribution_follows_the_death_source(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String harnessDimension = level.dimension().location().toString();
+        DimensionProfiles.register(new DimensionProfile(
+                harnessDimension,
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty()));
+        SlainCounter slain = new SlainCounter();
+        NeoForge.EVENT_BUS.register(slain);
+        try {
+            UUID killerId = UUID.randomUUID();
+            var killer = new ServerPlayer(level.getServer(), level,
+                    new GameProfile(killerId, "dungeoneer"), ClientInformation.createDefault());
+
+            var playerFelled = EntityType.ZOMBIE.create(level);
+            helper.assertTrue(playerFelled != null, "the guardian must be creatable");
+            playerFelled.addTag(GuardianChambers.GUARDIAN_TAG);
+            playerFelled.addTag("infinite_dungeon_guardian_layer_0");
+            var playerDeath = new LivingDeathEvent(
+                    playerFelled, playerFelled.damageSources().playerAttack(killer));
+            GuardianChambers.onLivingDeath(playerDeath);
+            helper.assertTrue(killerId.equals(slain.lastKiller),
+                    "a player-attributable guardian fall must forward the killer, got "
+                            + slain.lastKiller);
+
+            var envFelled = EntityType.ZOMBIE.create(level);
+            helper.assertTrue(envFelled != null, "the guardian must be creatable");
+            envFelled.addTag(GuardianChambers.GUARDIAN_TAG);
+            envFelled.addTag("infinite_dungeon_guardian_layer_0");
+            var envDeath = new LivingDeathEvent(envFelled, envFelled.damageSources().genericKill());
+            GuardianChambers.onLivingDeath(envDeath);
+            helper.assertTrue(slain.lastKiller == null,
+                    "an environmental guardian fall must forward the documented unknown, got "
+                            + slain.lastKiller);
+            helper.succeed();
+        } finally {
+            NeoForge.EVENT_BUS.unregister(slain);
+            DimensionProfiles.remove(harnessDimension);
+        }
+    }
+
+    /**
+     * Records BossSlainEvent posts; public so the bus can invoke it. Bus
+     * posts and the test's reads all happen on the server thread, so plain
+     * fields suffice.
+     */
+    public static final class SlainCounter {
+
+        UUID lastKiller;
+
+        @SubscribeEvent
+        public void onSlain(BossSlainEvent event) {
+            lastKiller = event.killingPlayer().orElse(null);
         }
     }
 

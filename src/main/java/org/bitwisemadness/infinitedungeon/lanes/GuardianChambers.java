@@ -281,7 +281,12 @@ public final class GuardianChambers {
         if (layer == null) {
             return;
         }
-        NeoForge.EVENT_BUS.post(new BossSlainEvent(level.dimension(), layer, event.getEntity()));
+        // Attribution follows ADR-0003 (api#86): the killer is carried when the
+        // death is player-attributable, null (documented unknown) otherwise -
+        // the 4-arg ctor, so GuardianGating's LayerCompletedEvent receives it.
+        ServerPlayer killer = event.getSource().getEntity() instanceof ServerPlayer player ? player : null;
+        NeoForge.EVENT_BUS.post(new BossSlainEvent(level.dimension(), layer, event.getEntity(),
+                killer == null ? null : killer.getUUID()));
         GuardianDefeats.of(level).record(layer, level.getGameTime());
         recordFighters(level, layer, event.getEntity(), event.getSource().getEntity());
     }

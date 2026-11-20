@@ -34,6 +34,7 @@ public final class DungeonDataGenerators {
                 Set.of(InfiniteDungeon.MOD_ID)));
         generator.addProvider(true, new DungeonProfileProvider(generator.getPackOutput()));
         generator.addProvider(true, new DungeonPoolsProvider(generator.getPackOutput()));
+        generator.addProvider(true, new TowerEntranceStructureProvider(generator.getPackOutput()));
         generator.addProvider(true, new DungeonHasStructureTagProvider(generator.getPackOutput()));
         generator.addProvider(true,
                 new DungeonLootProvider(generator.getPackOutput(), event.getLookupProvider()));

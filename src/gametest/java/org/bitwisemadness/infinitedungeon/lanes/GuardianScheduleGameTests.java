@@ -329,6 +329,11 @@ public final class GuardianScheduleGameTests {
             GuardianSchedule.setRoster(List.of(
                     new BossCandidate("minecraft:zombie", 100.0, false, Optional.empty())));
             LayerUnlocks.setGuardianAssigned(layer -> false);
+            // ...and the defeat/fight records: a sibling recording a layer-0
+            // defeat in the window would read as COOLDOWN on the first entry
+            // (the never-defeated policy) - the same self-healing pattern.
+            GuardianDefeats.of(level).forget(0);
+            FightRecords.of(level).forget(0, FightRecords.GUARDIAN);
             // ...and the profile: the sibling miniboss test registers and REMOVES the shared key
             // around this window - #42's gate reads it first, so a vanished profile silently
             // skipped the unlock (the death-chain regression).

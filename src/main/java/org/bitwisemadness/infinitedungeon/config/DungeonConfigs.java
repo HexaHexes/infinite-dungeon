@@ -41,6 +41,7 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.ConfigValue<String> PORTAL_BUILDABLE_MODE;
     private static final ModConfigSpec.ConfigValue<List<? extends String>> PORTAL_BUILDABLE_LIST;
     private static final ModConfigSpec.BooleanValue PORTAL_ALLOW_CONSTRUCTION;
+    private static final ModConfigSpec.BooleanValue TOWER_ENTRANCE_ENABLED;
     private static final ModConfigSpec.ConfigValue<List<? extends String>> ADVENTURE_BREAKABLE;
     private static final ModConfigSpec.BooleanValue CORPSE_DESPAWN_WHEN_EMPTY;
     private static final ModConfigSpec.IntValue FLOORS_PER_LAYER_MIN;
@@ -207,6 +208,16 @@ public final class DungeonConfigs {
                 .comment("already-formed portals keep working: the 'entrance is an")
                 .comment("admin-placed fixture' server mode.")
                 .define("allowConstruction", true);
+        builder.pop();
+        builder.push("towerEntrance");
+        TOWER_ENTRANCE_ENABLED = builder
+                .comment("Whether the tower-entrance building (issue #199) generates as a")
+                .comment("discoverable entrance. The register's global entrance rules bind")
+                .comment("it: fixed predefined structure, minimal terrain alteration, no")
+                .comment("exterior windows, identity-driven lighting. The portal treatment")
+                .comment("inside it follows the API's entrance policy (api#58); until that")
+                .comment("lands, the building ships with its portal shell.")
+                .define("enabled", true);
         builder.pop();
         builder.push("adventureLock");
         ADVENTURE_BREAKABLE = builder
@@ -516,6 +527,16 @@ public final class DungeonConfigs {
     /** Whether new portal ignition is allowed at all (admin-fixture mode). */
     public static boolean portalAllowConstruction() {
         return PORTAL_ALLOW_CONSTRUCTION.get();
+    }
+
+    /** Whether the tower-entrance building generates as a discoverable entrance. */
+    public static boolean towerEntranceEnabled() {
+        return TOWER_ENTRANCE_ENABLED.get();
+    }
+
+    /** The gametest seam for the toggle (the {@code setBossBarEnabled} pattern). */
+    public static void setTowerEntranceEnabled(boolean enabled) {
+        TOWER_ENTRANCE_ENABLED.set(enabled);
     }
 
     /** Blocks still breakable inside the dungeon under the adventure lock. */

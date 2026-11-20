@@ -21,6 +21,7 @@ import org.bitwisemadness.infinitedungeon.lanes.GuardianScheduleHook;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lanes.TransitionFramesFeature;
 import org.bitwisemadness.infinitedungeon.lanes.WaystoneEntranceFeature;
+import org.bitwisemadness.infinitedungeon.lobby.TowerEntranceFeature;
 import org.bitwisemadness.infinitedungeon.lock.DungeonLock;
 import org.bitwisemadness.infinitedungeon.lock.ProtectionListeners;
 import org.bitwisemadness.infinitedungeon.loot.LootFunctions;
@@ -117,6 +118,7 @@ public final class InfiniteDungeon {
         FallbackHallFeature.register(modBus);
         TransitionFramesFeature.register(modBus);
         WaystoneEntranceFeature.register(modBus);
+        TowerEntranceFeature.register(modBus);
         LootFunctions.register(modBus);
         LootModifiers.register(modBus);
         // No lobby feature since issue #246: the lobby is the Overworld entrance site (Reading B),

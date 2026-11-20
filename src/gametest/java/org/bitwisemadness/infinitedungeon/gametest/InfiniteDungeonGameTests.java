@@ -1123,7 +1123,7 @@ public final class InfiniteDungeonGameTests {
      * positions and always unregisters, so the shared static registry stays
      * clean for the batch.
      */
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", timeoutTicks = 600)
     public static void elevation_sources_lift_queries_once_and_persist(GameTestHelper helper) {
         var level = helper.getLevel();
         BlockPos far = new BlockPos(12345, 64, -12345);

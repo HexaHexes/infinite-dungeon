@@ -1127,6 +1127,10 @@ public final class InfiniteDungeonGameTests {
     public static void elevation_sources_lift_queries_once_and_persist(GameTestHelper helper) {
         var level = helper.getLevel();
         BlockPos far = new BlockPos(12345, 64, -12345);
+        // Premise resets at START (the guardian respawn test's pattern): a failed
+// run can leave 'far' recorded, which would read WARM before this test
+// registers anything.
+        MagiculeElevation.removeSource(level, far);
         try {
             helper.assertTrue(AmbientMagicule.query(level, far) == AmbientMagicule.COLD,
                     "precondition: the untouched probe reads COLD");

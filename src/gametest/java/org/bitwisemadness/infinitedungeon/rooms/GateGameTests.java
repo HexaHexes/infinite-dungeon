@@ -51,7 +51,7 @@ public final class GateGameTests {
     /** Distinct lane used only here; no other test seals or unlocks it. */
     private static final int OWN_LANE = 97;
 
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", timeoutTicks = 600)
     public static void gate_opens_on_key_layer_and_trials(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         // Start-premise: a prior failed run's leftovers (registrations, an

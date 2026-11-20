@@ -1,7 +1,5 @@
 package org.bitwisemadness.infinitedungeon.datagen;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,11 +18,12 @@ import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
  * The tower-entrance building (issue #199, Piece 1): the fixed, predefined
  * structure the register's global entrance rules bind - minimal terrain
  * alteration, no exterior windows - authored as a datagen {@code StructureTemplate}
- * ({@code data/infinite_dungeon/structure/tower_entrance.nbt}) plus its start
- * template pool, so the village injection (Piece 2) and the runtime code
- * feature both read the same committed content. The portal shell is the
- * obsidian frame inside; the portal treatment rides the API entrance policy
- * (api#58, Piece 3).
+ * ({@code data/infinite_dungeon/structure/tower_entrance.nbt}) so the village
+ * injection (Piece 2) and the runtime code feature both read the same
+ * committed content. The portal shell is the obsidian frame inside; the portal
+ * treatment rides the API entrance policy (api#58, Piece 3). The jigsaw block
+ * carries the Piece 2 village attachment contract (a house leaf on the plains
+ * streets).
  */
 final class TowerEntranceStructureProvider implements DataProvider {
 
@@ -35,8 +34,6 @@ final class TowerEntranceStructureProvider implements DataProvider {
 
     private static final ResourceLocation STRUCTURE_ID =
             ResourceLocation.fromNamespaceAndPath(InfiniteDungeon.MOD_ID, "tower_entrance");
-    private static final ResourceLocation START_POOL_ID =
-            ResourceLocation.fromNamespaceAndPath(InfiniteDungeon.MOD_ID, "tower_entrance/start");
 
     private static final String STONE_BRICKS = "minecraft:stone_bricks";
     private static final String OBSIDIAN = "minecraft:obsidian";
@@ -46,11 +43,9 @@ final class TowerEntranceStructureProvider implements DataProvider {
     private static final int DATA_VERSION = 4189;
 
     private final PackOutput.PathProvider structures;
-    private final PackOutput.PathProvider pools;
 
     TowerEntranceStructureProvider(PackOutput output) {
         this.structures = output.createPathProvider(PackOutput.Target.DATA_PACK, "structure");
-        this.pools = output.createPathProvider(PackOutput.Target.DATA_PACK, "worldgen/template_pool");
     }
 
     @Override
@@ -104,24 +99,9 @@ final class TowerEntranceStructureProvider implements DataProvider {
         root.put("blocks", blocksTag);
         root.put("entities", new ListTag());
 
-        JsonObject pool = new JsonObject();
-        pool.addProperty("name", START_POOL_ID.toString());
-        pool.addProperty("fallback", "minecraft:empty");
-        JsonArray elements = new JsonArray();
-        JsonObject element = new JsonObject();
-        element.addProperty("weight", 1);
-        JsonObject inner = new JsonObject();
-        inner.addProperty("element_type", "minecraft:single_pool_element");
-        inner.addProperty("location", STRUCTURE_ID.toString());
-        inner.addProperty("projection", "rigid");
-        inner.addProperty("processors", "minecraft:empty");
-        element.add("element", inner);
-        elements.add(element);
-        pool.add("elements", elements);
-
-        // Raw compressed bytes through CachedOutput (tracked, never cleaned) - the
-// CompoundTag.CODEC path re-encodes integer lists as arrays the loader
-// cannot read.
+        // Raw compressed bytes through CachedOutput (tracked, never cleaned) -
+        // the CompoundTag.CODEC path re-encodes integer lists as arrays the
+        // loader cannot read.
         try {
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
             NbtIo.writeCompressed(root, out);
@@ -131,7 +111,7 @@ final class TowerEntranceStructureProvider implements DataProvider {
         } catch (java.io.IOException e) {
             throw new java.io.UncheckedIOException(e);
         }
-        return DataProvider.saveStable(cache, pool, this.pools.json(START_POOL_ID));
+        return CompletableFuture.completedFuture(null);
     }
 
     /**
@@ -173,12 +153,12 @@ final class TowerEntranceStructureProvider implements DataProvider {
         return list;
     }
 
-    /** The jigsaw block entity: the start connection to the tower pool. */
+    /** The jigsaw block entity: the village-street attachment (Piece 2 contract). */
     private static CompoundTag jigsawNbt() {
         CompoundTag tag = new CompoundTag();
-        tag.putString("name", "infinite_dungeon:tower_entrance");
-        tag.putString("target", START_POOL_ID.toString());
-        tag.putString("pool", "minecraft:empty");
+        tag.putString("name", "minecraft:roads");
+        tag.putString("target", "minecraft:village/plains/streets");
+        tag.putString("pool", "minecraft:empty"); // a house is a leaf: the street pulls it, never the reverse
         tag.putString("final_state", "minecraft:air");
         tag.putString("joint", "rollable");
         return tag;

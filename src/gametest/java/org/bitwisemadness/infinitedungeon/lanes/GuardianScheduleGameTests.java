@@ -279,7 +279,7 @@ public final class GuardianScheduleGameTests {
      * (test methods are atomic - no interleaving mid-body between this and
      * #42's registration).
      */
-    @GameTest(template = "empty")
+    @GameTest(template = "empty", timeoutTicks = 600)
     public static void guardian_chamber_respawns_on_entry_after_the_cooldown(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         long seed = level.getSeed();

@@ -1,11 +1,9 @@
 package org.bitwisemadness.infinitedungeon.lobby;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -22,10 +20,6 @@ import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
 @PrefixGameTestTemplate(false)
 public final class TowerEntranceGameTests {
 
-    private static final ResourceLocation START_POOL =
-            ResourceLocation.fromNamespaceAndPath(InfiniteDungeon.MOD_ID,
-                    "worldgen/template_pool/tower_entrance/start.json");
-
     private TowerEntranceGameTests() {
     }
 
@@ -39,31 +33,17 @@ public final class TowerEntranceGameTests {
                         && template.getSize().getZ() == 7,
                 "the template must be the fixed 7x8x7 building, got " + template.getSize());
         var settings = new StructurePlaceSettings();
-        helper.assertTrue(!template.filterBlocks(BlockPos.ZERO, settings, Blocks.JIGSAW).isEmpty(),
+        var jigsaws = template.filterBlocks(BlockPos.ZERO, settings, Blocks.JIGSAW);
+        helper.assertTrue(!jigsaws.isEmpty(),
                 "the building must carry its jigsaw connection block");
-        String pool = template.filterBlocks(BlockPos.ZERO, settings, Blocks.JIGSAW).get(0)
-                .nbt().getString("pool");
-        helper.assertTrue("minecraft:empty".equals(pool),
-                "the jigsaw must be terminal (minecraft:empty pool), got " + pool);
+        CompoundTag jigsaw = jigsaws.get(0).nbt();
+        helper.assertTrue("minecraft:roads".equals(jigsaw.getString("name"))
+                        && "minecraft:village/plains/streets".equals(jigsaw.getString("target")),
+                "the jigsaw must attach to the plains village streets (Piece 2 contract)");
+        helper.assertTrue("minecraft:empty".equals(jigsaw.getString("pool")),
+                "the jigsaw must be a house leaf (minecraft:empty pool)");
         helper.assertTrue(!template.filterBlocks(BlockPos.ZERO, settings, Blocks.OBSIDIAN).isEmpty(),
                 "the building must carry its obsidian portal shell");
-        helper.succeed();
-    }
-
-    /** The start pool is well-formed and references the tower template. */
-    @GameTest(template = "empty")
-    public static void tower_entrance_start_pool_is_well_formed(GameTestHelper helper) {
-        var resource = helper.getLevel().getServer().getResourceManager().getResource(START_POOL);
-        helper.assertTrue(resource.isPresent(), "the start pool must ship: " + START_POOL);
-        try (InputStream input = resource.get().open()) {
-            String json = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-            helper.assertTrue(json.contains("infinite_dungeon:tower_entrance"),
-                    "the start pool must reference the tower template: " + json);
-            helper.assertTrue(json.contains("single_pool_element"),
-                    "the start pool must use a single_pool_element: " + json);
-        } catch (Exception e) {
-            throw new AssertionError("the start pool must parse", e);
-        }
         helper.succeed();
     }
 

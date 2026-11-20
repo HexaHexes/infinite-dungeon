@@ -220,6 +220,10 @@ test {
 // "All N required tests passed :)" when every required test succeeds. Keep
 // expectedTests in sync with the @GameTest methods in src/gametest.
 tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+    // The chunk-ticket race (the "wedge": tests never start, no summary) can
+    // hang the run; bound it so a wedged run fails fast with the log for
+    // diagnosis instead of stalling the task forever.
+    it.timeout = java.time.Duration.ofMinutes(10)
     def expectedTests = 51
     doLast {
         def log = file('run/logs/latest.log')

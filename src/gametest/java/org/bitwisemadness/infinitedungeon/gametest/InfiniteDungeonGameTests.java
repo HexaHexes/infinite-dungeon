@@ -1123,10 +1123,17 @@ public final class InfiniteDungeonGameTests {
      * positions and always unregisters, so the shared static registry stays
      * clean for the batch.
      */
-    @GameTest(template = "empty", timeoutTicks = 600)
+    // Isolated in its own batch: the COLD premise assumes no sibling writes
+// elevation sources before the probe, which the concurrent default batch
+// cannot guarantee.
+    @GameTest(template = "empty", batch = "elevation_isolated", timeoutTicks = 600)
     public static void elevation_sources_lift_queries_once_and_persist(GameTestHelper helper) {
         var level = helper.getLevel();
         BlockPos far = new BlockPos(12345, 64, -12345);
+        // Premise resets at START (the guardian respawn test's pattern): a failed
+// run can leave 'far' recorded, which would read WARM before this test
+// registers anything.
+        MagiculeElevation.removeSource(level, far);
         try {
             helper.assertTrue(AmbientMagicule.query(level, far) == AmbientMagicule.COLD,
                     "precondition: the untouched probe reads COLD");

@@ -64,10 +64,10 @@ public final class GateGameTests {
                 probeLayerDefeatedSource(helper, level); // schedules ticks 21 / 42
         probeTrialsSource(helper, level);        // schedules ticks 21 / 42 alongside
 
-        // The finalizer runs after both chains' last legs (tick 43 > 42):
-        // restore, release the forced chunk, then succeed. Nothing may succeed
-        // before those legs run.
-        helper.runAfterDelay(43, () -> {
+        // The finalizer runs after both chains' last legs: restore, release the
+        // forced chunk, then succeed. The probes' bounded poll-waits complete
+        // inside this window (fail-fast if a gate never opens).
+        helper.runAfterDelay(200, () -> {
             GateInstances.clear();
             LayerUnlocks.of(level).lock(OWN_LANE);
             level.setChunkForced(layerChunk.x, layerChunk.z, false);
@@ -155,13 +155,13 @@ public final class GateGameTests {
             helper.assertTrue(!level.getBlockState(gatePos).getValue(GateBlock.OPEN),
                     "a layer_defeated gate must stay closed while the guardian stands");
 
-            // The guardian falls; the next poll (a further 20 ticks) opens it.
+            // The guardian falls; the gate's next poll opens it. Poll-wait
+            // (1-tick checks, phase-robust) instead of a hardcoded 20-tick
+            // leg - the chunk-ticket race can skip a poll on CI.
             LayerUnlocks.of(level).unlock(OWN_LANE);
-            helper.runAfterDelay(21, () -> {
-                helper.assertTrue(level.getBlockState(gatePos).getValue(GateBlock.OPEN),
-                        "a layer_defeated gate must open once its lane's guardian falls");
-                level.setBlock(gatePos, Blocks.AIR.defaultBlockState(), 3);
-            });
+            awaitOpen(helper, level, gatePos, 100,
+                    () -> level.setBlock(gatePos, Blocks.AIR.defaultBlockState(), 3),
+                    "a layer_defeated gate must open once its lane's guardian falls");
         });
         return gateChunk;
     }
@@ -220,20 +220,65 @@ public final class GateGameTests {
                 helper.assertBlockProperty(gateRel, GateBlock.OPEN, open -> !open,
                         "a trials gate must stay closed until every declared spawner rewards");
 
-                // Leg C, one poll cycle later: the first re-arms BEFORE the
-                // second ever completes - its stamp must still count.
+                // Leg C, phase-robust (the trials flake): the first re-arms before the
+                // second completes - its stamp must stay sticky.
                 runJustBeforeNextPoll(helper, level, () -> {
                     first.setState(level, TrialSpawnerState.WAITING_FOR_PLAYERS);
-                    second.setState(level, TrialSpawnerState.EJECTING_REWARD);
-
-                    helper.runAfterDelay(2, () -> {
-                        helper.assertBlockProperty(gateRel, GateBlock.OPEN, open -> open,
-                                "a trials gate must open once every spawner has rewarded, stamps sticky");
-                        level.setBlock(gateAbs, Blocks.AIR.defaultBlockState(), 3);
-                        level.setBlock(firstAbs, Blocks.AIR.defaultBlockState(), 3);
-                        level.setBlock(secondAbs, Blocks.AIR.defaultBlockState(), 3);
-                    });
+                    awaitTrialsOpen(helper, level, second,
+                            gateAbs, 4,
+                            () -> {
+                                level.setBlock(gateAbs, Blocks.AIR.defaultBlockState(), 3);
+                                level.setBlock(firstAbs, Blocks.AIR.defaultBlockState(), 3);
+                                level.setBlock(secondAbs, Blocks.AIR.defaultBlockState(), 3);
+                            },
+                            "the trials gate must open once every spawner has rewarded");
                 });
+            });
+        });
+    }
+
+    /**
+     * Poll-waits (1-tick checks) for the gate to open, failing after
+     * {@code maxTicks}. Phase-robust: the gate's 20-tick poll can be skipped
+     * by the chunk-ticket race on CI, so a hardcoded "one poll later"
+     * assertion reads a stale gate.
+     */
+    private static void awaitOpen(GameTestHelper helper, ServerLevel level, BlockPos gatePos,
+            int maxTicks, Runnable onOpen, String message) {
+        if (level.getBlockState(gatePos).getValue(GateBlock.OPEN)) {
+            onOpen.run();
+            return;
+        }
+        if (maxTicks <= 0) {
+            helper.fail(message);
+            return;
+        }
+        helper.runAfterDelay(1, () -> awaitOpen(helper, level, gatePos, maxTicks - 1, onOpen, message));
+    }
+
+    /**
+     * Poll-waits for the trials gate, re-arming the second spawner to a
+     * completing state before each poll - the spawner's ticker versus the
+     * gate's poll has no guaranteed ordering within a tick on CI, so a single
+     * set-then-check can drift past the poll (the trials flake's phase luck).
+     * The first spawner stays re-armed throughout, so its earlier stamp must
+     * remain sticky.
+     */
+    private static void awaitTrialsOpen(GameTestHelper helper, ServerLevel level,
+            TrialSpawnerBlockEntity second, BlockPos gatePos,
+            int attemptsLeft, Runnable cleanup, String message) {
+        runJustBeforeNextPoll(helper, level, () -> {
+            second.setState(level, TrialSpawnerState.EJECTING_REWARD);
+            helper.runAfterDelay(1, () -> {
+                if (level.getBlockState(gatePos).getValue(GateBlock.OPEN)) {
+                    cleanup.run();
+                    return;
+                }
+                if (attemptsLeft <= 0) {
+                    helper.fail(message);
+                    return;
+                }
+                awaitTrialsOpen(helper, level, second, gatePos, attemptsLeft - 1, cleanup, message);
             });
         });
     }

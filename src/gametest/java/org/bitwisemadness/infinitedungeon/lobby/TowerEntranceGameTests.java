@@ -1,9 +1,11 @@
 package org.bitwisemadness.infinitedungeon.lobby;
 
+import java.nio.charset.StandardCharsets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -83,6 +85,26 @@ public final class TowerEntranceGameTests {
         }
         helper.assertTrue(TowerEntranceFeature.enabled(),
                 "restoring the toggle must re-enable the gate");
+        helper.succeed();
+    }
+
+    /** The village injection ships the tower as a plains house. */
+    @GameTest(template = "empty")
+    public static void tower_entrance_injected_into_the_plains_houses_pool(GameTestHelper helper) {
+        var resource = helper.getLevel().getServer().getResourceManager().getResource(
+                ResourceLocation.withDefaultNamespace(
+                        "worldgen/template_pool/village/plains/houses.json"));
+        helper.assertTrue(resource.isPresent(),
+                "the houses pool override must ship");
+        try (java.io.InputStream input = resource.get().open()) {
+            String json = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            helper.assertTrue(json.contains("infinite_dungeon:tower_entrance"),
+                    "the houses pool must carry the tower element: " + json);
+            helper.assertTrue(json.contains("minecraft:village/plains/houses/plains_small_house_1"),
+                    "the override must preserve the vanilla houses");
+        } catch (Exception e) {
+            throw new AssertionError("the houses pool override must parse", e);
+        }
         helper.succeed();
     }
 }

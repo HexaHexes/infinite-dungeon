@@ -211,6 +211,24 @@ dependencies {
 
 configurations.runtimeClasspath.extendsFrom(configurations.devRuntime)
 
+// CVE remediation (the dependency-review gate): the NeoForge toolchain
+// resolves io.netty:netty-handler 4.1.97, which carries multiple
+// high-severity GHSAs (SNI routing bypass, IPv6 subnet filter bypass, TLS
+// hostname-verification bypass, fragmented-ClientHello DoS). Force the
+// patched 4.1.137 line across every configuration.
+//
+// org.lz4:lz4-java 1.8.0 is also flagged (eight GHSAs), but its patched
+// 1.8.1 REMOVES the vulnerable stream classes (LZ4BlockInputStream/
+// LZ4FrameInputStream) that the NeoForge runtime still uses for region
+// compression - forcing it crashes the server at boot with
+// ClassNotFoundException. That remediation must come from the toolchain
+// upstream, not a force (documented in #296).
+configurations.all {
+    resolutionStrategy {
+        force 'io.netty:netty-handler:4.1.137.Final'
+    }
+}
+
 test {
     useJUnitPlatform()
 }

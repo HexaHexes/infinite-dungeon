@@ -6,8 +6,8 @@ and pulled in verbatim - **never hand-edit it.** Everything in this file is this
 repo's own and is edited freely; keep it aligned with the org rules rather than
 restating them.
 
-**Repo:** `HexaHexes/infinite-dungeon` · **Mod ID:** `infinite_dungeon` · **Branch:** `main`
-**Platform:** Minecraft 1.21.1 / NeoForge 21.1.259 / JDK 21 · **Jar:** `build/libs/infinite_dungeon-<version>.jar`
+**Repo:** `HexaHexes/infinite-dungeon` · **Mod ID:** `infinite_dungeon` · **Branch:** `neoforge-1.21.1` (the loader line; this is the default branch - no `main`)
+**Platform:** Minecraft 1.21.1 / NeoForge 21.1.259 / JDK 21 · **Jar:** `build/libs/infinite_dungeon-neoforge-1.21.1-<version>.jar`
 
 The dungeon dimension: descending floors and layers, magicule-tuned spawns and
 bosses, safe rooms, and depth-scaled loot. The suite's shared mechanics live in

@@ -27,8 +27,27 @@ jobs:
       # Defaults: fail on any introduced severity + built-in license
       # detection. No allow/deny lists yet - that policy is a later,
       # separate decision (recorded in issue #30).
+      #
+      # warn-on-openssf-scorecard-level 0: the OpenSSF Scorecard gate (default
+      # 3) flags ubiquitous toolchain transitives of any Gradle graph diff -
+      # fastutil (a hard Minecraft dependency, scorecard 2.4),
+      # org.jetbrains:annotations, the Spotless/Durian toolchain - false
+      # positives that block every PR whose dependency snapshot shifts. The
+      # vulnerability and license gates (the gate's real purpose) stay on.
+      #
+      # allow-ghsas (maintainer risk decision, #296): org.lz4:lz4-java 1.8.0 is
+      # flagged by eight GHSAs (decompressor/stream DoS, info leak, native-lib
+      # extraction). Its patched 1.8.1 REMOVES the vulnerable stream classes
+      # (LZ4BlockInputStream/LZ4FrameInputStream) the NeoForge runtime uses for
+      # region compression - forcing it crashes the server at boot. Exploiting
+      # these vectors requires attacker-controlled compressed input, which the
+      # modded-server threat model does not place on the lz4 path (world files
+      # are operator-controlled). Risk accepted and documented; remediation
+      # follows the NeoForge/vanilla toolchain upgrade.
       - name: Review the dependency diff
         uses: actions/dependency-review-action@v5
         with:
           retry-on-snapshot-warnings: true
           retry-on-snapshot-warnings-timeout: 600
+          warn-on-openssf-scorecard-level: 0
+          allow-ghsas: GHSA-vqf4-7m7x-wgfc, GHSA-cmp6-m4wj-q63q, GHSA-mcr4-qmvw-px4g, GHSA-xx22-p4ch-683r, GHSA-6cx8-rjf8-pr8g, GHSA-4v53-57pg-c464, GHSA-gm45-99xc-r7wv, GHSA-343h-94h5-c4wr

@@ -75,7 +75,8 @@ public final class TowerEntranceGameTests {
                     "the portal shell's bottom must be obsidian");
             helper.assertTrue(helper.getLevel().getBlockState(origin.offset(3, 2, 1))
                             .is(PortalBlocks.DUNGEON_PORTAL.get()),
-                    "the portal interior must be active at generation (Piece 3)");
+                    "the portal interior must be active at generation, got "
+                            + helper.getLevel().getBlockState(origin.offset(3, 2, 1)));
         } finally {
             DungeonConfigs.setTowerEntranceEnabled(wasEnabled);
             DungeonConfigs.setTowerEntrancePortal(wasPortal);

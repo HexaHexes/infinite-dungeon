@@ -424,6 +424,30 @@ public final class InfiniteDungeonGameTests {
         helper.succeed();
     }
 
+    /** A formed portal records an elevation source (issue #223). */
+    @GameTest(template = "empty")
+    public static void portal_formation_registers_elevation(GameTestHelper helper) {
+        for (int x = 2; x <= 5; x++) {
+            helper.setBlock(new BlockPos(x, 2, 1), Blocks.STONE_BRICKS);
+            helper.setBlock(new BlockPos(x, 6, 1), Blocks.STONE_BRICKS);
+        }
+        for (int y = 2; y <= 6; y++) {
+            helper.setBlock(new BlockPos(2, y, 1), Blocks.STONE_BRICKS);
+            helper.setBlock(new BlockPos(5, y, 1), Blocks.STONE_BRICKS);
+        }
+        for (int x = 3; x <= 4; x++) {
+            for (int y = 3; y <= 5; y++) {
+                helper.setBlock(new BlockPos(x, y, 1), Blocks.AIR);
+            }
+        }
+        BlockPos start = helper.absolutePos(new BlockPos(3, 3, 1));
+        helper.assertTrue(PortalIgnition.tryIgnite(helper.getLevel(), start),
+                "a valid stone-brick frame must ignite");
+        helper.assertTrue(ElevationSources.of(helper.getLevel()).contains(start),
+                "the formed portal must register an elevation source");
+        helper.succeed();
+    }
+
     /** A frame too small for vanilla's portal bounds refuses to ignite. */
     @GameTest(template = "empty")
     public static void portal_frame_rejects_bad_shape(GameTestHelper helper) {

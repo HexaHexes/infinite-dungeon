@@ -20,10 +20,11 @@ import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
  * alteration, no exterior windows - authored as a datagen {@code StructureTemplate}
  * ({@code data/infinite_dungeon/structure/tower_entrance.nbt}) so the village
  * injection (Piece 2) and the runtime code feature both read the same
- * committed content. The portal shell is the obsidian frame inside; the portal
- * treatment rides the API entrance policy (api#58, Piece 3). The jigsaw block
- * carries the Piece 2 village attachment contract (a house leaf on the plains
- * streets).
+ * committed content. The portal treatment (Piece 3) ships inside: the obsidian
+ * frame carries its active {@code infinite_dungeon:dungeon_portal} interior -
+ * the portal is present at generation, like the DC tower entrances. The jigsaw
+ * block carries the Piece 2 village attachment contract (a house leaf on the
+ * plains streets).
  */
 final class TowerEntranceStructureProvider implements DataProvider {
 
@@ -37,6 +38,7 @@ final class TowerEntranceStructureProvider implements DataProvider {
 
     private static final String STONE_BRICKS = "minecraft:stone_bricks";
     private static final String OBSIDIAN = "minecraft:obsidian";
+    private static final String PORTAL = "infinite_dungeon:dungeon_portal";
     private static final String JIGSAW = "minecraft:jigsaw";
 
     /** The current data version (1.21.1), stamped so the loader's DFU skips no-ops. */
@@ -134,12 +136,17 @@ final class TowerEntranceStructureProvider implements DataProvider {
         if (perimeter) {
             return frontDoor ? null : STONE_BRICKS;
         }
-        // The interior: the obsidian portal shell against the back wall.
+        // The interior: the obsidian portal shell against the back wall, the
+        // portal treatment (Piece 3) filling the frame's center - the portal
+        // is present at generation, like the DC tower entrances.
         if (z == 1 && x >= 2 && x <= 4 && y >= 1 && y <= 4) {
             boolean bottom = y == 1;
             boolean top = y == 4;
             boolean side = x == 2 || x == 4;
-            return bottom || top || side ? OBSIDIAN : null; // the center stays open
+            if (bottom || top || side) {
+                return OBSIDIAN;
+            }
+            return x == 3 ? PORTAL : null; // the interior columns carry the active portal
         }
         return null;
     }

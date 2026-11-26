@@ -64,7 +64,7 @@ public final class TowerEntranceGameTests {
         DungeonConfigs.setTowerEntrancePortal(true);
         try {
             BlockPos origin = helper.absolutePos(new BlockPos(4, 5, 4));
-            paveSite(helper, origin);
+            paveSite(helper);
             helper.assertTrue(TowerEntranceFeature.build(helper.getLevel(), origin,
                     helper.getLevel().getRandom()), "the feature must place the building");
             helper.assertTrue(helper.getLevel().getBlockState(origin.offset(3, 0, 6)).is(Blocks.JIGSAW),
@@ -108,7 +108,7 @@ public final class TowerEntranceGameTests {
         DungeonConfigs.setTowerEntrancePortal(false);
         try {
             BlockPos origin = helper.absolutePos(new BlockPos(4, 5, 4));
-            paveSite(helper, origin);
+            paveSite(helper);
             helper.assertTrue(TowerEntranceFeature.build(helper.getLevel(), origin,
                     helper.getLevel().getRandom()), "the feature must place the building");
             helper.assertTrue(helper.getLevel().getBlockState(origin.offset(3, 2, 1)).is(Blocks.AIR),
@@ -157,10 +157,10 @@ public final class TowerEntranceGameTests {
     }
 
     /** Solid ground under the tower's full 7x7 footprint (the policy's site). */
-    private static void paveSite(GameTestHelper helper, BlockPos origin) {
+    private static void paveSite(GameTestHelper helper) {
         for (int dx = -3; dx <= 3; dx++) {
             for (int dz = -3; dz <= 3; dz++) {
-                helper.setBlock(origin.offset(dx, -1, dz), Blocks.STONE.defaultBlockState());
+                helper.setBlock(new BlockPos(4 + dx, 4, 4 + dz), Blocks.STONE.defaultBlockState());
             }
         }
     }

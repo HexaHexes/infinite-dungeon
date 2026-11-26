@@ -21,6 +21,7 @@ import org.bitwisemadness.infinitedungeon.lanes.LaneGeometry;
 import org.bitwisemadness.infinitedungeon.lanes.LaneGrid;
 import org.bitwisemadness.infinitedungeon.lanes.LaneTransitions;
 import org.bitwisemadness.infinitedungeon.lanes.LayerUnlocks;
+import org.bitwisemadness.infinitedungeon.magicule.MagiculeElevation;
 
 /**
  * Ignites dungeon portals: scanning a lit frame and filling it with portal
@@ -51,10 +52,27 @@ public final class PortalIgnition {
                     along(start, axis), start.getY(), cellTest(level, axis, fixed(start, axis)));
             if (layout.isPresent()) {
                 fill(level, axis, fixed(start, axis), layout.get());
+                recordFormation(level, start);
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * The portal-formation elevation hook (issue #223): a formed portal is a
+     * dungeon-like structure, so its formation records an elevation source
+     * through {@link MagiculeElevation}. The flint-and-steel seam and the
+     * entity-placed-fire seam both funnel here, so both capture. Recorded
+     * gaps: portals that form outside this seam - a vanilla nether portal lit
+     * on a frame the dungeon is NOT claiming (the seam intercepts only frames
+     * of the configured frame block), and fire placed by a non-entity (a
+     * dispenser) - do not elevate.
+     */
+    private static void recordFormation(Level level, BlockPos start) {
+        if (level instanceof ServerLevel server) {
+            MagiculeElevation.registerSource(server, start);
+        }
     }
 
     /**

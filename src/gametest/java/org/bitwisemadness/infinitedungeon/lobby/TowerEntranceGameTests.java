@@ -149,6 +149,71 @@ public final class TowerEntranceGameTests {
         helper.succeed();
     }
 
+    /** The lobby building (issue #131) loads with the fixed five-floor geometry. */
+    @GameTest(template = "empty")
+    public static void lobby_building_template_loads_and_is_valid(GameTestHelper helper) {
+        var template = helper.getLevel().getServer().getStructureManager()
+                .getOrCreate(TowerEntranceFeature.LOBBY_TEMPLATE_ID);
+        helper.assertTrue(template.getSize().getX() == 7
+                        && template.getSize().getY() == 21
+                        && template.getSize().getZ() == 7,
+                "the lobby must be the fixed 7x21x7 building, got " + template.getSize());
+        var settings = new StructurePlaceSettings();
+        helper.assertTrue(!template.filterBlocks(BlockPos.ZERO, settings, Blocks.OAK_PLANKS).isEmpty(),
+                "floor 0 must carry the reception counter");
+        helper.assertTrue(!template.filterBlocks(BlockPos.ZERO, settings, Blocks.BARREL).isEmpty(),
+                "floor 0 must carry the task board");
+        helper.assertTrue(!template.filterBlocks(BlockPos.ZERO, settings, Blocks.RED_BED).isEmpty(),
+                "floor 0 must carry the decorative lodging beds");
+        helper.assertTrue(!template.filterBlocks(BlockPos.ZERO, settings, Blocks.POLISHED_ANDESITE).isEmpty(),
+                "floor 4 must carry the waystone pedestal");
+        helper.assertTrue(!template.filterBlocks(BlockPos.ZERO, settings, Blocks.STONE_BRICK_STAIRS).isEmpty(),
+                "the building must carry its staircase");
+        helper.succeed();
+    }
+
+    /** The tower-entrance construction places the lobby behind the tower. */
+    @GameTest(template = "empty")
+    public static void lobby_building_places_with_the_tower(GameTestHelper helper) {
+        boolean wasEnabled = DungeonConfigs.towerEntranceEnabled();
+        DungeonConfigs.setTowerEntranceEnabled(true);
+        try {
+            BlockPos origin = helper.absolutePos(new BlockPos(4, 5, 4));
+            paveSite(helper);
+            helper.assertTrue(TowerEntranceFeature.build(helper.getLevel(), origin,
+                    helper.getLevel().getRandom()), "the feature must place the construction");
+            BlockPos lobbyOrigin = origin.offset(TowerEntranceFeature.LOBBY_OFFSET);
+            helper.assertTrue(helper.getLevel().getBlockState(lobbyOrigin.offset(2, 1, 2))
+                            .is(Blocks.OAK_PLANKS),
+                    "the lobby's reception counter must stand on floor 0");
+            helper.assertTrue(helper.getLevel().getBlockState(lobbyOrigin.offset(3, 16, 3))
+                            .is(Blocks.POLISHED_ANDESITE),
+                    "the lobby's waystone pedestal must stand on floor 4");
+        } finally {
+            DungeonConfigs.setTowerEntranceEnabled(wasEnabled);
+        }
+        helper.succeed();
+    }
+
+    /** The death-lobby teleport anchors on the waystone room (issue #141). */
+    @GameTest(template = "empty")
+    public static void lobby_waystone_room_anchors_the_death_teleport(GameTestHelper helper) {
+        boolean wasEnabled = DungeonConfigs.towerEntranceEnabled();
+        DungeonConfigs.setTowerEntranceEnabled(true);
+        try {
+            BlockPos origin = helper.absolutePos(new BlockPos(4, 5, 4));
+            paveSite(helper);
+            helper.assertTrue(TowerEntranceFeature.build(helper.getLevel(), origin,
+                    helper.getLevel().getRandom()), "the feature must place the construction");
+            BlockPos anchor = origin.offset(3, 2, 1); // the portal cell the anchor holds
+            helper.assertTrue(TowerEntranceFeature.lobbyWaystoneRoomExists(helper.getLevel(), anchor),
+                    "the death-lobby teleport must land in the waystone room");
+        } finally {
+            DungeonConfigs.setTowerEntranceEnabled(wasEnabled);
+        }
+        helper.succeed();
+    }
+
     /** The toggle gates the feature: off, the gate refuses (place() no-ops). */
     @GameTest(template = "empty")
     public static void tower_entrance_feature_obeys_the_toggle(GameTestHelper helper) {

@@ -135,11 +135,9 @@ final class TowerEntranceStructureProvider implements DataProvider {
         if (perimeter) {
             return frontDoor ? null : STONE_BRICKS;
         }
-        // The interior: the obsidian portal shell against the back wall. The
-        // portal treatment (Piece 3) activates the frame's center after the
-        // template is placed - the frame's incremental placement would
-        // collapse a portal interior (each cell sees the other as air), so
-        // the active portal is the feature's post-step, like the ignition.
+        // The interior: the obsidian portal shell. The treatment (Piece 3)
+        // activates the frame after placement - incremental placement
+        // would collapse an active interior (like the ignition).
         if (z == 1 && x >= 2 && x <= 4 && y >= 1 && y <= 4) {
             boolean bottom = y == 1;
             boolean top = y == 4;

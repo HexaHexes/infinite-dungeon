@@ -15,6 +15,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.lobby.TowerEntranceFeature;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.DungeonPortalTravel;
 import org.bitwisemadness.infinitedungeon.portal.EntryAnchors;
@@ -119,6 +120,17 @@ public final class LobbyReturn {
             return;
         }
         BlockPos spot = anchor.get().position();
+        // Issue #141: when the lobby's waystone room exists (the fixed lobby
+        // construction stands behind the anchor), the death-lobby teleport
+        // lands there - the arrival room - instead of at the anchor portal.
+        if (TowerEntranceFeature.lobbyWaystoneRoomExists(lobby, spot)) {
+            BlockPos arrival = spot.offset(TowerEntranceFeature.WAYSTONE_ARRIVAL_OFFSET);
+            player.teleportTo(lobby,
+                    arrival.getX() + 0.5, arrival.getY(), arrival.getZ() + 0.5,
+                    player.getYRot(), player.getXRot());
+            player.setPortalCooldown();
+            return;
+        }
         if (!(lobby.getBlockState(spot).getBlock() instanceof DungeonPortalBlock)
                 && !(DungeonConfigs.reformMissingPortal()
                         && PortalFrameBuilder.build(lobby, spot, Direction.Axis.X))) {

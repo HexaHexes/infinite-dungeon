@@ -35,6 +35,7 @@ public final class DungeonDataGenerators {
         generator.addProvider(true, new DungeonProfileProvider(generator.getPackOutput()));
         generator.addProvider(true, new DungeonPoolsProvider(generator.getPackOutput()));
         generator.addProvider(true, new TowerEntranceStructureProvider(generator.getPackOutput()));
+        generator.addProvider(true, new LobbyBuildingStructureProvider(generator.getPackOutput()));
         generator.addProvider(true, new VillageInjectionProvider(generator.getPackOutput()));
         generator.addProvider(true, new DungeonHasStructureTagProvider(generator.getPackOutput()));
         generator.addProvider(true,

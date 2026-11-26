@@ -47,6 +47,19 @@ public final class TowerEntranceFeature extends Feature<NoneFeatureConfiguration
     public static final ResourceLocation TEMPLATE_ID =
             ResourceLocation.fromNamespaceAndPath(InfiniteDungeon.MOD_ID, "tower_entrance");
 
+    /** The fixed lobby building (issue #131): the five lobby floors. */
+    public static final ResourceLocation LOBBY_TEMPLATE_ID =
+            ResourceLocation.fromNamespaceAndPath(InfiniteDungeon.MOD_ID, "lobby_entrance");
+
+    /** The lobby building's fixed offset behind the tower (pending in-game confirm). */
+    public static final BlockPos LOBBY_OFFSET = new BlockPos(0, 0, -7);
+
+    /** The waystone room's arrival cell, relative to the tower's portal anchor. */
+    public static final BlockPos WAYSTONE_ARRIVAL_OFFSET = new BlockPos(0, 15, -6);
+
+    /** The waystone pedestal's block id (the room's signature). */
+    private static final String PEDESTAL = "minecraft:polished_andesite";
+
     /** The entrance key this tower answers under in the API's registry. */
     public static final String ENTRANCE_KEY = "tower";
 
@@ -104,10 +117,38 @@ public final class TowerEntranceFeature extends Feature<NoneFeatureConfiguration
         var template = level.getServer().getStructureManager().getOrCreate(TEMPLATE_ID);
         boolean placed = template.placeInWorld(level, origin, origin,
                 new StructurePlaceSettings().setIgnoreEntities(false), random, 2);
-        if (placed && portalEnabled()) {
-            activatePortal(level, origin);
+        if (placed) {
+            if (portalEnabled()) {
+                activatePortal(level, origin);
+            }
+            placeLobby(level, origin, random);
         }
         return placed;
+    }
+
+    /**
+     * The fixed lobby construction (issue #131): the five-floor building
+     * behind the tower, so the tower-entrance construction reads exactly the
+     * committed geometry the room-content issues and the EasyNPC slots
+     * reference. The offset is fixed; the in-game check confirms the joint.
+     */
+    private static void placeLobby(ServerLevelAccessor level, BlockPos origin, RandomSource random) {
+        var lobby = level.getServer().getStructureManager().getOrCreate(LOBBY_TEMPLATE_ID);
+        lobby.placeInWorld(level, origin.offset(LOBBY_OFFSET), origin.offset(LOBBY_OFFSET),
+                new StructurePlaceSettings().setIgnoreEntities(false), random, 2);
+    }
+
+    /**
+     * Whether the lobby's waystone room stands at the anchor's fixed offset
+     * (issue #141): the death-lobby teleport lands there instead of at the
+     * portal. The room's signature is its pedestal - absent, the lobby is not
+     * built and the teleport falls back to the anchor portal.
+     */
+    public static boolean lobbyWaystoneRoomExists(ServerLevelAccessor level, BlockPos anchor) {
+        BlockPos pedestal = anchor.offset(WAYSTONE_ARRIVAL_OFFSET).offset(0, -1, 1);
+        return level.getBlockState(pedestal)
+                .is(net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                        .get(ResourceLocation.parse(PEDESTAL)));
     }
 
     /**

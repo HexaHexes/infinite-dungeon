@@ -3,19 +3,24 @@ package org.bitwisemadness.infinitedungeon.magicule;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeonapi.magicule.AmbientMagicule;
 import org.bitwisemadness.infinitedungeonapi.magicule.ConcentrationModifier;
 import org.bitwisemadness.infinitedungeonapi.magicule.RadiusScope;
@@ -129,6 +134,7 @@ public final class MagiculeElevation {
         if (!(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
+        registerChunkSources(level, event.getChunk());
         if (!ModList.get().isLoaded("dungeoncrawl")) {
             return;
         }
@@ -156,6 +162,52 @@ public final class MagiculeElevation {
                 return;
             }
         }
+    }
+
+    /**
+     * The tower-entrance family (issue #224, riding #199): the tower's active
+     * dungeon portal is its signature - the feature places it at generation,
+     * seed-derived, so pregenerated and organic chunks converge - and each
+     * chunk load registers a source where a portal stands. The section scan
+     * is palette-first ({@code maybeHas}), so chunks without a portal cost a
+     * per-section palette check only; SavedData dedupes across loads.
+     */
+    public static void registerChunkSources(ServerLevel level, ChunkAccess chunk) {
+        if (!(chunk instanceof LevelChunk levelChunk)) {
+            return;
+        }
+        BlockPos lowestPortal = findLowestPortal(levelChunk);
+        if (lowestPortal != null) {
+            registerSource(level, lowestPortal);
+        }
+    }
+
+    private static BlockPos findLowestPortal(LevelChunk chunk) {
+        Block portalBlock = PortalBlocks.DUNGEON_PORTAL.get();
+        BlockPos found = null;
+        LevelChunkSection[] sections = chunk.getSections();
+        for (int index = 0; index < sections.length; index++) {
+            LevelChunkSection section = sections[index];
+            if (section.hasOnlyAir() || !section.maybeHas(state -> state.is(portalBlock))) {
+                continue;
+            }
+            int sectionY = chunk.getSectionYFromSectionIndex(index);
+            for (int y = 0; y < 16; y++) {
+                for (int x = 0; x < 16; x++) {
+                    for (int z = 0; z < 16; z++) {
+                        if (section.getBlockState(x, y, z).is(portalBlock)) {
+                            BlockPos pos = new BlockPos(chunk.getPos().getMinBlockX() + x,
+                                    SectionPos.sectionToBlockCoord(sectionY, y),
+                                    chunk.getPos().getMinBlockZ() + z);
+                            if (found == null || pos.getY() < found.getY()) {
+                                found = pos;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return found;
     }
 
     private static void apply(ServerLevel level, BlockPos pos) {

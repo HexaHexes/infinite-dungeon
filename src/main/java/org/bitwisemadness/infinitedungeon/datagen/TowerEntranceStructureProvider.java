@@ -146,7 +146,7 @@ final class TowerEntranceStructureProvider implements DataProvider {
             if (bottom || top || side) {
                 return OBSIDIAN;
             }
-            return x == 3 ? PORTAL : null; // the interior columns carry the active portal
+            return PORTAL; // the interior columns carry the active portal
         }
         return null;
     }

@@ -109,7 +109,8 @@ final class LobbyBuildingStructureProvider implements DataProvider {
             NbtIo.writeCompressed(root, out);
             byte[] bytes = out.toByteArray();
             java.nio.file.Path nbtPath = this.structures.file(STRUCTURE_ID, "nbt");
-            cache.writeIfNeeded(nbtPath, bytes, com.google.common.hash.Hashing.sha1().hashBytes(bytes));
+            cache.writeIfNeeded(nbtPath, bytes,
+                    com.google.common.hash.Hashing.sha256().hashBytes(bytes));
         } catch (java.io.IOException e) {
             throw new java.io.UncheckedIOException(e);
         }
@@ -133,6 +134,11 @@ final class LobbyBuildingStructureProvider implements DataProvider {
         boolean perimeter = x == 0 || x == WIDTH - 1 || z == 0 || z == DEPTH - 1;
         if (perimeter) {
             return frontDoor ? null : State.of(STONE_BRICKS);
+        }
+        // The waystone pedestal replaces the floor-4 slab (issue #141).
+        if (floor == FLOORS - 1 && x == WAYSTONE_PEDESTAL[0]
+                && z == WAYSTONE_PEDESTAL[1] && inFloor == 0) {
+            return State.of(PEDESTAL);
         }
         if (slab) {
             return State.of(STONE_BRICKS);

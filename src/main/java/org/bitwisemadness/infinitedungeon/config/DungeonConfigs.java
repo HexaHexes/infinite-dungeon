@@ -42,6 +42,7 @@ public final class DungeonConfigs {
     private static final ModConfigSpec.ConfigValue<List<? extends String>> PORTAL_BUILDABLE_LIST;
     private static final ModConfigSpec.BooleanValue PORTAL_ALLOW_CONSTRUCTION;
     private static final ModConfigSpec.BooleanValue TOWER_ENTRANCE_ENABLED;
+    private static final ModConfigSpec.BooleanValue TOWER_ENTRANCE_PORTAL;
     private static final ModConfigSpec.ConfigValue<List<? extends String>> ADVENTURE_BREAKABLE;
     private static final ModConfigSpec.BooleanValue CORPSE_DESPAWN_WHEN_EMPTY;
     private static final ModConfigSpec.IntValue FLOORS_PER_LAYER_MIN;
@@ -215,9 +216,15 @@ public final class DungeonConfigs {
                 .comment("discoverable entrance. The register's global entrance rules bind")
                 .comment("it: fixed predefined structure, minimal terrain alteration, no")
                 .comment("exterior windows, identity-driven lighting. The portal treatment")
-                .comment("inside it follows the API's entrance policy (api#58); until that")
-                .comment("lands, the building ships with its portal shell.")
+                .comment("inside it follows the API's entrance policy (api#58).")
                 .define("enabled", true);
+        TOWER_ENTRANCE_PORTAL = builder
+                .comment("Whether the tower's portal treatment applies (issue #199, Piece 3):")
+                .comment("the portal is active when the tower generates - present at")
+                .comment("generation, like the DC tower entrances - gated by the API's")
+                .comment("entrance policy. Off, the building ships with its obsidian shell")
+                .comment("only, no active portal.")
+                .define("portal", true);
         builder.pop();
         builder.push("adventureLock");
         ADVENTURE_BREAKABLE = builder
@@ -537,6 +544,16 @@ public final class DungeonConfigs {
     /** The gametest seam for the toggle (the {@code setBossBarEnabled} pattern). */
     public static void setTowerEntranceEnabled(boolean enabled) {
         TOWER_ENTRANCE_ENABLED.set(enabled);
+    }
+
+    /** Whether the tower's portal treatment applies (Piece 3). */
+    public static boolean towerEntrancePortal() {
+        return TOWER_ENTRANCE_PORTAL.get();
+    }
+
+    /** The gametest seam for the portal toggle. */
+    public static void setTowerEntrancePortal(boolean enabled) {
+        TOWER_ENTRANCE_PORTAL.set(enabled);
     }
 
     /** Blocks still breakable inside the dungeon under the adventure lock. */

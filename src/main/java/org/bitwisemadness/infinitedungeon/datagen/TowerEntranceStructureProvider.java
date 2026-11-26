@@ -20,10 +20,11 @@ import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
  * alteration, no exterior windows - authored as a datagen {@code StructureTemplate}
  * ({@code data/infinite_dungeon/structure/tower_entrance.nbt}) so the village
  * injection (Piece 2) and the runtime code feature both read the same
- * committed content. The portal shell is the obsidian frame inside; the portal
- * treatment rides the API entrance policy (api#58, Piece 3). The jigsaw block
- * carries the Piece 2 village attachment contract (a house leaf on the plains
- * streets).
+ * committed content. The obsidian portal shell ships inside; the portal
+ * treatment (Piece 3) is the feature's post-step - the frame's incremental
+ * placement would collapse an active interior, so the feature activates it
+ * after placement, like the ignition. The jigsaw block carries the Piece 2
+ * village attachment contract (a house leaf on the plains streets).
  */
 final class TowerEntranceStructureProvider implements DataProvider {
 
@@ -134,12 +135,14 @@ final class TowerEntranceStructureProvider implements DataProvider {
         if (perimeter) {
             return frontDoor ? null : STONE_BRICKS;
         }
-        // The interior: the obsidian portal shell against the back wall.
+        // The interior: the obsidian portal shell. The treatment (Piece 3)
+        // activates the frame after placement - incremental placement
+        // would collapse an active interior (like the ignition).
         if (z == 1 && x >= 2 && x <= 4 && y >= 1 && y <= 4) {
             boolean bottom = y == 1;
             boolean top = y == 4;
             boolean side = x == 2 || x == 4;
-            return bottom || top || side ? OBSIDIAN : null; // the center stays open
+            return bottom || top || side ? OBSIDIAN : null; // the interior stays open for the treatment
         }
         return null;
     }

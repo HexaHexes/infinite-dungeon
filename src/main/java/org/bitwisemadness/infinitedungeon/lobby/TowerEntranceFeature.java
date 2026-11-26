@@ -2,6 +2,7 @@ package org.bitwisemadness.infinitedungeon.lobby;
 
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
@@ -14,6 +15,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.portal.DungeonPortalBlock;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 import org.bitwisemadness.infinitedungeonapi.entrance.EntranceContext;
 import org.bitwisemadness.infinitedungeonapi.entrance.EntranceDecision;
@@ -27,14 +29,17 @@ import org.bitwisemadness.infinitedungeonapi.entrance.EntranceSite;
  * ({@code data/infinite_dungeon/structure/tower_entrance.nbt}) - this feature
  * loads it through the server's structure manager and places it at the origin,
  * so the runtime path reads exactly the committed content the village
- * injection (Piece 2) will reference. The portal treatment (Piece 3) ships in
- * the template (the frame's {@code dungeon_portal} interior, active at
- * generation like the DC tower entrances), gated by the {@code towerEntrance}
- * toggles and by the API's entrance generation policy (api#58): the feature
- * asks the policy at the origin - position-carrying query, the tower's fixed
- * footprint - and generates only on a {@code GENERATE} decision, never
- * silently in unsuitable sites (the register's rule). The portal toggle off
- * leaves the building with its obsidian shell only.
+ * injection (Piece 2) will reference. The portal treatment (Piece 3): the
+ * template ships the obsidian shell, and the feature activates the portal
+ * after placement - the frame's incremental placement would collapse an
+ * active interior, so the activation runs when the frame is complete, the
+ * same way the ignition lights a built frame. Gated by the
+ * {@code towerEntrance} toggles and by the API's entrance generation policy
+ * (api#58): the feature asks the policy at the origin - position-carrying
+ * query, the tower's fixed footprint - and generates only on a
+ * {@code GENERATE} decision, never silently in unsuitable sites (the
+ * register's rule). The portal toggle off leaves the building with its
+ * obsidian shell only.
  */
 public final class TowerEntranceFeature extends Feature<NoneFeatureConfiguration> {
 
@@ -99,13 +104,24 @@ public final class TowerEntranceFeature extends Feature<NoneFeatureConfiguration
         var template = level.getServer().getStructureManager().getOrCreate(TEMPLATE_ID);
         boolean placed = template.placeInWorld(level, origin, origin,
                 new StructurePlaceSettings().setIgnoreEntities(false), random, 2);
-        if (placed && !portalEnabled()) {
-            level.setBlock(origin.offset(PORTAL_INTERIOR_1), net.minecraft.world.level.block.Blocks.AIR
-                    .defaultBlockState(), 2);
-            level.setBlock(origin.offset(PORTAL_INTERIOR_2), net.minecraft.world.level.block.Blocks.AIR
-                    .defaultBlockState(), 2);
+        if (placed && portalEnabled()) {
+            activatePortal(level, origin);
         }
         return placed;
+    }
+
+    /**
+     * The portal treatment: fills the shell's interior with the active portal.
+     * Done after the template, never inside it - the frame's incremental
+     * placement would collapse an active interior (each portal cell sees the
+     * other as air), so the activation runs when the frame is complete, the
+     * same way the ignition lights a built frame.
+     */
+    private static void activatePortal(ServerLevelAccessor level, BlockPos origin) {
+        var portal = PortalBlocks.DUNGEON_PORTAL.get().defaultBlockState()
+                .setValue(DungeonPortalBlock.AXIS, Direction.Axis.X);
+        level.setBlock(origin.offset(PORTAL_INTERIOR_1), portal, 3);
+        level.setBlock(origin.offset(PORTAL_INTERIOR_2), portal, 3);
     }
 
     /** The API's entrance generation policy for the tower's fixed footprint. */

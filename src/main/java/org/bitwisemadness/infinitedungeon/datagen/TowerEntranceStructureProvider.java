@@ -20,11 +20,11 @@ import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
  * alteration, no exterior windows - authored as a datagen {@code StructureTemplate}
  * ({@code data/infinite_dungeon/structure/tower_entrance.nbt}) so the village
  * injection (Piece 2) and the runtime code feature both read the same
- * committed content. The portal treatment (Piece 3) ships inside: the obsidian
- * frame carries its active {@code infinite_dungeon:dungeon_portal} interior -
- * the portal is present at generation, like the DC tower entrances. The jigsaw
- * block carries the Piece 2 village attachment contract (a house leaf on the
- * plains streets).
+ * committed content. The obsidian portal shell ships inside; the portal
+ * treatment (Piece 3) is the feature's post-step - the frame's incremental
+ * placement would collapse an active interior, so the feature activates it
+ * after placement, like the ignition. The jigsaw block carries the Piece 2
+ * village attachment contract (a house leaf on the plains streets).
  */
 final class TowerEntranceStructureProvider implements DataProvider {
 
@@ -38,7 +38,6 @@ final class TowerEntranceStructureProvider implements DataProvider {
 
     private static final String STONE_BRICKS = "minecraft:stone_bricks";
     private static final String OBSIDIAN = "minecraft:obsidian";
-    private static final String PORTAL = "infinite_dungeon:dungeon_portal";
     private static final String JIGSAW = "minecraft:jigsaw";
 
     /** The current data version (1.21.1), stamped so the loader's DFU skips no-ops. */
@@ -136,17 +135,16 @@ final class TowerEntranceStructureProvider implements DataProvider {
         if (perimeter) {
             return frontDoor ? null : STONE_BRICKS;
         }
-        // The interior: the obsidian portal shell against the back wall, the
-        // portal treatment (Piece 3) filling the frame's center - the portal
-        // is present at generation, like the DC tower entrances.
+        // The interior: the obsidian portal shell against the back wall. The
+        // portal treatment (Piece 3) activates the frame's center after the
+        // template is placed - the frame's incremental placement would
+        // collapse a portal interior (each cell sees the other as air), so
+        // the active portal is the feature's post-step, like the ignition.
         if (z == 1 && x >= 2 && x <= 4 && y >= 1 && y <= 4) {
             boolean bottom = y == 1;
             boolean top = y == 4;
             boolean side = x == 2 || x == 4;
-            if (bottom || top || side) {
-                return OBSIDIAN;
-            }
-            return PORTAL; // the interior columns carry the active portal
+            return bottom || top || side ? OBSIDIAN : null; // the interior stays open for the treatment
         }
         return null;
     }

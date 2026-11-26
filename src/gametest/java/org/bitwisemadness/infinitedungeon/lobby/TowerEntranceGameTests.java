@@ -49,9 +49,9 @@ public final class TowerEntranceGameTests {
                 "the jigsaw must be a house leaf (minecraft:empty pool)");
         helper.assertTrue(!template.filterBlocks(BlockPos.ZERO, settings, Blocks.OBSIDIAN).isEmpty(),
                 "the building must carry its obsidian portal shell");
-        helper.assertTrue(!template.filterBlocks(BlockPos.ZERO, settings, PortalBlocks.DUNGEON_PORTAL.get())
+        helper.assertTrue(template.filterBlocks(BlockPos.ZERO, settings, PortalBlocks.DUNGEON_PORTAL.get())
                         .isEmpty(),
-                "the building must carry its active portal interior (Piece 3)");
+                "the template must ship the shell - the active portal is the feature's post-step (Piece 3)");
         helper.succeed();
     }
 
@@ -75,12 +75,8 @@ public final class TowerEntranceGameTests {
                     "the portal shell's bottom must be obsidian");
             helper.assertTrue(helper.getLevel().getBlockState(origin.offset(3, 2, 1))
                             .is(PortalBlocks.DUNGEON_PORTAL.get()),
-                    "portal cell A (3,2,1): " + helper.getLevel().getBlockState(origin.offset(3, 2, 1))
-                            + " | B (3,3,1): " + helper.getLevel().getBlockState(origin.offset(3, 3, 1))
-                            + " | side -X (2,2,1): " + helper.getLevel().getBlockState(origin.offset(2, 2, 1))
-                            + " | side +X (4,2,1): " + helper.getLevel().getBlockState(origin.offset(4, 2, 1))
-                            + " | top (3,4,1): " + helper.getLevel().getBlockState(origin.offset(3, 4, 1))
-                            + " | bottom (3,1,1): " + helper.getLevel().getBlockState(origin.offset(3, 1, 1)));
+                    "the portal interior must be active at generation, got "
+                            + helper.getLevel().getBlockState(origin.offset(3, 2, 1)));
         } finally {
             DungeonConfigs.setTowerEntranceEnabled(wasEnabled);
             DungeonConfigs.setTowerEntrancePortal(wasPortal);

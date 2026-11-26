@@ -63,7 +63,7 @@ public final class TowerEntranceGameTests {
         DungeonConfigs.setTowerEntranceEnabled(true);
         DungeonConfigs.setTowerEntrancePortal(true);
         try {
-            BlockPos origin = helper.absolutePos(new BlockPos(0, 5, 0));
+            BlockPos origin = helper.absolutePos(new BlockPos(4, 5, 4));
             paveSite(helper, origin);
             helper.assertTrue(TowerEntranceFeature.build(helper.getLevel(), origin,
                     helper.getLevel().getRandom()), "the feature must place the building");
@@ -89,7 +89,7 @@ public final class TowerEntranceGameTests {
         boolean wasEnabled = DungeonConfigs.towerEntranceEnabled();
         DungeonConfigs.setTowerEntranceEnabled(true);
         try {
-            BlockPos origin = helper.absolutePos(new BlockPos(0, 5, 0));
+            BlockPos origin = helper.absolutePos(new BlockPos(4, 5, 4));
             helper.assertTrue(!TowerEntranceFeature.build(helper.getLevel(), origin,
                             helper.getLevel().getRandom()),
                     "the API entrance policy must refuse an unsuitable site");
@@ -107,7 +107,7 @@ public final class TowerEntranceGameTests {
         DungeonConfigs.setTowerEntranceEnabled(true);
         DungeonConfigs.setTowerEntrancePortal(false);
         try {
-            BlockPos origin = helper.absolutePos(new BlockPos(0, 5, 0));
+            BlockPos origin = helper.absolutePos(new BlockPos(4, 5, 4));
             paveSite(helper, origin);
             helper.assertTrue(TowerEntranceFeature.build(helper.getLevel(), origin,
                     helper.getLevel().getRandom()), "the feature must place the building");

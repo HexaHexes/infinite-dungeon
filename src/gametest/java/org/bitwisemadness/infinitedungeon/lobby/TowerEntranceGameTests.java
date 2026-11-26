@@ -12,6 +12,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.bitwisemadness.infinitedungeon.InfiniteDungeon;
 import org.bitwisemadness.infinitedungeon.config.DungeonConfigs;
+import org.bitwisemadness.infinitedungeon.magicule.ElevationSources;
+import org.bitwisemadness.infinitedungeon.magicule.MagiculeElevation;
 import org.bitwisemadness.infinitedungeon.portal.PortalBlocks;
 
 /**
@@ -114,6 +116,32 @@ public final class TowerEntranceGameTests {
                     helper.getLevel().getRandom()), "the feature must place the building");
             helper.assertTrue(helper.getLevel().getBlockState(origin.offset(3, 2, 1)).is(Blocks.AIR),
                     "the portal toggle off must leave the interior as the shell only");
+        } finally {
+            DungeonConfigs.setTowerEntranceEnabled(wasEnabled);
+            DungeonConfigs.setTowerEntrancePortal(wasPortal);
+        }
+        helper.succeed();
+    }
+
+    /** The tower's portal is an elevation source (issue #224): the chunk-load
+     *  scan registers it, seed-derived. */
+    @GameTest(template = "empty")
+    public static void tower_elevation_registers_on_chunk_load(GameTestHelper helper) {
+        boolean wasEnabled = DungeonConfigs.towerEntranceEnabled();
+        boolean wasPortal = DungeonConfigs.towerEntrancePortal();
+        DungeonConfigs.setTowerEntranceEnabled(true);
+        DungeonConfigs.setTowerEntrancePortal(true);
+        try {
+            BlockPos origin = helper.absolutePos(new BlockPos(4, 5, 4));
+            paveSite(helper);
+            helper.assertTrue(TowerEntranceFeature.build(helper.getLevel(), origin,
+                    helper.getLevel().getRandom()), "the feature must place the building");
+            var chunk = (net.minecraft.world.level.chunk.LevelChunk) helper.getLevel()
+                    .getChunk(origin.offset(3, 2, 1));
+            MagiculeElevation.registerChunkSources(helper.getLevel(), chunk);
+            helper.assertTrue(ElevationSources.of(helper.getLevel())
+                            .contains(origin.offset(3, 2, 1)),
+                    "the tower's portal must register an elevation source");
         } finally {
             DungeonConfigs.setTowerEntranceEnabled(wasEnabled);
             DungeonConfigs.setTowerEntrancePortal(wasPortal);

@@ -192,6 +192,12 @@ public final class TowerEntranceGameTests {
             helper.assertTrue(helper.getLevel().getBlockState(lobbyOrigin.offset(2, 5, 2))
                             .is(Blocks.OAK_PLANKS),
                     "the lobby's essentials-shop counter must stand on floor 1 (issue #139)");
+            helper.assertTrue(helper.getLevel().getBlockState(lobbyOrigin.offset(2, 9, 2))
+                            .is(Blocks.SPRUCE_PLANKS),
+                    "the specialised-shop counter must stand on floor 2 (issue #140)");
+            helper.assertTrue(helper.getLevel().getBlockState(lobbyOrigin.offset(2, 13, 2))
+                            .is(Blocks.DARK_OAK_PLANKS),
+                    "the advanced-shop counter must stand on floor 3 (issue #140)");
         } finally {
             DungeonConfigs.setTowerEntranceEnabled(wasEnabled);
         }

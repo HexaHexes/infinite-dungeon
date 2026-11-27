@@ -55,6 +55,8 @@ final class LobbyBuildingStructureProvider implements DataProvider {
 
     private static final String STONE_BRICKS = "minecraft:stone_bricks";
     private static final String OAK_PLANKS = "minecraft:oak_planks";
+    private static final String SPRUCE_PLANKS = "minecraft:spruce_planks";
+    private static final String DARK_OAK_PLANKS = "minecraft:dark_oak_planks";
     private static final String BARREL = "minecraft:barrel";
     private static final String PEDESTAL = "minecraft:polished_andesite";
 
@@ -154,10 +156,13 @@ final class LobbyBuildingStructureProvider implements DataProvider {
         if (floor == 1) {
             return floor1Content(x, inFloor, z);
         }
+        if (floor == 2 || floor == 3) {
+            return shopContent(x, inFloor, z, floor == 2 ? SPRUCE_PLANKS : DARK_OAK_PLANKS);
+        }
         if (floor == FLOORS - 1) {
             return floor4Content(x, inFloor, z);
         }
-        return null; // the shop floors (issues #139-#140) are empty shells here
+        return null; // the shop floors are fully authored here
     }
 
     private static State floor0Content(int x, int inFloor, int z) {
@@ -187,6 +192,19 @@ final class LobbyBuildingStructureProvider implements DataProvider {
         if (inFloor == 1 && z >= 2 && z <= 4 && z % 2 == 0) {
             if (x >= COUNTER[0] && x <= COUNTER[COUNTER.length - 1]) {
                 return State.of(OAK_PLANKS); // a shop counter row
+            }
+        }
+        return null;
+    }
+
+    /** Floors 2-3 (issue #140): the specialised and advanced specialised
+     *  shop rows, keyed per floor by their counter block. The per-mod stock
+     *  data (required_mod gating, section 19's data-only rule) is the
+     *  documented follow-up. */
+    private static State shopContent(int x, int inFloor, int z, String counter) {
+        if (inFloor == 1 && z >= 2 && z <= 4 && z % 2 == 0) {
+            if (x >= COUNTER[0] && x <= COUNTER[COUNTER.length - 1]) {
+                return State.of(counter);
             }
         }
         return null;

@@ -189,6 +189,9 @@ public final class TowerEntranceGameTests {
             helper.assertTrue(helper.getLevel().getBlockState(lobbyOrigin.offset(3, 16, 3))
                             .is(Blocks.POLISHED_ANDESITE),
                     "the lobby's waystone pedestal must stand on floor 4");
+            helper.assertTrue(helper.getLevel().getBlockState(lobbyOrigin.offset(2, 5, 2))
+                            .is(Blocks.OAK_PLANKS),
+                    "the lobby's essentials-shop counter must stand on floor 1 (issue #139)");
         } finally {
             DungeonConfigs.setTowerEntranceEnabled(wasEnabled);
         }

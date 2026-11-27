@@ -151,6 +151,9 @@ final class LobbyBuildingStructureProvider implements DataProvider {
         if (floor == 0) {
             return floor0Content(x, inFloor, z);
         }
+        if (floor == 1) {
+            return floor1Content(x, inFloor, z);
+        }
         if (floor == FLOORS - 1) {
             return floor4Content(x, inFloor, z);
         }
@@ -172,6 +175,18 @@ final class LobbyBuildingStructureProvider implements DataProvider {
                 if (x == bed[0] && z == bed[1] - 1) {
                     return State.bedHead();
                 }
+            }
+        }
+        return null;
+    }
+
+    /** Floor 1 (issue #139): the guild-backed essentials shops - two counter
+     *  rows with the shopkeeper cells in front. The Lightman's Currency
+     *  trader wiring (the selling) is the documented follow-up (spike #133). */
+    private static State floor1Content(int x, int inFloor, int z) {
+        if (inFloor == 1 && z >= 2 && z <= 4 && z % 2 == 0) {
+            if (x >= COUNTER[0] && x <= COUNTER[COUNTER.length - 1]) {
+                return State.of(OAK_PLANKS); // a shop counter row
             }
         }
         return null;
